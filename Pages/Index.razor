@@ -1,0 +1,289 @@
+﻿@page "/"
+@using System.Text.RegularExpressions
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Microsoft.AspNetCore.Http
+@using System.Net
+
+
+@inject IHttpContextAccessor httpContextAccessor
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+@inject IJSRuntime JS
+
+@namespace NissayaEditor_Web.Data
+
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+<head>
+    <link href="https://cdn.syncfusion.com/blazor/23.1.36/styles/bootstrap5.css" rel="stylesheet" />
+    <script src="_content/Syncfusion.Blazor.Core/scripts/syncfusion-blazor.min.js" type="text/javascript"></script>
+</head>
+<body id="maincontainer" style="background-color:#f7f0df">
+    <br />
+    <h3 class="pageheader">Welcome to the Nissaya Data Entry System!</h3>
+    <h5>Version Alpha 0.1.0</h5>
+    <br />
+    <h6><em>@ServerStorage</em></h6>
+    <br />
+    <div id="ControlRegion" style="background-color:#ded8ca; width:100%; height:300px;">
+        <div class="col-lg-12 control-section">
+            <div class="control_wrapper">
+                <br/> 
+                <h5>LOGIN</h5>
+                <br/>
+                <div class="row" style="width:100%">
+                    <div style="width:320px;margin-left:34%">
+                        <SfTextBox id="email" Type="InputType.Email" Placeholder="Email" @bind-Value="@email"></SfTextBox>
+                    </div>
+                </div>
+                <br />
+                <div class="row" style="width:100%">
+                    <div style="width:320px;margin-left:34%">
+                        <SfTextBox ID="passcode" Type="InputType.Password" Placeholder="Product code" @bind-Value="@passcode"></SfTextBox>
+                    </div>
+                </div>
+                <div class="btn" style="margin-left:46%">
+                    <SfButton IsPrimary="true" @onclick="Login">Enter</SfButton>
+                </div>
+            </div>
+            <br/>
+            @* <span>@checking</span> *@
+            <SfSpinner Type="spinnerType" @bind-Visible="VisibleSpinner">
+            </SfSpinner>
+        </div>
+    </div>
+    <br />
+    <h6><em>sabbe sattā sukhitā hontu</em></h6>
+    <br />
+    <h6>This web app is contributed by Dhamma Yaungchi Software.</h6>
+    <div style="text-align:center;">
+        <a href="https://dhammayaungchi.net" target="_blank"><em>dhammayaungchi.net</em></a>
+    </div>
+    <br />
+    @* <p>UserAgent = @UserAgent</p> *@
+    @* <p>IPAddress = @IPAddress</p> *@
+    <div>
+        <SfDialog Width="400px" MinHeight="300px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+            <DialogTemplates>
+                <Header> User Name Required for Registration</Header>
+                <Content>
+                    <div>
+                        <span>Your email is not in the system. Please enter your name for registration.</span>
+                    </div>
+                    <div class="form-row">
+                        <label for="user_name" class="col-form-label">User Name</label>
+                        <SfTextBox ID="user_name" Input="@InputHandler" @bind-Value="@userName" CssClass="e-custom-height e-outline"></SfTextBox>
+                    </div>
+                    <div>
+                        <p style="color:brown">@ErrMsg</p>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Ok" IsPrimary="true" OnClick="@okClick" />
+                <DialogButton Content="Cancel" OnClick="@cancelClick" />
+            </DialogButtons>
+        </SfDialog>
+    </div>
+</body>
+@* https://stackoverflow.com/questions/9510359/set-size-of-html-page-and-browser-window *@
+<style>
+    #maincontainer_0 {
+        top: 0px;
+        padding-top: 0;
+        margin: auto;
+        position: relative;
+        width: 950px;
+    }
+
+    #maincontainer {
+        width: 950px;
+    }
+    span {
+        display: table;
+        margin: 0 auto;
+    }
+    h3 {
+        text-align: center;
+    }
+    h5 {
+        text-align: center;
+    }
+    h6 {
+        text-align: center;
+    }
+    button {
+        border-radius: 10px;
+        margin-top: 28px;
+    }
+</style>
+<script type="text/javascript">
+    /* https://stackoverflow.com/questions/4147112/how-to-jump-to-top-of-browser-page */
+    function setBrowserWindow(args) {
+        self.resizeTo(1000, 800);
+    }
+</script>
+@code {
+    private bool VisibleSpinner = false;
+    private string DDLValue { get; set; } = "Bootstrap4";
+    private SpinnerType spinnerType { get; set; } = SpinnerType.Bootstrap4;
+    public string UserAgent { get; set; }
+    public string IPAddress { get; set; }
+
+    private string email = "";
+    private string passcode = "";
+    private string userClass = "";
+    bool IsVisible = false;
+    string ErrMsg = "";
+    string userName = "";
+    string checking = "hello";
+    string ServerStorage = "";
+    ClientTipitakaDB_w clientTipitakaDB;
+    ClientUserProfile clientUserProfile;
+    // ClientSuttaInfo clientSuttaInfo;
+    // ClientSuttaPageData clientSuttaPageData;
+
+    protected override void OnInitialized()
+    {
+        clientTipitakaDB = new ClientTipitakaDB_w();
+        clientUserProfile = clientTipitakaDB.GetClientUserProfile();
+        State.clientTipitakaDB = clientTipitakaDB;
+        checking = "Checking ...";
+        this.VisibleSpinner = false;
+        this.email = this.passcode = this.userClass = "";
+        State.screenID = 0;
+        //GetClientGeoLocation();
+        JS.InvokeVoidAsync("setBrowserWindow", "");
+        ServerStorage = "Server : " + ((TipitakaDB_w.devModeDebug) ? "dystorage2021" : "tipitakadata2023");
+    }
+    private void GetClientGeoLocation()
+    {
+        UserAgent = httpContextAccessor.HttpContext.Request.Headers["User-Agent"];
+        IPAddress = httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
+        IPAddress = "73.93.203.178";
+        //string regInfo = GetUserCountryByIp(IPAddress);
+    }
+    //https://www.syncfusion.com/faq/blazor/web-api/how-do-you-send-an-http-get-request-using-httpclient-in-blazor
+
+    public static string GetUserCountryByIp(string ip)
+    {
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        //IpInfo ipInfo = new IpInfo();
+        try
+        {
+            // HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://ipapi.co/73.93.203.178/country");
+            // HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            // var reader = new System.IO.StreamReader(response.GetResponseStream(), System.Text.Encoding.Default);
+            // string s = reader.ReadToEnd();
+
+            // string info = new WebClient().DownloadString("http://ipinfo.io/" + ip);
+            // ipInfo = JsonConvert.DeserializeObject<IpInfo>(info);
+            // RegionInfo myRI1 = new RegionInfo(ipInfo.Country);
+            // ipInfo.Country = myRI1.EnglishName;
+            byte[] _postDataArray = new byte[10000];
+
+            HttpWebRequest _request = (HttpWebRequest)HttpWebRequest.Create("https://ipapi.co/73.93.203.178/json");
+            _request.KeepAlive = false;
+            _request.Timeout = 5000; // myRequestTimeOut;
+            _request.Method = "POST";
+            _request.ContentType = "application/x-www-form-urlencoded";
+            _request.ContentLength = _postDataArray.Length;
+
+            // if ((_headers != null))//Added 25-11
+            // {
+            //     foreach (KeyValuePair<string, string> _kv in _headers)
+            //     {
+            //         _request.Headers.Add(_kv.Key, _kv.Value);
+            //     }
+            // }
+            // Stream _dataStreamRequest = _request.GetRequestStream();
+            // _dataStreamRequest.Write(_postDataArray, 0, _postDataArray.Length);
+            // _dataStreamRequest.Close();
+            HttpWebResponse response = (HttpWebResponse)_request.GetResponse();
+            //return response.GetResponseStream();
+            var reader = new System.IO.StreamReader(response.GetResponseStream(), System.Text.Encoding.Default);
+            string s = reader.ReadToEnd();
+            return s;
+        }
+        catch (Exception)
+        {
+            //ipInfo.Country = null;
+        }
+
+        return "";
+    }
+    private void Login()
+    {
+        if (!CheckValidEmailFormat(email)) return;
+        if (passcode != "new24") 
+        {
+            string msg = "You entered an incorrect product code. Please check with the administrator and try again!";
+            string warn = "Unauthorized Code!";
+            AlertBtn(msg, warn);
+            return;
+        }
+        bool firstTime = true;
+        this.VisibleSpinner = true;
+        UserProfile userProfile = clientUserProfile.GetUserProfile(email);
+        firstTime = (clientUserProfile.StatusCode != 200);
+        if (firstTime)
+        {
+            IsVisible = true; this.VisibleSpinner = false;
+        }
+        else
+        {
+            userName = userProfile.Name_E;
+            userClass = userProfile.UserClass;
+            clientUserProfile.UpdateUserProfile(userProfile);
+            State.screenID = 1;
+            NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+        }
+    }
+    private async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+    private bool CheckValidEmailFormat(string email)
+    {
+        const string pattern = "^[^@\\s]+@[^@\\s]+\\.(com|net|org|gov)$";
+        Match m = Regex.Match(email, pattern);
+        if (m.Success) return true;
+        string msg = "Your email is not in the standard format. Please enter again!";
+        string warn = "Invalid email!";
+        AlertBtn(msg, warn);
+        return false;
+    }
+    private void okClick(Microsoft.AspNetCore.Components.Web.MouseEventArgs args)
+    {
+        if (userName.Trim().Length == 0)
+        {
+            ErrMsg = "Please enter user name.";
+        }
+        else
+        {
+            // register
+            clientUserProfile.AddUserProfile(email, userName);
+            UserProfile userProfile = clientUserProfile.GetUserProfile(email);
+            IsVisible = false;
+            //AlertBtn("You are now a registered user.", "Registration complete").Wait();
+            NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userProfile.UserClass));
+        }
+    }
+    private void cancelClick(Microsoft.AspNetCore.Components.Web.MouseEventArgs args)
+    {
+        IsVisible = false;
+    }
+    private void InputHandler(InputEventArgs args)
+    {
+        ErrMsg = String.Empty;
+    }
+}

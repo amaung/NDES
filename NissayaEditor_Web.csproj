@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+	<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\BaseDataComponent.cs" />
+    <Compile Remove="Data\WeatherForecast.cs" />
+    <Compile Remove="Data\WeatherForecastService.cs" />
+    <Compile Remove="Pages\Error.cshtml.cs" />
+    <Compile Remove="TipitakaDB_Web\ClientSuttaPageAssignment.cs" />
+    <Compile Remove="TipitakaDB_Web\ClientTipitakaDBLogin.cs" />
+    <Compile Remove="TipitakaDB_Web\ClientUpdateHistory.cs" />
+    <Compile Remove="TipitakaDB_Web\TipitakaUtils.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Pages\ButtonFeatures.razor" />
+    <Content Remove="Pages\Counter.razor" />
+    <Content Remove="Pages\DataGridFeatures.razor" />
+    <Content Remove="Pages\DialogFeatures.razor" />
+    <Content Remove="Pages\Error.cshtml" />
+    <Content Remove="Pages\FetchData.razor" />
+    <Content Remove="Pages\FileUploadFeatures.razor" />
+    <Content Remove="Pages\ListBoxFeatures.razor" />
+    <Content Remove="Pages\MenuBarFeatures.razor" />
+    <Content Remove="Pages\MessageFeatures.razor" />
+    <Content Remove="Pages\TextBoxFeatures.razor" />
+    <Content Remove="Pages\ToolbarFeatures.razor" />
+  </ItemGroup>
+  
+   <ItemGroup>
+         <PackageReference Include="Azure.Data.Tables" Version="12.8.2" />
+         <PackageReference Include="Azure.Storage.Files.Shares" Version="12.17.1" />
+         <PackageReference Include="IPInfo" Version="3.0.0" />
+         <PackageReference Include="Syncfusion.Blazor.Grid" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.DropDowns" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.Popups" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.Inputs" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.Buttons" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.Notifications" Version="23.1.43" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="23.1.44" />
+   </ItemGroup>
+  
+  
+
+</Project>

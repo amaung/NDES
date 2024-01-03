@@ -1,0 +1,243 @@
+﻿@page "/viewdocument/{docID}/{docTitle}/{pageNo}/{newParaMarker}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Buttons
+@using System.Text.RegularExpressions
+@inject State State
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+@namespace NissayaEditor_Web.Data
+
+<PageTitle>Document Viwer</PageTitle>
+<body style="background-color: #f7f0df;">
+    <div>
+        <h4>@docTitle_Text</h4>
+    </div>
+    <section style="margin-left:1%; margin-right:1%;">
+        @DynamicFragment
+    </section>
+    @* <button type="button" OnClick="@PrevClick">Previous</button>
+    <button type="button" OnClick="@NextClick">Next</button> *@
+    @if (btnVisible)
+    {
+        <SfButtonGroup>
+            <SfButton @onclick="PrevClick" style="width:150px;">Previous</SfButton>&nbsp;&nbsp;
+            <SfButton @onclick="NextClick" style="width:150px;">Next</SfButton>
+        </SfButtonGroup>
+    }
+    <br /><br /><br />
+        
+</body>
+@code {
+    [Parameter]
+    public string docID { get; set; }
+    [Parameter]
+    public string pageNo { get; set; }
+    [Parameter]
+    public string docTitle { get; set; }
+    [Parameter]
+    public string newParaMarker { get; set; }
+
+    private string docTitle_Text;
+    private string pgNo;
+    private List<NIS> nisRecords;
+    private RenderFragment DynamicFragment;
+    private Dictionary<int, RenderFragment> dictDynamicFragment = new Dictionary<int, RenderFragment>();
+    bool innerParaBegin = false;
+    bool btnVisible = true;
+    bool titleNotoFont = false;
+
+    protected override void OnInitialized()
+    {
+        if (State.dataFile == null) return;
+        docTitle_Text = KinziCorrectionForNotoFont(docTitle);
+        if (pageNo == "0")
+        {
+            btnVisible = true;
+            start = 0; end = 4;
+        }
+        else
+        {
+            btnVisible = false; start = end = 0;
+        }
+        pgNo = pageNo;
+        nisRecords = State.NISRecords;
+        if (pageNo == "0") pageNos = State.dataFile.GetPageNo();
+        else pageNos = new List<string>() { pageNo };
+        RenderComponent();
+    }
+    private string KinziCorrectionForNotoFont(string s)
+    {
+        if (!titleNotoFont) return docTitle;
+        string pattern = "င်္.";
+        int offset = 0;
+        string s4 = s;
+        string s1, s2, s3;
+        MatchCollection matches = Regex.Matches(s4, pattern);
+        foreach (Match match in matches)
+        {
+            s1 = s4.Substring(0, match.Index + offset);
+            s2 = match.Value[match.Value.Length - 1] + "\u1085";
+            s3 = s4.Substring(match.Index + offset + match.Length);
+            s4 = s1 + s2 + s3;
+            offset -= 2;
+        }
+        return s4;
+    }
+    private string dynamicContent = "";
+    private int start = 0;
+    private int end = 4;
+    private int idx = 0;
+    List<string> pageNos;
+    
+    private void NextClick()
+    {
+        if (end + 1 >= pageNos.Count()) return;
+        start = end + 1;
+        end += 5;
+        idx = (int)(start / 5);
+        RenderComponent();
+        JS.InvokeVoidAsync("scrollTop", "");
+    }
+    private void PrevClick()
+    {
+        if (start - 1 < 0) return;
+        start -= 5;
+        if (start < 0)
+        {
+            start = 0; end = 4;
+        }
+        else end -= 5;
+        idx = (int)(start / 5);
+        RenderComponent();
+        JS.InvokeVoidAsync("scrollTop", "");
+    }
+    private RenderFragment CreateComponent() => builder =>
+    {
+        bool pOpen = false;
+        int pgCount = 0;
+        int count = 0;
+        try
+        {
+            count = 0; string pgno;
+            for(int i = start; i <= end; i++)
+            {
+                ++pgCount; pgno = pageNos[i];
+                nisRecords = State.dataFile.GetPageData(pgno);
+                if (pgCount == 1)
+                {
+                    builder.OpenElement(1, "br"); builder.CloseElement();
+                    builder.OpenElement(1, "br"); builder.CloseElement();
+                    builder.OpenElement(1, "br"); builder.CloseElement();
+                }
+                builder.OpenElement(1, "label");
+                builder.AddAttribute(1, "class", "pageno");
+                builder.AddContent(2, String.Format("{0}", pgno));
+                builder.CloseElement();
+                //builder.OpenElement(1, "br"); builder.CloseElement();
+                // builder.OpenElement(1, "br"); builder.CloseElement();
+
+                builder.OpenElement(0, "p"); builder.CloseElement();
+
+                foreach(NIS nisRecord in nisRecords)
+                {
+                    ++count;
+                    builder.OpenElement(0, "span");
+                    builder.AddAttribute(1, "class", "pali");
+                    if (count == 1) builder.AddContent(2, String.Format("{0}", nisRecord.Pali));
+                    else builder.AddContent(2, String.Format(" {0}", nisRecord.Pali));
+                    builder.CloseElement();
+                    // translation
+                    builder.OpenElement(1, "span");
+                    builder.AddContent(2, String.Format(" {0}{1}{2}", "{", nisRecord.Trans, "}"));
+                    builder.CloseElement();
+                    // footnote
+                    if (nisRecord.Footnote.Length > 0)
+                    {
+                        builder.OpenElement(1, "span");
+                        builder.AddAttribute(1, "class", "footnote");
+                        builder.AddContent(2, String.Format(" [{0}]", nisRecord.Footnote));
+                        builder.CloseElement();
+                    }
+                    // does translation have newParaMarker
+                    if (nisRecord.Trans.EndsWith(newParaMarker))
+                    {
+                        builder.OpenElement(0, "p");
+                        builder.AddContent(1, " ");
+                        builder.CloseElement();
+                    }
+                }
+                builder.OpenElement(1, "br"); builder.CloseElement(); 
+                builder.OpenElement(1, "hr"); builder.CloseElement();
+            }
+        }
+        catch (Exception ex)
+        {
+            string s = ex.Message;
+        }
+    };
+    private void RenderComponent()
+    {
+        DynamicFragment = CreateComponent();
+    }
+    private async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+}
+<script type="text/javascript">
+    /* https://stackoverflow.com/questions/4147112/how-to-jump-to-top-of-browser-page */
+    function scrollTop(args) {
+        scroll(0,0);
+    }
+</script>
+<style>
+    @@font-face {
+        font-family: 'Padauk Book';
+        src: url('./css/fonts/Padauk-book.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    @@font-face {
+        font-family: 'Noto Serif Myanmar';
+        src: url('./css/fonts/NotoSerifMyanmar-Bold.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    div {
+        /*background-color: #ded8ca;*/
+        width: 100%;
+        height: 50px;
+        float: left;
+    }
+
+    h4 {
+        text-align: center;
+        font-family: 'Padauk Book';
+        font-size: 28px;
+        font-style: normal;
+    }
+    span {
+        font-family: 'Padauk Book';
+        font-size: 20px;
+        color: #939393;
+    }
+    span.pali {
+        font-family: 'Padauk Book';
+        font-size: 20px;
+        color: #A52A2A;
+    }
+    span.footnote {
+        font-family: 'Padauk Book';
+        font-size: 20px;
+        color: #a07e28;
+    }
+    label.pageno {
+        font-size: 22px;
+    }
+</style>
