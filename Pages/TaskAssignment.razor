@@ -1,0 +1,1037 @@
+﻿@page "/task_assignment/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Calendars
+@using Newtonsoft.Json;
+@using Newtonsoft.Json.Linq;
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@* *************************************************************************** *@
+@* ********************* Entry Point to TaskAssignments ********************** *@
+@* *************************************************************************** *@
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    public class DataItem
+    {
+        public string ID { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+    /************************************************************************************/
+    //***********************************************************************
+    //***************************** Initialize ******************************
+    //***********************************************************************
+    protected override async Task OnInitializedAsync()
+    //List<string> tasks = new List<string> { "DataEntry", "Review", "Edit", "Edit-Upload", "HTML" };
+    // protected override void OnInitialized()
+    {
+        if (State.dataFile != null)
+        {
+            foreach (string item in State.dataFile.listDocSearchTypes)
+            {
+                docSearchTypes.Add(new DataItem()
+                {
+                    ID = item,
+                    Text = item
+                });
+            }
+            List<UserProfile> userProfiles = State.dataFile.GetAllUserProfiles();
+            foreach (UserProfile user in userProfiles)
+            {
+                listUsers.Add(new DataItem()
+                    {
+                        ID = user.RowKey,
+                        Text = user.Name_E
+                    });
+            }
+            foreach (string s in State.dataFile.UserTasks)
+            {
+                listTasks.Add(new DataItem()
+                    {
+                        ID = s,
+                        Text = s
+                    });
+            }
+        }
+        // show Recent tasks by default
+        // searchTypeValue = docSearchTypes[0].ID;
+        // ShowTasks();
+    }
+}
+
+@* *************************************************************************** *@
+@* ***************************** Base Component ****************************** *@
+@* *************************************************************************** *@
+<Administration componentName="TaskAssignment" email=@email userName=@userName userClass=@userClass flex_width="810px">
+    <adminMenuItem>Task Assignments</adminMenuItem>
+</Administration>
+
+@* *************************************************************************** *@
+@* https://blazor.syncfusion.com/documentation/datagrid/template-editing  *@
+@* https://blazor.syncfusion.com/documentation/treegrid/editing/template-editing *@
+@* https://blazor.syncfusion.com/documentation/dialog/template *@
+@* https://blazor.syncfusion.com/documentation/datagrid/template-editing *@
+@* *************************************************************************** *@
+
+<div>
+    <div style="width:200px" class="form-group col-md-2 column">
+        <label class="col-form-label">Search Type</label>
+        <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="searchTypeValue"
+                        MultiSelectMode="None" PopupHeight="335px" DataSource="@docSearchTypes">
+            <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@SearchTypeValueChangeHandler"></DropDownListEvents>
+            <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+        </SfDropDownList>
+    </div>
+    <div style="width:200px" class="form-group col-md-2 column">
+        <label class="col-form-label">Search Text</label>
+        <SfTextBox TValue="string" @bind-Value="@pattern"></SfTextBox>
+    </div>
+</div>
+<br />
+<div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
+    <SfButton IsPrimary="true" CssClass="e-custom2" OnClick="@ShowTasks"> Show Tasks </SfButton>
+</div>
+<div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
+    <SfButton CssClass="e-custom3" OnClick="@ShowNextTasks"> Show Next @nextCount </SfButton>
+</div>
+<br />
+<br />
+<label style="margin-left:383px;width:200px;text-align: right;"><strong>Total: </strong>@totalCount</label>
+<br />
+@***************************************************************************************@
+@****************************** Task Assignments DataGrid ******************************@
+@***************************************************************************************@
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@TaskInfoRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
+            @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="5"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick"></GridEvents>
+        @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(TaskInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfo.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfo.DocTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Width="28%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfo.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfo.PagesSubmitted) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfo.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfo.Team) HeaderText="Team" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+@***************************************************************************************@
+@************************** Task Assignment Detailed DataGrid **************************@
+@***************************************************************************************@
+<br />
+<hr style="width:1000px" />
+<label style="font-size:21px"><strong>Task Details</strong></label>
+<label style="margin-left:160px;width:700px;text-align: right;"><strong>@SourceBookLabel</strong>@sourcePDF</label>
+
+<div id="ControlRegion">
+    <div class="form-row">
+        <div class="column-dialog left-dialog">
+            <div class="control-section">
+                <div class="timepicker-section">
+                    <div id="wrapper" class="timepicker-control">
+                        <div class="tabs-wrap">
+                            <div class="wrap">
+                                <label class="col-form-label">Expected Completion Date:</label>
+                                <SfDatePicker TValue="DateTime?" PlaceHolder="Choose a Date" @bind-Value="@DateValue" Format="d/M/yyyy" EnableMask="true"></SfDatePicker>
+                                @* <SfDatePicker TValue="DateTime?"></SfDatePicker> *@
+                                @* <DatePickerEvents TValue="DateTime?" ValueChange="DatePickerValueChangeHandler"></DatePickerEvents> *@
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="column-dialog middle-dialog">
+            <label class="col-form-label">Select User:</label>
+            <SfDropDownList TValue="string" TItem="DataItem" @ref=userDropdown MultiSelectMode="None" PopupHeight="200px"
+                            Placeholder="Select user" @bind-Value="@userDropDownValue" DataSource="@listUsers">
+                <DropDownListEvents TItem="DataItem" TValue="string"></DropDownListEvents>
+                <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+            </SfDropDownList>
+        </div>
+        <div class="column-dialog right-dialog">
+            <label class="col-form-label">Select Task:</label>
+            <SfDropDownList TValue="string" TItem="DataItem" @ref=taskDropdown MultiSelectMode="None" PopupHeight="200px"
+                            Placeholder="Select task" @bind-Value="@taskDropDownValue" DataSource="@listTasks">
+                <DropDownListEvents TItem="DataItem" TValue="string"></DropDownListEvents>
+                <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+            </SfDropDownList>
+        </div>
+        <br />
+        <div class="column-dialog right-dialog">
+            <label class="col-form-label"> </label>
+            <SfButton CssClass="e-custom1" Content="Add" OnClick="@AddTaskClick" />
+            <SfButton CssClass="e-custom1" Content="Save" IsPrimary="true" OnClick="@SaveTaskClick" />
+        </div>
+    </div>
+</div>
+<br /><br/><br/>
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@TaskDetailedInfoRecords" @ref="sfgrid1" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000" Toolbar="@(new List<string>() { "Delete" })">
+        <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="5"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridEvents TValue="TaskDetailedInfo" RowSelected="RowSelectHandlerTaskAssignment" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick"></GridEvents>
+        @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(TaskDetailedInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskDetailedInfo.UserName) HeaderText="User Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        AllowEditing="false" Width="15%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskDetailedInfo.NoPages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskDetailedInfo.PagesSubmitted) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.Integer"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskDetailedInfo.CorrectionCount) HeaderText="Corrections" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskDetailedInfo.Task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        AllowEditing="false" Width="9%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskInfo.StartDate) HeaderText="StartDate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskInfo.LastUpdate) HeaderText="LastUpdate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskDetailedInfo.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+
+        </GridColumns>
+    </SfGrid>
+</div>
+<label style="margin-left:260px;width:700px;text-align: right;"><strong>@overdueLabel</strong>@overdueDay</label>
+
+@***************************************************************************************@
+@***************************** Correction Detailed DataGrid ****************************@
+@***************************************************************************************@
+<br />
+<hr style="width:1000px" />
+<label style="font-size:21px"><strong>Correction Details</strong></label>
+<br/>
+<label style="margin-left:287px;width:700px;text-align: right;"><strong>Total : </strong>@nCorrections</label>
+<br/>
+
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@CorrectionInfoRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="5"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridEvents TValue="CorrectionInfo" RowSelected="RowSelectHandlerCorrectionGrid"></GridEvents>
+        @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(CorrectionInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+
+            <GridColumn Field=@nameof(CorrectionInfo.AssignedTo) HeaderText="Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Width="18%" Type="ColumnType.String"></GridColumn>
+
+            <GridColumn Field=@nameof(CorrectionInfo.Task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+
+            <GridColumn Field=@nameof(CorrectionInfo.PageNo) HeaderText="Page" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="7%" Type="ColumnType.Integer"></GridColumn>
+
+            <GridColumn Field=@nameof(CorrectionInfo.NISField ) HeaderText="NIS" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+
+            <GridColumn Field=@nameof(CorrectionInfo.BeforeEdit) HeaderText="Before Edit" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Width="28%" Type="ColumnType.String"></GridColumn>
+
+            <GridColumn Field=@nameof(CorrectionInfo.AfterEdit) HeaderText="After Edit" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Width="28%" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+<br />
+<label style="width:100px;"><strong>Before Edit</strong></label>
+<label><strong>:&nbsp&nbsp&nbsp</strong>@beforeEdit</label>
+<br/>
+<label style="width:100px;"><strong>After Edit</strong></label>
+<label><strong>:&nbsp&nbsp&nbsp</strong>@afterEdit</label>
+<br/><br/>
+
+@* *************************************************************************** *@
+@* ************************ New doc info dialog Style ************************ *@
+@* *************************************************************************** *@
+<style>
+    .column {
+        float: left;
+        padding: 9px;
+        width: 250px;
+        /* height: 530px; /* should be removed. only for demonstration */
+    }
+    .column-dialog {
+        float: left;
+        padding: 10px;
+    }
+
+    .left-col2-dialog {
+        width: 50%;
+    }
+
+    .right-col2-dialog {
+        width: 50%;
+    }
+
+    .left-dialog {
+        padding: 10px;
+        width: 260px;
+    }
+
+    .middle-dialog {
+        padding: 10px;
+        width: 260px;
+    }
+
+    .right-dialog {
+        padding: 10px;
+        width: 260px;
+    }
+
+    .e-custom {
+        /* border-radius: 0; */
+        height: 32px;
+        width: 100px;
+    }
+
+    .e-custom, .e-custom:hover, .e-custom:focus, .e-custom:active {
+        background-color: #ff6e40;
+        color: #fff;
+    }
+
+    .e-custom1 {
+        margin-top: 15px;
+        margin-left: 10px;
+        border-radius: 0;
+        height: 30px;
+        width: 90px;
+    }
+</style>
+@********************************** Grid styles **********************************@
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+
+    .e-grid .e-altrow {
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+</style>
+@******************************* SfButton styles ********************************@
+<style>
+    .e-custom2 {
+        /* border-radius: 25px; */
+        height: 32px;
+        width: 140px;
+    }
+
+    .e-custom3 {
+        display: @showNextButton;
+        /* border-radius: 25px; */
+        height: 32px;
+        width: 140px;
+        background-color: white;
+    }
+</style>
+@* ***************************** End of Grid styles ************************** *@
+@* *************************************************************************** *@
+@* ************************ New doc info dialog Code ************************* *@
+@* *************************************************************************** *@
+@code {
+    /************************************************************************************/
+    //******** Classes and variables
+    /************************************************************************************/
+    public class TaskInfo()
+    {
+        public int SrNo { get; set; }
+        public string DocNo { get; set; }
+        public string DocTitle { get; set; }
+        public string Task { get; set; }
+        public string Pages { get; set; }
+        public int PagesSubmitted { get; set; }
+        public string StartDate { get; set; }
+        public string LastUpdate { get; set; }
+        public int CorrectionCount { get; set; }
+        public string Status { get; set; }
+        public string Team { get; set; }
+    };
+    public class TaskDetailedInfo()
+    {
+        public int SrNo { get; set; }
+        public string DocNo { get; set; }
+        public string UserName { get; set; }
+        public string UserID { get; set; }
+        public string NoPages { get; set; }
+        public int? PagesSubmitted { get; set; }
+        public string Task { get; set; }
+        public string StartDate { get; set; }
+        public string LastUpdate { get; set; }
+        public int? CorrectionCount { get; set; }
+        public string Status { get; set; }
+    };
+    public class CorrectionInfo()
+    {
+        public int SrNo { get; set; }
+        public string DocNo { get; set; }
+        public string AssignedTo { get; set; }
+        public string Task { get; set; }
+        public int PageNo { get; set; }
+        public string NISField { get; set; }
+        public string BeforeEdit { get; set; }
+        public string AfterEdit { get; set; }
+        public string Date { get; set; }
+    }
+    public DateTime? DateValue { get; set; }
+    private List<DataItem> docSearchTypes = new List<DataItem>();
+    List<TaskInfo> TaskInfoRecords = new List<TaskInfo>();
+    List<TaskDetailedInfo> TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
+    List<CorrectionInfo> CorrectionInfoRecords = new List<CorrectionInfo>();
+    SfGrid<TaskInfo> sfgrid;
+    SfGrid<TaskDetailedInfo> sfgrid1;
+    SfGrid<CorrectionInfo> sfgrid2;
+    SfDatePicker<DateTime?> sfdatepicker;
+    SfDropDownList<string, DataItem> userDropdown;
+    SfDropDownList<string, DataItem> taskDropdown;
+
+    /************************************************************************************/
+    //******** Variables
+    /************************************************************************************/
+    string searchTypeValue = "", searchType = "", pattern = "";
+    string userDropDownValue = "", taskDropDownValue = "";
+    string showNextButton = "none";
+
+    List<string> docTypes, docSubTypes;
+    List<DataItem> listDocs = new List<DataItem>();
+    List<DataItem> listPDFItems = new List<DataItem>();
+    List<DataItem> listUsers = new List<DataItem>();
+    List<DataItem> listTasks = new List<DataItem>();
+    List<SuttaInfo> newSuttaList = new List<SuttaInfo>();
+
+    Dictionary<string, int> dictPDFPageCount = new Dictionary<string, int>();
+    public SfDropDownList<string, DataItem> docDropdown;
+    public SfDropDownList<string, DataItem> srcPDFDropdown;
+    public SfComboBox<string, DataItem> docSubTypeCombo;
+
+    string ErrMsgNewDocInfo = "";
+    string formattedDocNo = "";
+    string doc_No = "", doc_Title = "", doc_SubTitle = "", pages_Count = "";
+    string sourcePDF = "", SourceBookLabel = "";
+    string beforeEdit = "", afterEdit = "";
+    string loadedDocType = "";
+    string overdueLabel = "";
+    string overdueDay = "";
+    int selectedBookPages = 0;
+    int? startPage = 0, endPage = 0;
+    int idxTaskAssignmentRowSelect = -1;
+    int idxTaskRowSelect = -1;
+    int totalCount = 0, nextCount = 0;
+    int nCorrections = 0;
+
+    bool IsVisible_NewDocInfo = false;
+
+    private void InputHandler_NewDocInfo(InputEventArgs args)
+    {
+        ErrMsgNewDocInfo = String.Empty;
+    }
+    public async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+    //************************************************************************************/
+    //******** Search value change events
+    /************************************************************************************/
+    private void SearchTypeValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        if (args != null && args.ItemData != null)
+            searchType = args.ItemData.Text;
+        else searchType = String.Empty;
+    }
+    /************************************************************************************/
+    //******** ShowTasks
+    /************************************************************************************/
+    private void ShowTasks()
+    {
+        if (searchTypeValue == null || searchTypeValue.Length == 0)
+        {
+            AlertBtn("Please select search type first.", "Warning");
+            return;
+        }
+        // retrieve
+        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass);
+        totalCount = State.dataFile.GetSearchResultCount();
+        TaskInfoRecords = new List<TaskInfo>();
+        if (totalCount == 0)
+            AlertBtn("No tasks found.", "Alert");
+
+        int n = 0;
+        List<TaskInfo> listTaskInfo = new List<TaskInfo>();
+        foreach (SuttaInfo suttaInfo in listSuttaInfo)
+        {
+            listTaskInfo.Add(new TaskInfo()
+                {
+                    SrNo = listTaskInfo.Count + 1,
+                    DocNo = suttaInfo.RowKey,
+                    DocTitle = suttaInfo.Title,
+                    Pages = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.EndPage - suttaInfo.StartPage + 1),
+                    //Pages = suttaInfo.EndPage - suttaInfo.StartPage + 1,
+                    PagesSubmitted = suttaInfo.PagesSubmitted,
+                    Status = suttaInfo.Status,
+                    Team = suttaInfo.Team
+                });
+        }
+        idxTaskRowSelect = -1;
+        idxTaskAssignmentRowSelect = -1;
+        TaskInfoRecords = listTaskInfo;
+        TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
+        if (TaskInfoRecords.Count < totalCount)
+        {
+            int remainingCount = totalCount - TaskDetailedInfoRecords.Count;
+            if (remainingCount >= 10) nextCount = 10;
+            else nextCount = remainingCount;
+            showNextButton = "block";
+        }
+        else showNextButton = "none";
+    }
+    private void ShowNextTasks()
+    {
+        List<SuttaInfo> listSuttaInfo = State.dataFile.GetNextBatchSearchedSuttas();
+        List<TaskInfo> listTaskInfo = TaskInfoRecords.ToList();
+
+        foreach (SuttaInfo suttaInfo in listSuttaInfo)
+        {
+            listTaskInfo.Add(new TaskInfo()
+                {
+                    SrNo = listTaskInfo.Count + 1,
+                    DocNo = suttaInfo.RowKey,
+                    DocTitle = suttaInfo.Title,
+                    Pages = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.EndPage - suttaInfo.StartPage + 1),
+                    PagesSubmitted = suttaInfo.PagesSubmitted,
+                    Status = suttaInfo.Status,
+                    Team = suttaInfo.Team
+                });
+        }
+        TaskInfoRecords = listTaskInfo;
+        if (TaskInfoRecords.Count < totalCount)
+        {
+            int remainingCount = totalCount - TaskInfoRecords.Count;
+            if (remainingCount >= 10) nextCount = 10;
+            else nextCount = remainingCount;
+            showNextButton = "block";
+        }
+        else showNextButton = "none";
+    }
+    private void onCancelNewDoc()
+    {
+        ErrMsgNewDocInfo = String.Empty;
+        IsVisible_NewDocInfo = false;
+    }
+    private void docValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        ErrMsgNewDocInfo = String.Empty;
+        string[] f = args.ItemData.ID.Split(' ');
+        doc_No = f[1];
+        int idx = Int32.Parse(f[0].Substring(0, f[0].Length - 1));
+        f = args.ItemData.Text.Split('/');
+        int p1 = f[0].IndexOf('(');
+        int p2 = f[0].IndexOf(')');
+        string t = f[0].Substring(p1+1, p2-p1-1);
+        // string[] ff = t.Split('/');
+        // doc_Title = ff[0];
+        doc_Title = t;
+        // doc_SubTitle = (ff.Length == 2) ? ff[1] : "";
+        if (idx > 0 && idx < newSuttaList.Count)
+        {
+            --idx;
+            var s = newSuttaList[idx];
+            pages_Count = String.Format("{0}-{1} ({2})", s.StartPage, s.EndPage, s.NoPages);
+            SourceBookInfo? sourceBookInfo = State.dataFile.GetSourceBookInfo(s.BookID);
+            if (sourceBookInfo != null) sourcePDF = sourceBookInfo.BookFilename;
+        }
+    }
+    private void docSubTypeValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        ErrMsgNewDocInfo = String.Empty;
+        // if (args.ItemData != null) doc_SubType = args.ItemData.Text; else doc_SubType = "";
+        formatDocNo();
+    }
+    private void docNoValueChangedHandler(InputEventArgs args)
+    {
+        ErrMsgNewDocInfo = String.Empty;
+        doc_No = args.Value;
+        formatDocNo();
+    }
+    private void PDFValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        ErrMsgNewDocInfo = String.Empty;
+        // selectedPDF = args.ItemData.Text;
+        // if (selectedPDF.Length > 0) selectedBookPages = dictPDFPageCount[selectedPDF];
+    } 
+    private void formatDocNo()
+    {
+        formattedDocNo = "";
+        // if (doc_Type.Length > 0) formattedDocNo = doc_Type;
+        // if (doc_SubType.Length > 0) formattedDocNo += "." + doc_SubType;
+        // if (doc_No.Length > 0) formattedDocNo += "-" + doc_No;
+    }
+    private Dictionary<string, string> GetUserTaskProgressData(string s)
+    {
+        Dictionary<string, string> dict = new Dictionary<string, string>();
+        if (s.Length > 0) 
+        {
+            string[] f = s.Split(";");
+            foreach(string item in f)
+            {
+                string[] ff = item.Split("=");
+                dict[ff[0]] = ff[1];
+            }
+        }
+        return dict;
+    }
+    //********************************
+    //******** AddTaskClick()
+    //********************************
+    private void AddTaskClick()
+    {
+        if (TaskDetailedInfoRecords.Count == 0)
+        {
+            AlertBtn("The table is empty. A document needs to be selected above.", "Error"); return;
+        }
+        if (DateValue == null)
+        {
+            AlertBtn("Expected completion date not selected.", "Error"); return;
+        }
+        if (userDropDownValue == null || userDropDownValue.Length == 0)
+        {
+            AlertBtn("User not selected.", "Error"); return;
+        }
+        if (taskDropDownValue == null || taskDropDownValue.Length == 0)
+        {
+            AlertBtn("Task not selected.", "Error"); return;
+        }
+        // no errors at this point
+        DateTime dt = (DateTime)DateValue;
+        List<TaskDetailedInfo> listTaskDetailedInfo = TaskDetailedInfoRecords.ToList();
+        listTaskDetailedInfo[0].LastUpdate = String.Format("{0}/{1}/{2}", dt.Day, dt.Month, dt.Year);
+        //
+        // check for Upload task. It should be the only task in the list.
+        //
+        if (taskDropDownValue == "Edit-Upload")
+        {
+            if (listTaskDetailedInfo.Count > 1 || 
+                (listTaskDetailedInfo.Count == 1 && listTaskDetailedInfo[0].Task != "NewDoc"))
+            {
+                AlertBtn("Edit-Upload must be the task after NewDoc.", "Error"); return;
+            }
+        }
+        //
+        // check for multiple DataEntry tasks.
+        //
+        if (taskDropDownValue == "DataEntry")
+        {
+            var list = (from item in listTaskDetailedInfo
+                        where item.Task == "DataEntry"
+                        select item).ToList();
+            if (list.Count > 0)
+            {
+                AlertBtn("Only one DataEntry task allowed.", "Error"); return;
+            }
+        }
+        // 
+        // Check if user has been already assigned, Check for DataEntry tasks only
+        //
+        if (taskDropDownValue != "Edit-Upload" && taskDropDownValue != "HTML")
+        {
+            var listItems = (from item in TaskDetailedInfoRecords
+                             where item.UserID == userDropDownValue
+                             select item).ToList();
+            if (listItems.Count > 0)
+            {
+                AlertBtn(String.Format("\"{0}\" is already been assigned.", listItems[0].UserName), "Error"); return;
+            }
+        }
+        // check for Review1 or 2
+        string task = taskDropDownValue;
+        if (task == "Review")
+        {
+            var lst = (from item in listTaskDetailedInfo
+                       where item.Task.StartsWith("Review")
+                       select item).ToList();
+            task = String.Format("Review{0}", lst.Count + 1);
+        }
+        if (idxTaskAssignmentRowSelect <= 0)
+        {
+            listTaskDetailedInfo.Add(new TaskDetailedInfo()
+                {
+                    SrNo = listTaskDetailedInfo.Count + 1,
+                    DocNo = listTaskDetailedInfo[0].DocNo,
+                    UserID = userDropDownValue,
+                    UserName = State.dataFile.GetUserName(userDropDownValue),
+                    NoPages = listTaskDetailedInfo[0].NoPages,
+                    PagesSubmitted = 0,
+                    Task = task,
+                    StartDate = "",
+                    LastUpdate = "",
+                    CorrectionCount = 0,
+                    Status = ""
+                });
+        }
+        else
+        {
+            listTaskDetailedInfo.Insert(idxTaskAssignmentRowSelect, new TaskDetailedInfo()
+                {
+                    SrNo = idxTaskAssignmentRowSelect + 1,
+                    DocNo = listTaskDetailedInfo[0].DocNo,
+                    UserID = userDropDownValue,
+                    UserName = State.dataFile.GetUserName(userDropDownValue),
+                    NoPages = "371-383 (399)", //listTaskDetailedInfo[0].NoPages,
+                    PagesSubmitted = 0,
+                    Task = task,
+                    StartDate = "",
+                    LastUpdate = "",
+                    CorrectionCount = 0,
+                    Status = ""
+                });
+            for(int i = idxTaskAssignmentRowSelect + 1; i < listTaskDetailedInfo.Count; i++)
+            {
+                ++listTaskDetailedInfo[i].SrNo;
+            }
+            idxTaskAssignmentRowSelect = -1;
+        }
+        TaskDetailedInfoRecords = listTaskDetailedInfo;
+    }
+    //********************************
+    //******** SaveTaskClick()
+    //**https://www.newtonsoft.com/json/help/html/DeserializeObject.htm*/
+    //********************************
+    private void SaveTaskClick()
+    {
+        List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>();
+        // save task assignment info
+        string userTaskAssignments = "";
+        string docNo = TaskDetailedInfoRecords[0].DocNo;
+        DateTime dt = (DateTime)DateValue;
+        TaskDetailedInfoRecords[0].LastUpdate = String.Format("{0}/{1}/{2}", dt.Day, dt.Month, dt.Year);
+        List<string> teamMembers = new List<string>();
+        string key;
+        foreach (var item in TaskDetailedInfoRecords)
+        {
+            if (item.Status.Length == 0) item.Status = "Assigned";
+            if (item.PagesSubmitted == null) item.PagesSubmitted = 0;
+            userTaskAssignments = State.dataFile.UserTaskAssignment(userTaskAssignments, item.UserID, item.Task,
+                                  item.StartDate, item.LastUpdate, (int)item.PagesSubmitted, item.Status);
+            // prepare for NewtonSoft Json lib
+            key = item.Task == "NewDoc" ? "Create" : item.Task;
+            dictUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                {
+                    userID = item.UserID,
+                    task = item.Task,
+                    startDate = item.StartDate,
+                    lastDate = item.LastUpdate,
+                    submitted = (int)item.PagesSubmitted,
+                    corrections = 0,
+                    status = item.Status
+                });
+            teamMembers.Add(State.dataFile.GetUserName(item.UserID));
+        }
+        // SerializeObject to string using NewtonSoft Json
+        userTaskAssignments = JsonConvert.SerializeObject(dictUserTaskProgressInfo);
+        TaskAssignmentInfo taskAssignmentInfo = new TaskAssignmentInfo()
+            {
+                RowKey = docNo,
+                PagesSubmitted = 0,
+                AssigneeProgress = userTaskAssignments,
+                StartDate = TaskDetailedInfoRecords[0].StartDate,
+                LastDate = TaskDetailedInfoRecords[0].LastUpdate,
+                CorrectionCount = 0,
+                Status = TaskCategories._Assigned_,
+            };
+        // update screens
+        string team = String.Join(", ", teamMembers);
+        if (idxTaskRowSelect >= 0)
+        {
+            var newlist = TaskInfoRecords.ToList();
+            newlist[idxTaskRowSelect].Status = TaskCategories._Assigned_;
+            newlist[idxTaskRowSelect].Team = team;
+            TaskInfoRecords = newlist;
+            sfgrid.SelectRow(idxTaskRowSelect);
+        }
+        if (State.dataFile != null)
+        {
+            taskAssignmentInfo.Status = TaskCategories._Assigned_;
+            // user and doc will be updated to KeyValueData
+            State.dataFile.UpdateTaskAssignmentInfo(taskAssignmentInfo, docNo);
+            // Update suttaInfo
+            State.dataFile.UpdateSuttaInfo(docNo, TaskCategories._Assigned_, team);
+            State.dataFile.AddActivityLog(email, "Task", String.Format("{0} task assigned.", docNo));
+            //                int percentage = (int)(((float)totalSubmittedPages / (float)pages) * 100);
+            string[] pgNos = State.dataFile.ParsePageInfo(TaskDetailedInfoRecords[0].NoPages);
+            State.dataFile.AddTaskActivityLog(docNo, email, "Assignment", 
+                    (pgNos.Length == 3) ? Int32.Parse(pgNos[2]) : 0, 
+                    0, 0, "Team = " + team);
+            var userList = dictUserTaskProgressInfo.Select(r=>r.userID).ToList();
+            userList.RemoveAt(0);
+            ClientKeyValueData clientKeyValueData = State.dataFile.GetClientKeyValueData();
+            if (clientKeyValueData != null) 
+            {
+                clientKeyValueData.AddUserTask(userList.ToArray(), docNo);
+                clientKeyValueData.AddUserDocByCategory("admin", TaskCategories._Recent_, docNo);
+                clientKeyValueData.AddUserDocByCategory(userList.ToArray(), TaskCategories._Assigned_, docNo);
+            }
+        }
+    }
+    /************************************************************************************/
+    //******** Grid events
+    /************************************************************************************/
+    public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args != null)
+        {
+            if (args.Item.Text.Equals("Add") && State.dataFile !=  null)
+            {
+                IsVisible_NewDocInfo = true;
+                if (newSuttaList.Count == 0)
+                {
+                    newSuttaList = State.dataFile.GetSuttaList("100");
+                    int n = 0;
+                    foreach(SuttaInfo suttaInfo in newSuttaList)
+                    {
+                        //string s = String.Format("{0} ({1})", suttaInfo.RowKey, suttaInfo.Title)
+                        listDocs.Add(new DataItem()
+                        {
+                            ID = String.Format("{0}. {1}", ++n, suttaInfo.RowKey),
+                            Text = String.Format("{0} ({1})", suttaInfo.RowKey, suttaInfo.Title)
+                        });
+                    }
+                }
+                args.Cancel = true;
+            }
+            if (args.Item.Text.Equals("Edit"))
+            {
+                IsVisible_NewDocInfo = true;
+                args.Cancel = true;
+            }
+            if (args.Item.Text.Equals("Delete"))
+            {
+                // TaskDetailedInfoRecords
+                IsVisible_NewDocInfo = false;
+                // args.Cancel = true;
+            }
+        }
+    }
+    //********************************
+    //******** RowSelectHandler()
+    //********************************
+    public void RowSelectHandler(RowSelectEventArgs<TaskInfo> args)
+    {
+        if (State.dataFile == null) return;
+        TaskInfo taskInfo = args.Data;
+        idxTaskRowSelect = args.RowIndex;
+        //TaskInfo taskInfo = listTaskInfo[taskInfo.SrNo];
+        TaskAssignmentInfo taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(taskInfo.DocNo);
+        if (taskAssignmentInfo.LastDate.Length > 0) 
+        {
+            string[] dd = taskAssignmentInfo.LastDate.Split('/');
+            DateValue = new DateTime(Int32.Parse(dd[2]), Int32.Parse(dd[1]), Int32.Parse(dd[0]));
+        }
+        List<TaskDetailedInfo> taskDetailedInfo = new List<TaskDetailedInfo>();
+        //**********************************************************/
+        //**** Parse Assignee Progress using Json Method ***********/
+        var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+        //**********************************************************/
+        int reviewNo = 0; string status = "";
+        int correctionCount = 0;
+        bool dataComplete = false;
+        overdueLabel = "";
+        overdueDay = "";
+        foreach (UserTaskProgressInfo t in listUserTaskInfo)
+        {
+            status = State.dataFile.GetTaskStatus(taskAssignmentInfo, t);
+            if (status == "Review")
+            {
+                status = String.Format("Review{0}", ++reviewNo);
+            }
+            taskDetailedInfo.Add(new TaskDetailedInfo()
+                {
+                    SrNo = taskDetailedInfo.Count + 1,
+                    DocNo = taskInfo.DocNo,
+                    UserID = t.userID,
+                    UserName = State.dataFile.GetUserName(t.userID),
+                    NoPages = taskInfo.Pages,
+                    Task = t.task,
+                    StartDate = t.startDate, //DateTime.Now.ToString("d/M/yyyy"),
+                    LastUpdate = t.lastDate,
+                    PagesSubmitted = t.submitted,
+                    CorrectionCount = t.corrections,
+                    Status = status
+                });
+            correctionCount += t.corrections;
+        }
+        SourceBookLabel = "Source Book : ";
+        sourcePDF = State.dataFile.GetSourceBook(taskInfo.DocNo);
+        taskDetailedInfo[0].LastUpdate = taskAssignmentInfo.LastDate;
+        taskDetailedInfo[0].PagesSubmitted = null;
+        taskDetailedInfo[0].CorrectionCount = (correctionCount > 0) ? correctionCount : null;
+        TaskDetailedInfoRecords = taskDetailedInfo;
+        CalculateDaysFromDueDate();
+
+        ClientCorrectionLog clientCorrectionLog = State.dataFile.GetClientCorrectionLog();
+        List<CorrectionInfo> corrections = new List<CorrectionInfo>();
+        List<CorrectionLog> correctionLog = new List<CorrectionLog>();
+        CorrectionInfoRecords.Clear();
+        if (clientCorrectionLog != null)
+        {
+            correctionLog = clientCorrectionLog.QueryCorrections(taskInfo.DocNo);
+            if (correctionLog != null)
+            {
+                int srno = 0;
+                foreach(CorrectionLog item in correctionLog)
+                {
+                    corrections.Add(new CorrectionInfo()
+                    {
+                        SrNo = ++srno,
+                        DocNo = taskInfo.DocNo,
+                        AssignedTo = State.dataFile.GetUserName(item.UserID),
+                        Task = item.Task,
+                        PageNo = item.PageNo,
+                        NISField = item.NISRec,
+                        BeforeEdit = item.OrigText,
+                        AfterEdit = item.EditedText,
+                        //Date = item.Timestamp.ToString("d'/'M'/'yyyy")
+                    });
+                }
+                CorrectionInfoRecords = corrections;
+                nCorrections = corrections.Count;
+            }
+        }
+        beforeEdit = "";
+        afterEdit = "";
+    }
+    void CalculateDaysFromDueDate()
+    {
+        if (TaskDetailedInfoRecords.Count == 0 || TaskDetailedInfoRecords[0].LastUpdate.Length == 0) return;
+        DateTime? dt1 = null, dt2 = null;
+        int days = 0;
+        string[] f1 = TaskDetailedInfoRecords[0].LastUpdate.Split("/");
+        if (f1.Length == 3)
+        {
+            dt1 = new DateTime(Int32.Parse(f1[2]), Int32.Parse(f1[1]), Int32.Parse(f1[0]), 0, 0, 0);
+        }
+        TaskDetailedInfo lastTaskDetailedInfo = TaskDetailedInfoRecords[TaskDetailedInfoRecords.Count - 1];
+        if (lastTaskDetailedInfo.Status == "Completed")
+        {
+            string[] f2 = lastTaskDetailedInfo.LastUpdate.Split("/");
+            dt2 = new DateTime(Int32.Parse(f2[2]), Int32.Parse(f2[1]), Int32.Parse(f2[0]), 0, 0, 0);
+        }
+        else
+        {
+            dt2 = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+        }
+        
+        if (dt1 != null && dt2 != null)
+        {
+            if (dt2 < dt1) //dt2 = ((DateTime)dt2).AddDays(-1);
+            {
+                days = (int)((DateTime)dt1 - (DateTime)dt2).TotalDays;
+                overdueLabel = "Days to due date : ";
+                overdueDay = String.Format("{0}", days);
+            }
+            else
+            {
+                days = (int)((DateTime)dt2 - (DateTime)dt1).TotalDays;
+                overdueLabel = "Days past due date : ";
+                overdueDay = String.Format("{0}{1}", (days > 0) ? "+" : "", days);
+            }
+        }
+        return;
+    }
+    public void DatePickerValueChangeHandler(ChangedEventArgs<DateTime?> args)
+    {
+        // Here, you can customize your code.
+        DateTime? dt = null; //args.Value;
+    }
+    //****************************************************************
+    //******** RowSelectHandlerTaskAssignment()
+    //****************************************************************
+    public void RowSelectHandlerTaskAssignment(RowSelectEventArgs<TaskDetailedInfo> args)
+    {
+        if (State.dataFile == null) return;
+        TaskDetailedInfo taskDetailedInfo = args.Data;
+        idxTaskAssignmentRowSelect = args.RowIndex;
+    }
+    private void ActionCompleteUser(ActionEventArgs<TaskDetailedInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            TaskDetailedInfo taskDetailedInfo = args.Data;
+            //dataFile.DelNISRecord(page_No, nis);
+        }
+    }
+    public void RowSelectHandlerCorrectionGrid(RowSelectEventArgs<CorrectionInfo> args)
+    {
+        CorrectionInfo correctionInfo = args.Data;
+        beforeEdit = correctionInfo.BeforeEdit;
+        afterEdit = correctionInfo.AfterEdit;
+    }
+}

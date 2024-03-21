@@ -9,47 +9,88 @@ namespace Tipitaka_DB
         //*** ClientActivityLog
         //*******************************************************************
         public ClientActivityLog() : base(_ActivityLog_) { }
+        const string _timeFormat_ = "yyyy-MM-ddTHH:mm:ss.ffff";
         //*******************************************************************
         //*** Add Activity Log
         //*******************************************************************
-        public void AddActivityLog(string userID, string DocID, string activity, int startPage, int endPage)
+        public void AddActivityLog(string userID, string activity, string desc)
         {
-            string rowKey = userID + "-" + DocID;
+            string rowKey = DateTime.UtcNow.ToString(_timeFormat_);
 
             ActivityLog activityLog = new ActivityLog()
             {
                 PartitionKey = "ActivityLog",
                 RowKey = rowKey,
-                DocID = DocID,
+                UserID = userID,
                 Activity = activity,
-                PageRanges = string.Format("{0}-{1}", startPage, endPage),
-                Pages = endPage - startPage + 1
+                Description = desc,
             };
             InsertTableRec(activityLog).Wait();
         }
         //*******************************************************************
         //*** GetActivities
         //*******************************************************************
-        public List<string> GetActivities(string userID = "", DateTime? date1 = null, DateTime? date2 = null)
+        public List<ActivityLog> GetActivities(DateTime date1, DateTime date2)
         {
-            List<string> activities = new List<string>();
+            List<ActivityLog> activities = new List<ActivityLog>();
             string query = string.Empty;
-            if (userID.Length > 0)
-            {
-                query += String.Format(" and (UserID eq '{0}')", userID);
-            }
-            if (date1 != null && date2 != null) 
-            { 
-                string s = "";
-                string[] f = s.Split('|');
-                if (f.Length >= 2)
-                {
-                    query += String.Format(" and (RowKey ge '{0}') and (RowKey lt '{1}')", f[0], f[1]);
-                }
-            }
+ 
+            string d1 = date1.ToString(_timeFormat_);
+            string d2 = date2.ToString(_timeFormat_);
+            query += String.Format("(RowKey ge '{0}') and (RowKey lt '{1}')", d1, d2);
+
             QueryTableRec(query).Wait();
-            activities = (List<string>)objResult;
+            activities = (List<ActivityLog>)objResult;
+            activities.Reverse();
             return activities;
+        }
+        //*******************************************************************
+        //*** Delete Activities
+        //*******************************************************************
+        const string _CleanUp_ = "CleanUp";
+        public void DeleteOldActivities(string userID, string userName)
+        {
+            if (HasOldActivitiesDeleted()) return;
+            const int daysRetained = 7;
+            string todayUTC = DateTime.UtcNow.ToString("yyyy-MM-ddT00:00:00.0000");
+            string pastDay7UTC = DateTime.UtcNow.AddDays(-daysRetained).ToString("yyyy-MM-ddT00:00:00.0000");
+            //string checkUTC = todayUTC;
+
+            string query = String.Format("RowKey lt '{0}'", pastDay7UTC);
+            QueryTableRec(query).Wait();
+            List<ActivityLog> activities = (List<ActivityLog>)objResult;
+            if (activities.Count > 0)
+            {
+                DeleteTableRecBatch(objResult).Wait();
+                AddActivityLog(userID, _CleanUp_, String.Format("Deleted {0} old activities.", activities.Count));
+            }
+            return;
+        }
+        //*******************************************************************
+        //*** Delete Activities
+        //*******************************************************************
+        public bool HasOldActivitiesDeleted()
+        {
+            string todayUTC = DateTime.UtcNow.ToString("yyyy-MM-dd");
+            string nextdayUTC = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
+            string qualifier = String.Format("(RowKey gt '{0}') and (RowKey lt '{1}') and (Activity eq '{2}')", todayUTC, nextdayUTC, _CleanUp_);
+            QueryTableRec(qualifier).Wait();
+            List<ActivityLog> listActivities = (List<ActivityLog>)objResult;
+            return listActivities.Count == 1 ? true : false;
+        }
+        public void AddTestData()
+        {
+            DateTime todayUTC = DateTime.UtcNow;
+            ActivityLog activityLog = new ActivityLog();
+            for(int i = 0; i < 10; i++) 
+            {
+                todayUTC = todayUTC.AddDays(-1);
+                activityLog.RowKey = todayUTC.ToString("yyyy-MM-dd");
+                activityLog.UserID = "auzm2002@yahoo.com";
+                activityLog.Activity = "TestData";
+                activityLog.Description = "To be deleted";
+                InsertTableRec(activityLog).Wait();
+            }
         }
     }
 }

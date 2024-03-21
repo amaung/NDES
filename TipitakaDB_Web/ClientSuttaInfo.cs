@@ -21,6 +21,17 @@ namespace Tipitaka_DB
                 UpdateTableRec(newSuttaInfo).Wait();
             }
         }
+        public void UpdateSuttaInfo(string docNo, string status, string team)
+        {
+            RetrieveTableRec(docNo).Wait();
+            if (StatusCode == 200)
+            {
+                SuttaInfo newSuttaInfo = (SuttaInfo)objResult;
+                newSuttaInfo.Status = status;
+                newSuttaInfo.Team = team;
+                UpdateTableRec(newSuttaInfo).Wait();
+            }
+        }
         public SuttaInfo? GetSuttaInfo(string rowKey)
         {
             SuttaInfo? newSuttaInfo = null;
@@ -35,11 +46,11 @@ namespace Tipitaka_DB
         {
             DeleteTableRec(suttaInfo).Wait();
         }
-        public List<SuttaInfo> QuerySuttaInfo(string suttaType)
+        public List<SuttaInfo> QuerySuttaInfo(string query)
         {
             List<SuttaInfo> list = new List<SuttaInfo>();
-            string rowKey = string.Format("RowKey ge '{0}' and RowKey le '{0}z'", suttaType);
-            QueryTableRec(rowKey).Wait();
+            //string rowKey = string.Format("RowKey ge '{0}' and RowKey le '{0}z'", suttaType);
+            QueryTableRec(query).Wait();
             list = (List<SuttaInfo>)objResult;
             return list;
         }

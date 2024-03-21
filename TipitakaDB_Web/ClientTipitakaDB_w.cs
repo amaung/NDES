@@ -9,12 +9,12 @@ namespace Tipitaka_DB
         ClientUserProfile clientUserProfile;
         ClientActivityLog clientActivityLog;
         ClientSuttaInfo clientSuttaInfo;
-        //ClientSuttaPageAssignment clientSuttaAssignment;
-        //ClientMessageLog clientMessageLog;
-        //ClientFileStorage clientFileStorage;
+        ClientTaskAssignmentInfo clientTaskAssignmentInfo;
+        ClientTaskActivityLog clientTaskActivityLog;
+        ClientSourceBookInfo clientSourceBookInfo;
         ClientSuttaPageData clientSuttaPageData;
         ClientUserPageActivity clientUserPageActivity;
-        //ClientUpdateHistory clientUpdateHistory;
+        ClientCorrectionLog clientCorrectionLog;
         ClientKeyValueData clientKeyValueData;
         //public UserProfile? loggedinUser = null;
 
@@ -22,25 +22,29 @@ namespace Tipitaka_DB
         public ClientUserProfile GetClientUserProfile() { return clientUserProfile; }
         public ClientActivityLog GetClientActivityLog() { return clientActivityLog; }
         public ClientSuttaInfo GetClientSuttaInfo() { return clientSuttaInfo; }
-        //public ClientSuttaPageAssignment GetClientSuttaAssignment() { return clientSuttaAssignment; }
-        //public ClientMessageLog GetClientMessageLog() { return clientMessageLog; }
+        public ClientTaskAssignmentInfo GetClientTaskAssignmentInfo() { return clientTaskAssignmentInfo; }
+        public ClientTaskActivityLog GetClientTaskActivityLog() { return clientTaskActivityLog; }
         ////public ClientFileStorage GetClientFileStorage() { return clientFileStorage; }
         public ClientSuttaPageData GetClientSuttaPageData() { return clientSuttaPageData; }
         public ClientUserPageActivity GetClientUserPageActivity() { return clientUserPageActivity; }
         //public ClientUpdateHistory GetClientUpdateHistory() {  return clientUpdateHistory; }
         public ClientKeyValueData GetClientKeyValueData() { return clientKeyValueData; }
+        public ClientSourceBookInfo GetClientSourceBookInfo() { return clientSourceBookInfo; }
+        public ClientCorrectionLog GetClientCorrectionLog() { return clientCorrectionLog; }
         public ClientTipitakaDB_w() : base("TipitakaDB")
         {
             //clientTipitakaDBLogin = new ClientTipitakaDBLogin();
             clientUserProfile = new ClientUserProfile();
             clientActivityLog = new ClientActivityLog();
             clientSuttaInfo = new ClientSuttaInfo();
-            //clientSuttaAssignment = new ClientSuttaPageAssignment();
-            //clientMessageLog = new ClientMessageLog();
+            clientTaskAssignmentInfo = new ClientTaskAssignmentInfo();
+            clientTaskActivityLog = new ClientTaskActivityLog();
             clientSuttaPageData = new ClientSuttaPageData(this);
             clientUserPageActivity = new ClientUserPageActivity();
-            //clientUpdateHistory = new ClientUpdateHistory(this);
+            clientSourceBookInfo = new ClientSourceBookInfo(this);
             clientKeyValueData = new ClientKeyValueData(this);
+            clientSourceBookInfo = new ClientSourceBookInfo(this);
+            clientCorrectionLog = new ClientCorrectionLog();
         }
         public void Login(string userID, string password, string userClass)
         {

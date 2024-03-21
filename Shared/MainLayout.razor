@@ -1,10 +1,12 @@
 ﻿@inherits LayoutComponentBase
 @inject IJSRuntime JS
+
 @using Syncfusion.Blazor.Navigations
 @using System.Timers
+
 @inject NavigationManager UriHelper
 
-<PageTitle>NissayaEditor_Web</PageTitle>
+<PageTitle>Nissaya Data Entry System</PageTitle>
 
 <Syncfusion.Blazor.Popups.SfDialogProvider />
 
@@ -224,13 +226,13 @@
     [CascadingParameter]
     private Task<AuthenticationState> stateAuthenticate { get; set; }
     private Timer timerObj;
-
     protected override async Task OnAfterRenderAsync(bool firstRender) //OnInitializedAsync()
     {
         if (firstRender)
         {
             // Set the Timer delay.
-            timerObj = new Timer(1800000); // 30 mins = 30 * 60 * 1000 milliseconds
+            int idleTimeLimit = 30;
+            timerObj = new Timer(idleTimeLimit * 60000); // 30 mins = 30 * 60 * 1000 milliseconds = 1800000
             timerObj.Elapsed += UpdateTimer;
             timerObj.AutoReset = false;
             // Identify whether the user is active or inactive using onmousemove and onkeypress in JS function.
@@ -259,12 +261,10 @@
                 var authstate = await stateAuthenticate;
                 if (authstate.User.Identity.IsAuthenticated)
                 {
-                    // UriHelper.NavigateTo("logout", true);
                     UriHelper.NavigateTo("/", true);
                 }
             }
-            else 
-                UriHelper.NavigateTo("/", true);
+            else UriHelper.NavigateTo("/", true);
         });
     }
  }

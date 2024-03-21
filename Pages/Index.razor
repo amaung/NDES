@@ -24,10 +24,11 @@
     <link href="https://cdn.syncfusion.com/blazor/23.1.36/styles/bootstrap5.css" rel="stylesheet" />
     <script src="_content/Syncfusion.Blazor.Core/scripts/syncfusion-blazor.min.js" type="text/javascript"></script>
 </head>
+<PageTitle>Nissaya Data Entry System</PageTitle>
 <body id="maincontainer" style="background-color:#f7f0df">
     <br />
     <h3 class="pageheader">Welcome to the Nissaya Data Entry System!</h3>
-    <h5>Version Alpha 0.1.0</h5>
+    <h5>Version Alpha 0.2</h5>
     <br />
     <h6><em>@ServerStorage</em></h6>
     <br />
@@ -38,17 +39,17 @@
                 <h5>LOGIN</h5>
                 <br/>
                 <div class="row" style="width:100%">
-                    <div style="width:320px;margin-left:34%">
+                    <div style="width:320px;margin-left:35%">
                         <SfTextBox id="email" Type="InputType.Email" Placeholder="Email" @bind-Value="@email"></SfTextBox>
                     </div>
                 </div>
                 <br />
                 <div class="row" style="width:100%">
-                    <div style="width:320px;margin-left:34%">
+                    <div style="width:320px;margin-left:35%">
                         <SfTextBox ID="passcode" Type="InputType.Password" Placeholder="Product code" @bind-Value="@passcode"></SfTextBox>
                     </div>
                 </div>
-                <div class="btn" style="margin-left:46%">
+                <div class="btn" style="margin-left:44%">
                     <SfButton IsPrimary="true" @onclick="Login">Enter</SfButton>
                 </div>
             </div>
@@ -69,17 +70,22 @@
     @* <p>UserAgent = @UserAgent</p> *@
     @* <p>IPAddress = @IPAddress</p> *@
     <div>
-        <SfDialog Width="400px" MinHeight="300px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+        <SfDialog Width="500px" MinHeight="300px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
             <DialogTemplates>
-                <Header> User Name Required for Registration</Header>
+                <Header> Registration</Header>
                 <Content>
                     <div>
-                        <span>Your email is not in the system. Please enter your name for registration.</span>
+                        Your email is not in the system. Please enter your name for registration.
                     </div>
                     <div class="form-row">
                         <label for="user_name" class="col-form-label">User Name</label>
                         <SfTextBox ID="user_name" Input="@InputHandler" @bind-Value="@userName" CssClass="e-custom-height e-outline"></SfTextBox>
                     </div>
+                    <br />
+                    <div class="form-row">
+                        <label for="user_name" class="col-form-label">မြန်မာ အမည်</label>
+                        <SfTextBox ID="user_name" Input="@InputHandler" @bind-Value="@userName_M" CssClass="e-custom-height e-outline"></SfTextBox>
+                    </div>  
                     <div>
                         <p style="color:brown">@ErrMsg</p>
                     </div>
@@ -121,6 +127,7 @@
     button {
         border-radius: 10px;
         margin-top: 28px;
+        width:100px;
     }
 </style>
 <script type="text/javascript">
@@ -141,11 +148,12 @@
     private string userClass = "";
     bool IsVisible = false;
     string ErrMsg = "";
-    string userName = "";
+    string userName = "", userName_M = "";
     string checking = "hello";
     string ServerStorage = "";
     ClientTipitakaDB_w clientTipitakaDB;
     ClientUserProfile clientUserProfile;
+    ClientActivityLog clientActivityLog;
     // ClientSuttaInfo clientSuttaInfo;
     // ClientSuttaPageData clientSuttaPageData;
 
@@ -153,14 +161,17 @@
     {
         clientTipitakaDB = new ClientTipitakaDB_w();
         clientUserProfile = clientTipitakaDB.GetClientUserProfile();
+        clientActivityLog = clientTipitakaDB.GetClientActivityLog();
         State.clientTipitakaDB = clientTipitakaDB;
         checking = "Checking ...";
         this.VisibleSpinner = false;
         this.email = this.passcode = this.userClass = "";
+        if (State.screenID > 1 && clientActivityLog != null)
+            clientActivityLog.AddActivityLog(State.email, "Logout", State.userName);
         State.screenID = 0;
         //GetClientGeoLocation();
         JS.InvokeVoidAsync("setBrowserWindow", "");
-        ServerStorage = "Server : " + ((TipitakaDB_w.devModeDebug) ? "dystorage2021" : "tipitakadata2023");
+        ServerStorage = "Server Storage: " + ((TipitakaDB_w.devModeDebug) ? "dystorage2021" : "tipitakadata2023");
     }
     private void GetClientGeoLocation()
     {
@@ -240,9 +251,21 @@
         {
             userName = userProfile.Name_E;
             userClass = userProfile.UserClass;
+            userProfile.LoginCount++;
+            userProfile.LastDate = "";
             clientUserProfile.UpdateUserProfile(userProfile);
             State.screenID = 1;
-            NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+            State.userName = userName;
+            State.email = email;
+            State.userName_M = userProfile.Name_M;
+            if (clientActivityLog != null)
+                clientActivityLog.AddActivityLog(State.email, "Login", userName);
+            if (userClass == "U") NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+            else 
+            {
+                State.dataFile = new DataFile(clientTipitakaDB, email, userName);
+                NavManager.NavigateTo(String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass));
+            }
         }
     }
     private async Task AlertBtn(string msg, string warn)
@@ -254,6 +277,7 @@
     }
     private bool CheckValidEmailFormat(string email)
     {
+        email = email.ToLower();
         const string pattern = "^[^@\\s]+@[^@\\s]+\\.(com|net|org|gov)$";
         Match m = Regex.Match(email, pattern);
         if (m.Success) return true;
@@ -264,14 +288,16 @@
     }
     private void okClick(Microsoft.AspNetCore.Components.Web.MouseEventArgs args)
     {
-        if (userName.Trim().Length == 0)
+        if (userName.Trim().Length == 0 || userName_M.Trim().Length == 0)
         {
             ErrMsg = "Please enter user name.";
         }
         else
         {
             // register
-            clientUserProfile.AddUserProfile(email, userName);
+            State.email = email;
+            State.userName = userName;
+            clientUserProfile.AddUserProfile(email, userName, userName_M);
             UserProfile userProfile = clientUserProfile.GetUserProfile(email);
             IsVisible = false;
             //AlertBtn("You are now a registered user.", "Registration complete").Wait();

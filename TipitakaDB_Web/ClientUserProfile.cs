@@ -25,13 +25,15 @@ namespace Tipitaka_DB
         //*******************************************************************
         //*** Add new user profile
         //*******************************************************************
-        public UserProfile AddUserProfile(string email, string nameE, string nameM = "")
+        public UserProfile AddUserProfile(string email, string nameE, string nameM = "", string user_Class = "U", int loginCount = 1)
         {
             //string pid = GetPID();
             //string encrypt = Encrypt(pwd, pid);
             //string password = Encrypt(encrypt, pid, false);
-            string userClass = "U";
-            if (email == "heinsithuwin95@gmail.com" || email == "monksarana@gmail.com") userClass = "A";
+            string userClass = user_Class;
+            // special accounts
+            if (email == "heinsithuwin95@gmail.com") userClass = "P";
+            if (email == "monksarana@gmail.com") userClass = "A";
             if (email == "dhammayaungchi2011@gmail.com") userClass = "S";
             UserProfile userProfile = new UserProfile()
             {
@@ -39,12 +41,13 @@ namespace Tipitaka_DB
                 RowKey = email,
                 Name_E = nameE,
                 Name_M = nameM,
-                LoginCount = 1,
+                LoginCount = loginCount,
                 //Password = encrypt,
                 //PID = pid,
                 UserClass = userClass,
                 //Status = "Active",
                 JoinedDate = DateTime.Now.ToUniversalTime(),
+                LastDate = null
                 //Remarks = remarks,
             };
             userProfile.LastLogin = userProfile.JoinedDate;
@@ -57,9 +60,14 @@ namespace Tipitaka_DB
         //*******************************************************************
         public void UpdateUserProfile(UserProfile userProfile)
         {
-            userProfile.LastLogin = DateTime.Now.ToUniversalTime();
-            userProfile.LoginCount++;
-            UpdateTableRec(userProfile).Wait();
+            UserProfile? serverUserProfile = GetUserProfile(userProfile.RowKey);
+            if (serverUserProfile == null) return;
+            serverUserProfile.Name_E = userProfile.Name_E;
+            serverUserProfile.Name_M = userProfile.Name_M;
+            serverUserProfile.LoginCount = userProfile.LoginCount;
+            serverUserProfile.UserClass = userProfile.UserClass;
+            //serverUserProfile.LastDate = userProfile.LastDate;
+            UpdateTableRec(serverUserProfile).Wait();
             return;
         }
         //*******************************************************************
@@ -93,10 +101,11 @@ namespace Tipitaka_DB
         //*******************************************************************
         //*** Get users meeting given qaulifications
         //*******************************************************************
-        public List<UserProfile> GetAllUsers(bool inclDev = false)
+        public List<UserProfile> GetAllUsers(bool inclDev = true, bool active = true)
         {
             string qualifier = String.Empty;
-            if (!inclDev) qualifier += " and (UserClass ne 'D')";
+            if (!inclDev) qualifier += " and (UserClass ne 'S')";
+            if (active) qualifier += " and (LastDate eq '')";
             //qualifier += " and (Status eq 'Active')";
             QueryTableRec(qualifier).Wait();
             List<UserProfile> listUserProfile = (List<UserProfile>)objResult;

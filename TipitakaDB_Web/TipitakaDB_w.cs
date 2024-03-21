@@ -17,7 +17,7 @@ namespace Tipitaka_DB
         public string DBErrMsg = string.Empty;
         public object objResult = new object();
         public string ErrMsg = string.Empty;
-        public static bool devModeDebug = false;
+        public static bool devModeDebug = true;
         public TipitakaDB_w(string partitionKey)
         {
             try
@@ -93,10 +93,10 @@ namespace Tipitaka_DB
                             }
                         }
                         break;
-                    case "UserDocumentLog":
+                    case "TaskActivityLog":
                         if (tableClient != null)
                         {
-                            var result = await tableClient.GetEntityAsync<UserDocumentLog>(
+                            var result = await tableClient.GetEntityAsync<TaskActivityLog>(
                                 partitionKey: PartitionKey,
                                 rowKey: rowKey
                             ).ConfigureAwait(false);
@@ -138,25 +138,70 @@ namespace Tipitaka_DB
                             }
                         }
                         break;
-                    //    case "UpdateHistory":
-                    //        if (tableClient != null)
-                    //        {
-                    //            var result = await tableClient.GetEntityAsync<UpdateHistory>(
-                    //                rowKey: rowKey,
-                    //                partitionKey: PartitionKey
-                    //            ).ConfigureAwait(false);
+                    case "ActivityLog":
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.GetEntityAsync<ActivityLog>(
+                                rowKey: rowKey,
+                                partitionKey: PartitionKey
+                            ).ConfigureAwait(false);
 
-                    //            StatusCode = result.GetRawResponse().Status;
-                    //            if (StatusCode == 200)
-                    //            {
-                    //                obj = objResult = (object)result.Value;
-                    //            }
-                    //        }
-                    //        break;
+                            StatusCode = result.GetRawResponse().Status;
+                            if (StatusCode == 200)
+                            {
+                                obj = objResult = (object)result.Value;
+                            }
+                        }
+                        break;
                     case "KeyValueData":
                         if (tableClient != null)
                         {
                             var result = await tableClient.GetEntityAsync<KeyValueData>(
+                                rowKey: rowKey,
+                                partitionKey: PartitionKey
+                            ).ConfigureAwait(false);
+
+                            StatusCode = result.GetRawResponse().Status;
+                            if (StatusCode == 200)
+                            {
+                                obj = objResult = (object)result.Value;
+                            }
+                        }
+                        break;
+                    case "SourceBookInfo":
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.GetEntityAsync<SourceBookInfo>(
+                                rowKey: rowKey,
+                                partitionKey: PartitionKey
+                            ).ConfigureAwait(false);
+
+                            StatusCode = result.GetRawResponse().Status;
+                            if (StatusCode == 200)
+                            {
+                                obj = objResult = (object)result.Value;
+                            }
+                        }
+                        break;
+                    case "TaskAssignmentInfo":
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.GetEntityAsync<TaskAssignmentInfo>(
+                                rowKey: rowKey,
+                                partitionKey: PartitionKey
+                            ).ConfigureAwait(false);
+
+                            StatusCode = result.GetRawResponse().Status;
+                            if (StatusCode == 200)
+                            {
+                                obj = objResult = (object)result.Value;
+                            }
+                        }
+                        break;
+                    case "CorrectionLog":
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.GetEntityAsync<CorrectionLog>(
                                 rowKey: rowKey,
                                 partitionKey: PartitionKey
                             ).ConfigureAwait(false);
@@ -210,21 +255,18 @@ namespace Tipitaka_DB
                         //https://learn.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022
                         if (tableClient != null)
                         {
+                            List<ActivityLog> listActivities = new List<ActivityLog>();
                             string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
-                            if (qualifier != null && qualifier.Length > 0) filter += qualifier;
+                            if (qualifier != null && qualifier.Length > 0) filter += String.Format(" and ({0})", qualifier);
                             token = null;
                             var pages = tableClient.QueryAsync<ActivityLog>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
                             await foreach (var page in pages)
                             {
-                                List<ActivityLog> listActivities = page.Values.ToList();
-                                foreach (var activityLog in listActivities)
-                                {
-                                    listObj.Add(string.Format("{0}|{1}|{2}", activityLog.RowKey, activityLog.DocID, activityLog.Activity));
-                                }
+                                listActivities.AddRange(page.Values.ToList());
                                 token = page.ContinuationToken; // usage ?
                             }
-                            listObj.Reverse();
-                            objResult = (object)listObj;
+                            //listObj.Reverse();
+                            objResult = (object)listActivities;
                         }
                         break;
                     case "SuttaInfo":
@@ -282,17 +324,86 @@ namespace Tipitaka_DB
                             if (callback != null) callback(listSuttaPageData);
                         }
                         break;
-                        //    case "KeyValueData":
-                        //        List<KeyValueData> listKeyValueData = new List<KeyValueData>();
-                        //        if (tableClient != null)
-                        //        {
-                        //            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
-                        //            if (qualifier.Length > 0) { filter += " and " + qualifier; }
-                        //            var listKVD = tableClient.Query<KeyValueData>(filter);
-                        //            listKeyValueData = (List<KeyValueData>)listKVD.ToList();
-                        //            objResult = (object)listKeyValueData;
-                        //        }
-                        //        break;
+                    case "KeyValueData":
+                        List<KeyValueData> listKeyValueData = new List<KeyValueData>();
+                        if (tableClient != null)
+                        {
+                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            if (qualifier.Length > 0) { filter += " and " + qualifier; }
+
+                            var pages = tableClient.QueryAsync<KeyValueData>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                            await foreach (var page in pages)
+                            {
+                                listKeyValueData.AddRange(page.Values.ToList());
+                                token = page.ContinuationToken;
+                            }
+                            objResult = (object)listKeyValueData;
+                        }
+                        break;
+                    case "SourceBookInfo":
+                        List<SourceBookInfo> listSourceBookInfo = new List<SourceBookInfo>();
+                        if (tableClient != null)
+                        {
+                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            if (qualifier.Length > 0) { filter += " and " + qualifier; }
+
+                            var pages = tableClient.QueryAsync<SourceBookInfo>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                            await foreach (var page in pages)
+                            {
+                                listSourceBookInfo.AddRange(page.Values.ToList());
+                                token = page.ContinuationToken;
+                            }
+                            objResult = (object)listSourceBookInfo;
+                        }
+                        break;
+                    case "TaskAssignmentInfo":
+                        List<TaskAssignmentInfo> listTaskAssignmentInfo = new List<TaskAssignmentInfo>();
+                        if (tableClient != null)
+                        {
+                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            if (qualifier.Length > 0) { filter += " and " + qualifier; }
+
+                            var pages = tableClient.QueryAsync<TaskAssignmentInfo>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                            await foreach (var page in pages)
+                            {
+                                listTaskAssignmentInfo.AddRange(page.Values.ToList());
+                                token = page.ContinuationToken;
+                            }
+                            objResult = (object)listTaskAssignmentInfo;
+                        }
+                        break;
+                    case "CorrectionLog":
+                        List<CorrectionLog> listCorrectionLog = new List<CorrectionLog>();
+                        if (tableClient != null)
+                        {
+                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            if (qualifier.Length > 0) { filter += " and " + qualifier; }
+
+                            var pages = tableClient.QueryAsync<CorrectionLog>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                            await foreach (var page in pages)
+                            {
+                                listCorrectionLog.AddRange(page.Values.ToList());
+                                token = page.ContinuationToken;
+                            }
+                            objResult = (object)listCorrectionLog;
+                        }
+                        break;
+                    case "TaskActivityLog":
+                        List<TaskActivityLog> listTaskActivityLog = new List<TaskActivityLog>();
+                        if (tableClient != null)
+                        {
+                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            if (qualifier.Length > 0) { filter += " and " + qualifier; }
+
+                            var pages = tableClient.QueryAsync<TaskActivityLog>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                            await foreach (var page in pages)
+                            {
+                                listTaskActivityLog.AddRange(page.Values.ToList());
+                                token = page.ContinuationToken;
+                            }
+                            objResult = (object)listTaskActivityLog;
+                        }
+                        break;
                 }
                 return objResult;
             }
@@ -326,44 +437,6 @@ namespace Tipitaka_DB
         //*** Add table records in a batch
         //*******************************************************************
         // https://stackoverflow.com/questions/77082662/inserting-batches-in-azure-table-storage-using-the-azure-data-tables-sdk-does-no
-        public async Task<object> InsertTableRecBatch(List<SuttaPageData> obj)
-        {
-            if (tableClient != null)
-            {
-                var transactionActions = new List<TableTransactionAction>();
-                try
-                {
-                    int n = 0;
-                    foreach(SuttaPageData data in obj)
-                    {
-                        ++n;
-                        if (SubPartitionKey.Length > 0) data.PartitionKey = SubPartitionKey;
-                        transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, data));
-                        if (n == 100)
-                        {
-                            var result = await tableClient.SubmitTransactionAsync(transactionActions);
-                            ProcessCatchErrorMessage(result.ToString().Split('\n'));
-                            if (StatusCode != 202) return obj;
-                            DBErrMsg = string.Empty;
-                            n = 0;
-                            transactionActions.Clear();
-                        }
-                    }
-                    if (n > 0)
-                    {
-                        var result = await tableClient.SubmitTransactionAsync(transactionActions);
-                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
-                        if (StatusCode == 202) DBErrMsg = string.Empty;
-                    }
-                }
-                catch (Exception e)
-                {
-                    ProcessCatchErrorMessage(e.Message.Split('\n'));
-                }
-
-            }
-            return obj;
-        }
         public async Task InsertTableRecBatch(string docID, string email, Dictionary<string, string> obj)
         {
             List<SuttaPageData> dataList = new List<SuttaPageData>();
@@ -379,6 +452,8 @@ namespace Tipitaka_DB
                     PageNo = Convert.ToInt16(item.Key),
                     PageData = item.Value,
                     UserID = email,
+                    NISRecCount = item.Value.Count(f=> f == '*'),
+                    NISRecLen = item.Value.Length,
                 };
                 dataList.Add(pageData);
             };
@@ -394,7 +469,7 @@ namespace Tipitaka_DB
                         transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, data));
                         if (n == 100)
                         {
-                            var result = await tableClient.SubmitTransactionAsync(transactionActions);
+                            var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
                             ProcessCatchErrorMessage(result.ToString().Split('\n'));
                             if (StatusCode != 202) return;
                             DBErrMsg = string.Empty;
@@ -404,7 +479,100 @@ namespace Tipitaka_DB
                     }
                     if (n > 0)
                     {
-                        var result = await tableClient.SubmitTransactionAsync(transactionActions);
+                        var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                        if (StatusCode == 202) DBErrMsg = string.Empty;
+                    }
+                }
+                catch (Exception e)
+                {
+                    ProcessCatchErrorMessage(e.Message.Split('\n'));
+                }
+
+            }
+            return;
+        }
+        public async Task InsertSuttaInfoRecBatch(List<SuttaInfo> dataList)
+        {
+            if (tableClient != null)
+            {
+                var transactionActions = new List<TableTransactionAction>();
+                try
+                {
+                    int n = 0;
+                    foreach (SuttaInfo data in dataList)
+                    {
+                        ++n;
+                        transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, data));
+                        if (n == 100)
+                        {
+                            var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                            ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                            if (StatusCode != 202) return;
+                            DBErrMsg = string.Empty;
+                            n = 0;
+                            transactionActions.Clear();
+                        }
+                    }
+                    if (n > 0)
+                    {
+                        var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                        if (StatusCode == 202) DBErrMsg = string.Empty;
+                    }
+                }
+                catch (Exception e)
+                {
+                    ProcessCatchErrorMessage(e.Message.Split('\n'));
+                }
+
+            }
+            return;
+        }
+        public async Task InsertBatch(List<object> dataList)
+        {
+            if (tableClient != null)
+            {
+                var transactionActions = new List<TableTransactionAction>();
+                try
+                {
+                    int n = 0;
+                    ITableEntity entity = null;
+                    foreach (var data in dataList)
+                    {
+                        if (data != null)
+                        {
+                            switch(PartitionKey)
+                            {
+                                case "SuttaInfo":
+                                    entity = (SuttaInfo)data;
+                                    break;
+                                case "TaskAssignmentInfo":
+                                    entity = (TaskAssignmentInfo)data;
+                                    break;
+                                case "KeyValueData":
+                                    entity = (KeyValueData)data;
+                                    break;
+                                case "CorrectionLog":
+                                    entity = (CorrectionLog)data;
+                                    break;
+                            }
+                            ++n;
+                            transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, entity));
+                            if (n == 100)
+                            {
+                                var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                                ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                if (StatusCode != 202) return;
+                                DBErrMsg = string.Empty;
+                                n = 0;
+                                transactionActions.Clear();
+                            }
+                        }
+                    }
+                    if (n > 0)
+                    {
+                        var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
                         ProcessCatchErrorMessage(result.ToString().Split('\n'));
                         if (StatusCode == 202) DBErrMsg = string.Empty;
                     }
@@ -474,6 +642,30 @@ namespace Tipitaka_DB
                             StatusCode = result.Status;
                         }
                         break;
+                    case "SourceBookInfo":
+                        SourceBookInfo sourceBookInfo = (SourceBookInfo)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.AddEntityAsync<SourceBookInfo>(sourceBookInfo).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                        }
+                        break;
+                    case "TaskAssignmentInfo":
+                        TaskAssignmentInfo taskAssignmentInfo = (TaskAssignmentInfo)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.AddEntityAsync<TaskAssignmentInfo>(taskAssignmentInfo).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                        }
+                        break;
+                    case "TaskActivityLog":
+                        TaskActivityLog taskActivityLog = (TaskActivityLog)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.AddEntityAsync<TaskActivityLog>(taskActivityLog).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                        }
+                        break;
                 }
             }
             catch (Exception e)
@@ -536,11 +728,29 @@ namespace Tipitaka_DB
                             DBErrMsg = string.Empty;
                         }
                         break;
+                    case "SourceBookInfo":
+                        SourceBookInfo sourceBookInfo = (SourceBookInfo)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.UpdateEntityAsync(sourceBookInfo, sourceBookInfo.ETag).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
+                    case "TaskAssignmentInfo":
+                        TaskAssignmentInfo taskAssignmentInfo = (TaskAssignmentInfo)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.UpdateEntityAsync(taskAssignmentInfo, taskAssignmentInfo.ETag).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
                 }
             }
             catch (Exception e)
             {
-                //StatusCode = ProcessCatchErrorMessage(e.Message.Split('\n'));
+                ProcessCatchErrorMessage(e.Message.Split('\n'));
             }
             return;
         }
@@ -553,39 +763,92 @@ namespace Tipitaka_DB
             {
                 switch (PartitionKey)
                 {
-                    //case "UserProfile":
-                    //    UserProfile rec = (UserProfile)obj;
-                    //    rec.PartitionKey = PartitionKey;
-                    //    if (tableClient != null)
-                    //    {
-                    //        var result = await tableClient.DeleteEntityAsync(rec.PartitionKey, rec.RowKey).ConfigureAwait(false);
-                    //        StatusCode = result.Status;
-                    //        DBErrMsg = String.Empty;
-                    //    }
-                    //    break;
-                    //case "SuttaPageAssignment":
-                    //    SuttaPageAssignment sutta = (SuttaPageAssignment)obj;
-                    //    if (tableClient != null)
-                    //    {
-                    //        var result = await tableClient.DeleteEntityAsync(sutta.PartitionKey, sutta.RowKey).ConfigureAwait(false);
-                    //        StatusCode = result.Status;
-                    //        DBErrMsg = String.Empty;
-                    //    }
-                    //    break;
-                    //case "UserPageActivity":
-                    //    UserPageActivity userPageActivity = (UserPageActivity)obj;
-                    //    if (tableClient != null)
-                    //    {
-                    //        var result = await tableClient.DeleteEntityAsync(userPageActivity.PartitionKey, userPageActivity.RowKey).ConfigureAwait(false);
-                    //        StatusCode = result.Status;
-                    //        DBErrMsg = String.Empty;
-                    //    }
-                    //    break;
+                    case "UserProfile":
+                        UserProfile rec = (UserProfile)obj;
+                        rec.PartitionKey = PartitionKey;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.DeleteEntityAsync(rec.PartitionKey, rec.RowKey).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = String.Empty;
+                        }
+                        break;
+                    case "SuttaInfo":
+                        SuttaInfo suttaInfo = (SuttaInfo)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.DeleteEntityAsync(suttaInfo.PartitionKey, suttaInfo.RowKey).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = String.Empty;
+                        }
+                        break;
+                        //case "UserPageActivity":
+                        //    UserPageActivity userPageActivity = (UserPageActivity)obj;
+                        //    if (tableClient != null)
+                        //    {
+                        //        var result = await tableClient.DeleteEntityAsync(userPageActivity.PartitionKey, userPageActivity.RowKey).ConfigureAwait(false);
+                        //        StatusCode = result.Status;
+                        //        DBErrMsg = String.Empty;
+                        //    }
+                        //    break;
                 }
             }
             catch (Exception e)
             {
-                //StatusCode = ProcessCatchErrorMessage(e.Message.Split('\n'));
+                ProcessCatchErrorMessage(e.Message.Split('\n'));
+            }
+            return;
+        }
+        public async Task DeleteTableRecBatch(object obj)
+        {
+            if (tableClient != null)
+            {
+                try
+                {
+                    switch (PartitionKey)
+                    {
+                        case "UserProfile":
+                            //UserProfile userProfile = (UserProfile)obj;
+                            //if (tableClient != null)
+                            //{
+                            //    var result = await tableClient.AddEntityAsync<UserProfile>(userProfile).ConfigureAwait(false);
+                            //    StatusCode = result.Status;
+                            //}
+                            break;
+                        case "ActivityLog":
+                            List<ActivityLog> delList = (List<ActivityLog>)obj;
+                            var transactionActions = new List<TableTransactionAction>();
+                            int n = 0;
+                            if (delList != null)
+                            {
+                                foreach (var item in delList) //SuttaPageData data in dataList)
+                                {
+                                    ++n;
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (ActivityLog)item));
+                                    if (n == 100)
+                                    {
+                                        var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                        if (StatusCode != 202) return;
+                                        DBErrMsg = string.Empty;
+                                        n = 0;
+                                        transactionActions.Clear();
+                                    }
+                                }
+                                if (n > 0)
+                                {
+                                    var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                                    ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                    if (StatusCode == 202) DBErrMsg = string.Empty;
+                                }
+                            }
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    ProcessCatchErrorMessage(e.Message.Split('\n'));
+                }
             }
             return;
         }

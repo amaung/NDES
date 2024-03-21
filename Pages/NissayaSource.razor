@@ -1,0 +1,180 @@
+﻿@page "/nissaya_source/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
+<Administration componentName="NissayaSource" email=@email userName=@userName userClass=@userClass flex_width="550px">
+    <adminMenuItem>Nissaya Source Books</adminMenuItem>
+</Administration>
+<br/>
+<label style="font-size:16px; text-align:left">No. of Books = @noBooks</label>
+<label style="font-size:16px; margin-left:400px; width:250px; text-align:right">Total Pages: @totalPages</label>
+<br />
+@**************************** NissayaSource DataGrid ****************************@
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@NissayaBookRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="false" AllowTextWrap="true" Height="600" Width="800">
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="100"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(SourceBookInfo.RowKey) HeaderText="Book ID" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="10%" Type="ColumnType.Integer" DefaultValue=@GetSrNo() ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(SourceBookInfo.BookFilename) HeaderText="Book PDF File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="70%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(SourceBookInfo.DocCount) HeaderText="No Docs" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="10%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(SourceBookInfo.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="10%" Type="ColumnType.Integer"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+@************************* End of NissayaSource DataGrid *************************@
+
+@*********************** Button: Upload more source books ************************@
+<div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
+    @* hidden="@(!hide_file_browser)"*@
+    <SfButton OnClick="@UploadMoreBooks"> Upload More Books </SfButton>
+</div>
+@********************* End Button: Upload more source books **********************@
+
+@*************************** Upload more source books ****************************@
+<br />
+<div hidden="@hide_file_browser">
+    <SfUploader AutoUpload="true">
+        <UploaderEvents ValueChange="@OnFileUpload" OnCancel="@OnCancelHandler"></UploaderEvents>
+    </SfUploader>
+</div>
+@************************ End of Upload more source books ************************@
+
+@********************************** Grid styles **********************************@
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+
+    .e-grid .e-altrow {
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+</style>
+@****************************** End of Grid styles ******************************@
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    SfGrid<SourceBookInfo>? sfgrid;
+
+    string noBooks = "";
+    string totalPages = "";
+    bool hide_file_browser = true;
+
+    List<SourceBookInfo> NissayaBookRecords = new List<SourceBookInfo>();
+
+    protected override void OnInitialized()
+    {
+        PopulateGrid();
+    }
+    int srno = 0;
+    private int GetSrNo() { return ++srno; }
+    private void UploadMoreBooks()
+    {
+        hide_file_browser = false;
+    }
+    private void PopulateGrid()
+    {
+        int pages = 0;
+        int rowIndex = 0;
+        if (NissayaBookRecords.Count == 0)
+        {
+            SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
+            foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
+            {
+                NissayaBookRecords.Add(sourceBookInfo);
+                pages += sourceBookInfo.Pages;
+            }
+            noBooks = NissayaBookRecords.Count.ToString();
+            totalPages = pages.ToString();
+        }
+    }
+    private async Task PopulateGridAtImport()
+    {
+        int pages = 0;
+        int rowIndex = 0;
+        if (NissayaBookRecords.Count == 0)
+        {
+            SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
+            foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
+            {
+                await sfgrid.AddRecordAsync(sourceBookInfo, rowIndex++);
+                // NissayaBookRecords.Add(sourceBookInfo);
+                pages += sourceBookInfo.Pages;
+            }
+            noBooks = NissayaBookRecords.Count.ToString();
+            totalPages = pages.ToString();
+        }
+    }
+    private async Task OnFileUpload(UploadChangeEventArgs args)
+    {
+        try
+        {
+            foreach (var file in args.Files)
+            {
+                MemoryStream filestream = new MemoryStream();
+                await file.File.OpenReadStream(long.MaxValue).CopyToAsync(filestream);
+                var buffer = new byte[filestream.Length];
+                filestream.Read(buffer, 0, (int)filestream.Length);
+                string fileContent = buffer.ToString();
+                fileContent = System.Text.Encoding.UTF8.GetString(filestream.ToArray());
+                filestream.Close();
+                string[] recs = fileContent.Split("\r\n");
+                if (State.dataFile != null) 
+                {
+                    State.dataFile.AddSourceBookInfo(recs);
+                    //PopulateGridAtImport();
+                }
+            }
+            hide_file_browser = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+    private void OnCancelHandler(CancelEventArgs args)
+    {
+        hide_file_browser = true;
+    }
+}

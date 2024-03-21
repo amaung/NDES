@@ -24,46 +24,46 @@ namespace Tipitaka_DB
             //clientUserPageActivity = clientTipitakaDB.GetClientUserPageActivity();
         }
         //Dictionary<string, string>
-        public async Task UploadSutta(string userID, string docID, Dictionary<string, string> dataPages)
-        {
-            if (clientTipitakaDB == null) { return; }
-            var dataList = new List<SuttaPageData>();
-            SetSubPartitionKey(docID);
-            foreach (KeyValuePair<string, string> item in dataPages)
-            {
-                string pgnoKey = "00" + item.Key;
-                pgnoKey = pgnoKey.Substring(pgnoKey.Length-3);
-                var pageData = new SuttaPageData()
-                {
-                    //PartitionKey = docID,
-                    PageNo = Convert.ToInt16(item.Key),
-                    RowKey = string.Format("{0}-{1}", docID, pgnoKey),
-                    PageData = item.Value,
-                    UserID = userID,
-                };
-                dataList.Add(pageData);
-            };
-            await InsertTableRecBatch(dataList);
-        }
-        public async Task InsertSuttaPages(string userID, string docID, Dictionary<string, string> dataPages)
-        {
-            //InsertTableRec
-            if (clientTipitakaDB == null) { return; }
-            foreach (KeyValuePair<string, string> item in dataPages)
-            {
-                string pgnoKey = "00" + item.Key;
-                pgnoKey = pgnoKey.Substring(pgnoKey.Length - 3);
-                var pageData = new SuttaPageData()
-                {
-                    //PartitionKey = docID,
-                    PageNo = Convert.ToInt16(item.Key),
-                    RowKey = string.Format("{0}-{1}", docID, pgnoKey),
-                    PageData = item.Value,
-                    UserID = userID,
-                };
-                await InsertTableRec(pageData);
-            };
-        }
+        //public async Task UploadSutta(string userID, string docID, Dictionary<string, string> dataPages)
+        //{
+        //    if (clientTipitakaDB == null) { return; }
+        //    var dataList = new List<SuttaPageData>();
+        //    SetSubPartitionKey(docID);
+        //    foreach (KeyValuePair<string, string> item in dataPages)
+        //    {
+        //        string pgnoKey = "00" + item.Key;
+        //        pgnoKey = pgnoKey.Substring(pgnoKey.Length-3);
+        //        var pageData = new SuttaPageData()
+        //        {
+        //            //PartitionKey = docID,
+        //            PageNo = Convert.ToInt16(item.Key),
+        //            RowKey = string.Format("{0}-{1}", docID, pgnoKey),
+        //            PageData = item.Value,
+        //            UserID = userID,
+        //        };
+        //        dataList.Add(pageData);
+        //    };
+        //    await InsertTableRecBatch(dataList);
+        //}
+        //public async Task InsertSuttaPages(string userID, string docID, Dictionary<string, string> dataPages)
+        //{
+        //    //InsertTableRec
+        //    if (clientTipitakaDB == null) { return; }
+        //    foreach (KeyValuePair<string, string> item in dataPages)
+        //    {
+        //        string pgnoKey = "00" + item.Key;
+        //        pgnoKey = pgnoKey.Substring(pgnoKey.Length - 3);
+        //        var pageData = new SuttaPageData()
+        //        {
+        //            //PartitionKey = docID,
+        //            PageNo = Convert.ToInt16(item.Key),
+        //            RowKey = string.Format("{0}-{1}", docID, pgnoKey),
+        //            PageData = item.Value,
+        //            UserID = userID,
+        //        };
+        //        await InsertTableRec(pageData);
+        //    };
+        //}
         public int UpdateSuttaPageData(SuttaPageData suttaPageData)
         {
             UpdateTableRec(suttaPageData).Wait();

@@ -16,17 +16,19 @@
 @inject State State
 
 @namespace NissayaEditor_Web.Data
+@implements IDisposable;
 
 @* https://www.syncfusion.com/forums/160145/custom-delete-confirmation-dialog *@
 @* https://www.syncfusion.com/forums/173587/get-grid-selected-row-number-and-total-grid-rows-number *@
 @* https://www.syncfusion.com/faq/blazor/general/how-do-i-generate-and-save-a-file-client-side-using-blazor *@
-<PageTitle>Nissaya Data Entry System</PageTitle>
+<PageTitle>NDES</PageTitle>
 
 <body style="background-color:#f7f0df;">
     <script>
         function timeOutCall(dotnethelper) {
             document.onmousemove = resetTimeDelay;
             document.onkeypress = resetTimeDelay;
+            // document.onkeypress = resetTimeDelay;
 
             function resetTimeDelay() {
                 dotnethelper.invokeMethodAsync("TimerInterval");
@@ -43,7 +45,6 @@
     </div>
     <div style="width:100%; border: thin solid black;padding:8px 8px 8px" hidden="@hide_file_browser">
         <InputFile OnChange="@HandleFileSelection" />
-
     </div>
     <br />
 
@@ -79,7 +80,7 @@
                               NewRowPosition="NewRowPosition.Bottom" Mode="@EditMode.Dialog" Dialog="DialogParams">
                     <Template>
                         @{
-                            NISRec = (context as NIS);
+                            NISRec = (context as NIS)!;
                         }
                         <div>
                             <div class="form-row">
@@ -132,14 +133,32 @@
         <label style="color:brown">@pali_field</label>&nbsp;
         <label class="trans_text">{ @trans_field }</label>&nbsp;
         <label class="footer_text">[ @footnote_field ]</label>&nbsp
-        <label class="footer_text">&lt; @remarks_field &gt;</label>
+        @* <label class="footer_text">&lt; @remarks_field &gt;</label> *@
+        <label class="footer_text">? @remarks_field</label>
     </div>
     <div>
-        <SfDialog Width="550px" MinHeight="600px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+        <SfDialog Width="800px" MinHeight="600px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
             <DialogTemplates>
                 <Header> Add Nissaya Record </Header>
                 <Content>
                     <div class="column-dialog left-dialog">
+                        <div class="parent">
+                            <br /><br /><br /><br />
+                            <div class="btn">
+                                <SfButton id="jjh" CssClass="e-custom" OnClick="@jjhClick">ဇ္ဈ</SfButton>
+                            </div>
+                            <div class="btn">
+                                <SfButton id="nng" CssClass="e-custom" OnClick="@nngClick">င်္</SfButton>
+                            </div>
+                            <div class="btn">
+                                <SfButton id="tth" CssClass="e-custom" OnClick="@tthClick">ဋ္ဌ</SfButton>
+                            </div>
+                            <div class="btn">
+                                <SfButton id="ddh" CssClass="e-custom" OnClick="@ddhClick">ဍ္ဎ</SfButton>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column-dialog right-dialog">
                         <div class="form-row">
                             <div class="form-group col-md-12">
                                 <label class="col-form-label">Sr. No.</label>
@@ -170,23 +189,6 @@
                             <p style="color:brown">@ErrMsgDataEntry</p>
                         </div>
                     </div>
-                    <div class="column-dialog right-dialog">
-                        <div class="parent">
-                            <br /><br /><br /><br />
-                            <div class="btn">
-                                <SfButton id="jjh" CssClass="e-custom" OnClick="@jjhClick">ဇ္ဈ</SfButton>
-                            </div>
-                            <div class="btn">
-                                <SfButton id="nng" CssClass="e-custom" OnClick="@nngClick">င်္</SfButton>
-                            </div>
-                            <div class="btn">
-                                <SfButton id="tth" CssClass="e-custom" OnClick="@tthClick">ဋ္ဌ</SfButton>
-                            </div>
-                            <div class="btn">
-                                <SfButton id="ddh" CssClass="e-custom" OnClick="@ddhClick">ဍ္ဎ</SfButton>
-                            </div>
-                        </div>
-                    </div>
                 </Content>
             </DialogTemplates>
             <DialogButtons>
@@ -207,19 +209,19 @@
                     <div class="form-row">
                         <div class="form-group col-md-12">
                             <label class="col-form-label">Doc No</label>
-                            <SfTextBox ID="srno" Input="@InputHandler_NewDocInfo" @bind-Value="@doc_ID" Placeholder="example: MN-001"></SfTextBox>
+                            <SfTextBox ID="newDoc" Input="@InputHandler_NewDocInfo" @bind-Value="@doc_ID" Placeholder="example: MN-001"></SfTextBox>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-12">
                             <label class="col-form-label">Doc Title</label>
-                            <SfTextBox ID="srno" Input="@InputHandler_NewDocInfo" @bind-Value="@doc_Title" Placeholder="example: မူဠပရိယာယသုတ္တံ"></SfTextBox>
+                            <SfTextBox ID="newDoc" Input="@InputHandler_NewDocInfo" @bind-Value="@doc_Title" Placeholder="example: မူဠပရိယာယသုတ္တံ"></SfTextBox>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label class="col-form-label">Start Page No</label>
-                            <SfTextBox ID="srno" Input="@PageNoInputHandler" @bind-Value="@page_No" Placeholder="book page number"></SfTextBox>
+                            <SfTextBox ID="newDoc" Input="@PageNoInputHandler" @bind-Value="@page_No" Placeholder="book page number"></SfTextBox>
                         </div>
                     </div>
                     <br/>
@@ -340,13 +342,29 @@
         public string Id { get; set; } = "";
     }
 
+    // User Profile Dialog
+    // bool IsUserProfileVisible = false;
+    // string userName_E = "", userName_M = "";
+    // string UserProfileErrMsg = "";
+
     private DialogSettings DialogParams = new DialogSettings { Width = "400px", Height = "600px" };
 
     protected override void OnInitialized()
     {
+        userName_E = State.userName;
+        userName_M = State.userName_M;
         ResetMembers();
         enableAdminstratorMenu();
         enableSystemAdminMenu();
+        if (State.screenID == 5) // screenID to Open file for import on MainPage.
+        {
+            hide_file_browser = false;
+        }
+        if (State.screenID == 6) // screenID to Open file for import on MainPage.
+        {
+            hide_file_browser = true;
+            LoadServerData();
+        }
     }
 
     public int GetSrNo() 
@@ -397,10 +415,6 @@
             }
         }
     }
-    // private void PrepareDocSelectComplete()
-    // {
-    //     VisibleSpinner = false;
-    // }
     private void doneClick()
     {
         // this.ClickStatus = "you have clicked Cancel";
@@ -475,6 +489,17 @@
                 dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);
             }
         }
+    }
+    //**************************************************************************************/
+    //**** This routine is called after returning from Task Assignments screen.
+    //**************************************************************************************/
+    private void LoadServerData()
+    {
+        VisibleSpinner = true;
+        doc_ID = State.doc_ID;
+        doc_Title = State.doc_Title;
+        dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded);
+
     }
     private void LoadDocumentFromServer(string docID)
     {
@@ -662,6 +687,8 @@
         file = e.File;
         if (State.clientTipitakaDB != null) dataFile = new DataFile(State.clientTipitakaDB, email, userName);
         await ReadFile();
+        // if file has BOM remove '\ufeff'
+        if (fileContent[0] == '\ufeff') fileContent = fileContent.Substring(1);
         ServerUploadRequired = true;
         hide_file_browser = true;
         dataFile.SetFileContent(file.Name, fileContent);
@@ -674,9 +701,9 @@
         LoadPageMenu();
         Value = new string[] { Pages[0].Id };
         LoadPageData(Pages[0].Text);
-        doc_ID = dataFile.GetDocID();
-        doc_Title = dataFile.GetDocTitle();
-        newParaMarker = dataFile.GetNewParaMarker();
+        // doc_ID = dataFile.GetDocID();
+        // doc_Title = dataFile.GetDocTitle();
+        // newParaMarker = dataFile.GetNewParaMarker();
         page_No = Pages[0].Text;
         isPageDisabled = false;
         hide_file_browser = true;
@@ -715,7 +742,7 @@
         bool flag = false;
         if (ServerUploadRequired)
         {
-            AlertBtn("Upload data to server first before performing adding or editing.", "Att9ention");
+            AlertBtn("Upload data to server first before performing adding or editing.", "Attention");
             flag = true;
         }
         return flag;
@@ -887,14 +914,19 @@
             remarks_field = "";
             fileContent = "";
             dataFile = new DataFile(State.clientTipitakaDB, email, userName);
+            State.dataFile = dataFile;
             isPageDisabled = true;
             State.screenID = 2;
+            State.Pages = Pages;
             fileUpload = false;
             UpdateRecentlyUsedFileList();
             enableServerUploadMenu();
         }
         else
-           SaveRestoreDataState(false);
+        {
+            SaveRestoreDataState(false);
+            enableServerUploadMenu();
+        }
     }
     private void Logout()
     {
@@ -908,19 +940,35 @@
             PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
         });
     }
-}
+    public void Dispose()
+    {
+        int n = 0;
+    }
+} 
 @code {
+    //***************************************************************************************
+    //***
+    //*** Menu Related Code
+    //***
+    //***************************************************************************************
     const string importFile = "Import File";
     const string newDocument = "New Document";
     const string getDocumentFromServer = "Get Document from Server";
     const string uploadToServer = "Upload to Server";
     const string downloadAsTXT = "Download as TXT";
-    const string administrator = "Administrator";
+    const string downloadAsTXTHDR = "Download as TXT/Header";
+    const string administration = "Administration";
     const string logout = "Logout";
     const string currentPage = "Current Page";
     const string allPages = "All Pages";
     const string DY = "Dhamma Yaungchi";
     const string ExportHTML = "Export As HTML";
+    const string userMenu = "User";
+    const string userProfile = "User Profile";
+    const string taskAssignment = "Task Assignments";
+    const string documents = "Documents";
+    const string activities = "Activities"; 
+    const string reports = "Reports";
 
     #pragma warning disable
     private List<MenuItem> MenuData = new List<MenuItem>{
@@ -936,13 +984,13 @@
                 // new MenuItem { Text= "Upload to server", IconCss= "oi oi-account-upload" },
                 // new MenuItem { Separator= true },
                 // new MenuItem { Text= "Logout", IconCss= "oi oi-account-logout" }
+                //new MenuItem { Text= importFile },
+                //new MenuItem { Text= newDocument },
 
-                new MenuItem { Text= importFile },
-                new MenuItem { Text= newDocument },
                 new MenuItem { Text= getDocumentFromServer },
                 new MenuItem { Text= uploadToServer },
                 new MenuItem { Text= downloadAsTXT },
-                new MenuItem { Text= administrator },
+                //new MenuItem { Text= downloadAsTXTHDR },
                 new MenuItem { Text= logout },
                 // new MenuItem { Separator= true },
             }
@@ -955,6 +1003,24 @@
                 new MenuItem { Text = currentPage },
                 new MenuItem { Text = allPages },
             }
+        },
+        new MenuItem
+        {
+            Text = userMenu,
+            Items = new List<MenuItem>
+            {
+                new MenuItem { Text = taskAssignment },
+                new MenuItem { Text = userProfile },
+            }
+        },        
+        new MenuItem
+        {
+            Text = administration,
+            // Items = new List<MenuItem>
+            // {
+            //     new MenuItem { Text = currentPage },
+            //     new MenuItem { Text = allPages },
+            // }
         },
         new MenuItem
         {
@@ -1027,25 +1093,7 @@
                 break;
             case uploadToServer:
                 hide_file_browser = true;
-                if (dataFile != null)
-                {
-                    if (doc_ID.Length == 0 || doc_Title.Length == 0)
-                    {
-                        AlertBtn("Please enter the missing document No or Title.", "No document information");
-                        return;
-                    }
-                    this.VisibleSpinner = true;
-                    dataFile.DocID = doc_ID; dataFile.DocTitle = doc_Title;
-                    string errmsg = await dataFile.UploadDocument();
-                    this.VisibleSpinner = false;
-                    if (errmsg.Length == 0) 
-                    {
-                        AlertBtn("Document uploaded successfully.", "Upload Status");
-                        UpdateRecentlyUsedFileList(doc_ID);
-                        ServerUploadRequired = false;
-                    }
-                    else AlertBtn(errmsg, "Upload Status");
-                }
+                ShowUploadInfoDialog();
                 break;
             case getDocumentFromServer:
                 hide_file_browser = IsVisible_DocSelection = true;
@@ -1057,12 +1105,25 @@
                 CreateTXT();
                 //downloadURI("", "");
                 break;
-            case administrator:
+            case downloadAsTXTHDR:
                 hide_file_browser = true;
-                AlertBtn("This feature is not implemented yet.", "Notice");
+                CreateTXT();
+                break;
+            case administration:
+                hide_file_browser = true;
+                //JS.InvokeAsync<object>("open", String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass), "_blank");
+                NavManager.NavigateTo(String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass));
+                //NavManager.NavigateTo(String.Format("/user_profile/{0}/{1}/{2}", email, userName, userClass));
+                //AlertBtn("This feature is not implemented yet.", "Notice");
                 break;
             case DY:
                 JS.InvokeVoidAsync("gotoDhammaYaungchi", new string[] { doc_ID + ".txt" });
+                break;
+            case taskAssignment:
+                NavManager.NavigateTo(String.Format("/user_task_assignment/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case userProfile:
+                IsUserProfileVisible = true;
                 break;
             default:
                 if ("12345".Contains(selectedItem[0]) && selectedItem[1] == '.')
@@ -1077,16 +1138,102 @@
                 break;
         }
     }
+    private void ShowUploadInfoDialog()
+    {
+        dataFile.DocID = doc_ID;
+        dataFile.DocTitle = doc_Title;
+        userTask = State.UserTaskInfo[email + "-Task"];
+        Dictionary<string, string> dictServerDocInfo = dataFile.GetServerDocInfo(doc_ID, userTask);
 
+        int fileFirstPage = dataFile.GetFirstPageNo();
+        int fileLastPage = dataFile.GetLastPageNo();
+
+        dictServerDocInfo["Task"] = userTask;
+        int bookDocStartPage = Int32.Parse(dictServerDocInfo["BookDocStartPage"]);
+        int bookDocEndPage = Int32.Parse(dictServerDocInfo["BookDocEndPage"]);
+        int bookDocPages = Int32.Parse(dictServerDocInfo["NoPages"]);
+        // check if the file contains pages that are in the book pages
+        if (fileFirstPage >= bookDocStartPage && fileFirstPage <= bookDocEndPage &&
+            fileLastPage >= bookDocStartPage && fileLastPage <= bookDocEndPage)
+        {
+            doc_Pages = String.Format("{0}-{1} ({2})", bookDocStartPage, bookDocEndPage, bookDocPages);
+
+            int pagesSubmitted = Int32.Parse(dictServerDocInfo["PagesSubmitted"]);
+            int serverSubmittedLastPage = bookDocStartPage + pagesSubmitted - 1;
+            int submitStartPage = bookDocStartPage + pagesSubmitted;
+            int submitEndPage = Int32.Parse(dictServerDocInfo["ImportedEndPage"]);
+            int submitPages = submitEndPage - submitStartPage + 1;
+
+            if (dictServerDocInfo["PagesSubmitted"] == "0") submittedPagesOnServer = "0";
+            else
+            {
+                int percent = (int)((float)pagesSubmitted * 100.0 / bookDocPages);
+                submittedPagesOnServer = String.Format("{0}-{1} ({2})  ({3}%)", bookDocStartPage, serverSubmittedLastPage, pagesSubmitted, percent);
+
+            }
+            pagesInFile = String.Format("{0}-{1}", fileFirstPage, fileLastPage);
+            pagesToSubmit = String.Format("{0}-{1} ({2})", submitStartPage, submitEndPage, submitPages);
+            if (submitPages == 0) pagesToSubmit = _NoNewPagesToSubmit_;
+            //
+            hidePageSubmitRange = false;
+            if (userTask != "DataEntry" && userTask != "Edit-Upload") hidePageSubmitRange = true;
+            hideReviewPageSubmitRange = !hidePageSubmitRange;
+            serverUploadStartPage = bookDocStartPage + pagesSubmitted;
+            docStartPage = bookDocStartPage;
+            docEndPage = bookDocEndPage;
+            startValue = serverUploadStartPage;
+            endValue = docEndPage;
+            IsImportInfoDialogVisible = true;
+        }
+        else
+        {
+            string msg = String.Format("File pages {0}-{1} are outside of book pages {2}-{3}.", fileFirstPage, 
+                        fileLastPage, bookDocStartPage, bookDocEndPage);
+            AlertBtn(msg, "Error");
+        }
+    }
+    private void UploadToServer()
+    {
+        string userTask = "";
+        if (State.UserTaskInfo.ContainsKey(email + "-Task")) userTask = State.UserTaskInfo[email + "-Task"];
+        Dictionary<string, string> dictServerDocInfo = dataFile.GetServerDocInfo(doc_ID, userTask);
+
+        int bookDocStartPage = Int32.Parse(dictServerDocInfo["BookDocStartPage"]);
+        int pagesSubmitted = Int32.Parse(dictServerDocInfo["PagesSubmitted"]);
+        int submitStartPage = bookDocStartPage + pagesSubmitted;
+        int submitEndPage = Int32.Parse(dictServerDocInfo["ImportedEndPage"]);
+        int submitPages = submitEndPage - submitStartPage + 1;
+        if (userTask == "DataEntry" || userTask == "Edit-Upload")
+        {
+            dataFile.UploadDocument(submitStartPage.ToString(), submitEndPage.ToString());
+        }
+        else
+        {
+            submitStartPage = (int)startValue;
+            submitEndPage = (int)endValue;
+            submitPages = submitEndPage - submitStartPage + 1;
+            int correctionCount = dataFile.Update_Document(submitStartPage.ToString(), submitEndPage.ToString(), userTask);
+            dictServerDocInfo["CorrectionCount"] = correctionCount.ToString();
+        }
+
+        dictServerDocInfo["PagesToSubmit"] = submitPages.ToString();
+        dictServerDocInfo["PagesSubmitted"] = (pagesSubmitted + submitPages).ToString();
+        dataFile.userClass = userClass;
+        dataFile.LogUserTaskActivity(dictServerDocInfo, userTask);
+        TaskComplete(dataFile.ErrMsg);
+    }
     private void UpdateRecentlyUsedFileList(string docNo = "")
     {
         bool addFlag = true;
+        // no longer use this feature, just return
+        if (addFlag) return;
+
         if (RUFList.Count > 0)
         {
             if (RUFList[RUFList.Count - 1] == docNo) return;
         }
         var menu = MenuData.First();
-        if (menu.Items.Count == 7 && dataFile != null)
+        if (menu.Items.Count == 6 && dataFile != null)
         {
             RUFList.Clear();
             List<string> RUFList_tmp = dataFile.GetRUFList();
@@ -1133,7 +1280,7 @@
 
 }
 @code {
-    public void TaskComplete(int statsCode, string errmsg)
+    public void TaskComplete(string errmsg)
     {
         if (errmsg.Length == 0) AlertBtn("Document uploaded successfully.", "Upload Status");
         else AlertBtn(errmsg, "Upload Status");
@@ -1189,17 +1336,22 @@
                 doc_ID = State.doc_ID;
                 doc_Title = State.doc_Title;
                 page_No = State.page_No;
+                if (State.screenID == 5)
+                {
+                    // this is to import data from file. set the first page # in Page Menu
+                    Pages.Clear();
+                    Pages.Add(new PageData { Text = page_No, Id = "id-0001" });
+                }
                 dataFile = State.dataFile;
                 isPageDisabled = false;
                 UpdateRecentlyUsedFileList();
                 break;
         }
     }
-
     private void enableAdminstratorMenu()
     {
-        MenuData[0].Items[0].Hidden = MenuData[0].Items[3].Hidden = MenuData[0].Items[5].Hidden =
-            (userClass != "A" && userClass != "S");
+        //MenuData[0].Items[0].Hidden = //MenuData[0].Items[3].Hidden = //MenuData[0].Items[5].Hidden =
+            //(userClass != "A" && userClass != "S");
     }
     private void enableServerUploadMenu()
     {
@@ -1208,20 +1360,21 @@
         // if (n > 3) MenuData[0].Items[3].Disabled = !fileUpload;
         foreach (var item in MenuData[0].Items)
         {
-            if (item.Text == downloadAsTXT) item.Disabled = (NISRecords.Count == 0);
+            if (item.Text == downloadAsTXT) item.Disabled = (NISRecords ==  null ||NISRecords.Count == 0);
+            if (item.Text == downloadAsTXTHDR) item.Disabled = (NISRecords == null || NISRecords.Count == 0);
             if (item.Text == uploadToServer) item.Disabled = !fileUpload;
         }
     }
     private void enableSystemAdminMenu()
     {
         // (userClass == "S")
-        foreach (var item in MenuData[2].Items)
+        MenuData[3].Hidden = (userClass != "S");
+        foreach (var item in MenuData[4].Items)
         {
             if (item.Text == ExportHTML) item.Hidden = (userClass != "S");
         }
     }
 }
-
 <script type="text/javascript">
     /* https://stackoverflow.com/questions/54626186/how-to-download-file-with-javascript */
     function downloadURI(filename) {
@@ -1239,9 +1392,6 @@
     /* https://www.syncfusion.com/forums/132797/is-it-possible-to-scroll-to-the-position-of-a-selected-element */
     function SfListBoxLastlItemToView(arg) {
         document.querySelector('[data-uid="' + args.Id + '"]').scrollIntoView();
-        // listBox = document.getElementById('PageListBox');
-        // int visibleItems = listBox.ClientSize.Height / listBox.ItemHeight;
-        // listBox.TopIndex = Math.Max(listBox.Items.Count - visibleItems + 1, 0);
     }
 
 </script>
@@ -1292,11 +1442,11 @@
     }
 
     .left-dialog {
-        width: 85%;
+        width: 10%;
     }
 
     .right-dialog {
-        width: 15%;
+        width: 90%;
     }
     /* Clear floats after the columns */
     .row:after {
@@ -1367,7 +1517,7 @@
         /* background-color: #d8e1f2; */
         /* background-color: #f7f8fa; */
         background-color: #F3F2F1;
-}
+    }
 
     .e-grid .e-rowcell.e-selectionbackground {
         background-color: lightsteelblue !important;
@@ -1378,7 +1528,6 @@
         border-block-start-color: black;
         /* border-bottom-color: black; */
     }
-
 </style>
 
 @* sftextbox style *@
@@ -1410,3 +1559,162 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         font-size: 18px;
     }
 </style>
+<div>
+    <SfDialog Width="400px" MinHeight="370px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsUserProfileVisible">
+        <DialogTemplates>
+            <Header> User Profile</Header>
+            <Content>
+                <div>
+                    <span>You can update your user names.</span>
+                </div>
+                <br />
+                <div class="form-row">
+                    <label for="user_name" class="col-form-label">User Name in English</label>
+                    <SfTextBox ID="user_name" Input="@UserProfileInputHandler" @bind-Value="@userName_E"></SfTextBox>
+                </div>
+                <br />
+                <div class="form-row">
+                    <label for="user_name" class="col-form-label">မြန်မာ အမည်</label>
+                    <SfTextBox ID="user_name" Input="@UserProfileInputHandler" @bind-Value="@userName_M"></SfTextBox>
+                </div>                
+                <div>
+                    <p style="color:brown">@UserProfileErrMsg</p>
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Ok" IsPrimary="true" OnClick="@ok_UserProfileClick" />
+            <DialogButton Content="Cancel" OnClick="@cancel_UserProfileClick" />
+        </DialogButtons>
+    </SfDialog>
+</div>
+@code {
+    bool IsUserProfileVisible = false;
+    string userName_E = "", userName_M = "";
+    string UserProfileErrMsg = "";
+
+    private void UserProfileInputHandler(InputEventArgs args)
+    {
+        UserProfileErrMsg = String.Empty;
+    }
+    private void ok_UserProfileClick()
+    {
+        if (userName_E.Trim().Length == 0 || userName_M.Trim().Length == 0)
+        {
+            UserProfileErrMsg = "User name cannot be empty.";
+        }
+        else
+        {
+            if (State != null && State.dataFile != null)
+            {
+                // register
+                State.email = email;
+                State.userName = userName_E;
+                State.userName_M = userName_M;
+                State.dataFile.UpdateUserProfile(email, userName_E, userName_M);
+                IsUserProfileVisible = false;
+                AlertBtn("User profile updated.", "Success");
+            }
+        }
+    }
+    private void cancel_UserProfileClick()
+    {
+        IsUserProfileVisible = false;
+    }
+}
+<div>
+    <SfDialog Width="425px" MinHeight="360px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsImportInfoDialogVisible">
+        <DialogEvents OnOpen="ImportInfoDialogOpen"></DialogEvents>
+        <DialogTemplates>
+            <Header> Import Data Details </Header>
+            <Content>
+                <label class="col-form-label" style="width:200px"><strong>Doc No. :</strong></label>
+                <span>@doc_ID</span>
+                <label class="col-form-label" style="width:200px"><strong>Doc Pages :</strong></label>
+                <span>@doc_Pages</span>
+                <label class="col-form-label" style="width:200px"><strong>Task :</strong></label>
+                <span>@userTask</span>
+                <label class="col-form-label" style="width:200px"><strong>Submitted pages on server :</strong></label>
+                <span>@submittedPagesOnServer</span>
+                <label class="col-form-label" style="width:200px"><strong>Pages in file :</strong></label>
+                <span>@pagesInFile</span>
+                <div hidden="@hidePageSubmitRange">
+                    <label class="col-form-label" style="width:200px"><strong>Pages to submit to server :</strong></label>
+                    <span>@pagesToSubmit</span>
+                </div>
+                <div hidden="@hideReviewPageSubmitRange">
+                    <div style="width:200px" class="form-group column3" hidden="@hideReviewPageSubmitRange">
+                        <label class="col-form-label" style="width:200px"><strong>Pages to submit to server :</strong></label>
+                    </div>
+                    <div style="width:50px" class="form-group column4" hidden="@hideReviewPageSubmitRange">
+                        <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@startValue" Max=@docEndPage Min=@docStartPage></SfNumericTextBox>
+                    </div>
+                    <div style="width:50px;margin-left:25px" class="form-group column5" hidden="@hideReviewPageSubmitRange">
+                        <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@endValue" Max=@docEndPage Min=@docStartPage></SfNumericTextBox>
+                    </div>
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" CssClass="e-custom-dial-button" OnClick="@okCancel_ImportInfoDialog" />
+            <DialogButton Content="Ok" CssClass="e-custom-dial-button" IsPrimary="true" OnClick="@okClick_ImportInfoDialog" />
+        </DialogButtons>
+    </SfDialog>
+</div>
+@* DialogButton and other styles *@
+<style>
+    .e-custom-dial-button {
+        background-color: #f7f0df;
+        border-radius: 15;
+        /* height: 40px; */
+        width: 75px;
+    }
+
+    .column3 {
+        float: left;
+        padding: 0px;
+        width: 200px;
+        /* height: 530px; /* should be removed. only for demonstration */
+    }
+
+    .column4 {
+        float: left;
+        padding: 0px;
+        width: 75px;
+        /* height: 530px; /* should be removed. only for demonstration */
+    }
+
+    .column5 {
+        float: left;
+        padding: 0px;
+        width: 75px;
+        /* height: 530px; /* should be removed. only for demonstration */
+    }
+</style>
+@code {
+    bool IsImportInfoDialogVisible = false;
+    string userTask = "";
+    string submittedPagesOnServer = "", pagesToSubmit = "", doc_Pages = "", pagesInFile = "";
+    const string _NoNewPagesToSubmit_ = "No new pages to submit.";
+    int serverUploadStartPage = 0;
+    int docStartPage = 0, docEndPage = 0;
+    int? startValue = 0, endValue = 0;
+    bool hidePageSubmitRange = false;
+    bool hideReviewPageSubmitRange = true;
+
+    private void okCancel_ImportInfoDialog()
+    {
+        IsImportInfoDialogVisible = false;
+    }
+    private void okClick_ImportInfoDialog()
+    {
+        IsImportInfoDialogVisible = false;
+        if (pagesToSubmit != _NoNewPagesToSubmit_) UploadToServer();
+    }
+    // The following event is not really necessary. MinHeight in SfDialog satisfies the required height.
+    private void ImportInfoDialogOpen(Syncfusion.Blazor.Popups.BeforeOpenEventArgs args)
+    {
+        // setting maximum height to the Dialog
+        args.MaxHeight = "350px";
+    }
+}

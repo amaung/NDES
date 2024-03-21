@@ -1,0 +1,102 @@
+﻿@page "/administration_main/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Navigations
+
+@inject NavigationManager NavManager
+
+
+<PageTitle>Administration</PageTitle>
+
+<body id="maincontainer" style="background-color:#f7f0df;">
+    <div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
+        <div class="menu-control">
+            <SfMenu Items="@MenuData">
+                <MenuEvents TValue="MenuItem" ItemSelected="menuitemSelected"></MenuEvents>
+            </SfMenu>
+        </div>
+    </div>
+    <br />
+    <h5>NDES Administration Office</h5>
+    <br />
+    <label>User: @userName</label>
+    <br />
+</body>
+
+<style>
+    .menu-control, .e-menu-container, .e-menu-container.e-menu-popup,
+    .e-menu-container ul .e-menu-item, .e-menu-container .e-ul .e-menu-item {
+        background-color: #ded8ca;
+        font-size: 18px;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+#pragma warning disable
+    const string _Main = "MainPage";
+    const string _Users = "Users";
+    const string _TaskAssignments = "TaskAssignments";
+    const string _Documents = "Documents";
+    const string _Activities = "Activities";
+    const string _NissayaSource = "SourceBooks";
+    const string _Project = "Project";
+    const string _DataPage = "DataPage";
+    const string _Logout = "Logout";
+
+#pragma warning disable
+    protected override void OnInitialized()
+    {
+        //State.dataFile = new DataFile(State.clientTipitakaDB, email, userName);
+    }
+    private List<MenuItem> MenuData = new List<MenuItem>
+    {
+        new MenuItem { Text = _Users },
+        new MenuItem { Text = _Documents },
+        new MenuItem { Text = _TaskAssignments },
+        new MenuItem { Text = _Activities },
+        new MenuItem { Text = _NissayaSource },
+        new MenuItem { Text = _Project },
+        new MenuItem { Text = _DataPage },
+        new MenuItem { Text = _Logout },
+    };
+
+    // https://www.syncfusion.com/blogs/post/preview-file-blazor-file-manager.aspx
+    private async Task menuitemSelected(MenuEventArgs<MenuItem> args)
+    {
+        var selectedItem = args.Item.Text;
+        switch (selectedItem)
+        {
+            case _DataPage:
+                NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Users:
+                NavManager.NavigateTo(String.Format("/user_profile/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Documents:
+                NavManager.NavigateTo(String.Format("/document/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Activities:
+                NavManager.NavigateTo(String.Format("/activity/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _TaskAssignments:
+                NavManager.NavigateTo(String.Format("/task_assignment/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _NissayaSource:
+                NavManager.NavigateTo(String.Format("/nissaya_source/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Project:
+                NavManager.NavigateTo(String.Format("/project/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Logout:
+                NavManager.NavigateTo("/");
+                break;
+        }
+    }
+}

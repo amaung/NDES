@@ -1,0 +1,183 @@
+﻿@page "/project/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
+<Administration componentName="Project" email=@email userName=@userName userClass=@userClass flex_width="900px">
+    <adminMenuItem>Project</adminMenuItem>
+</Administration>
+
+<br/>
+@* <label style="font-size:16px; text-align:left">No. of Books = @noBooks</label> *@
+@* <label style="font-size:16px; margin-left:580px; width:250px; text-align:right">Total Pages: @totalPages</label> *@
+<br />
+@**************************** NissayaSource DataGrid ****************************@
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@NissayaBookRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="false" AllowTextWrap="true" Height="600" Width="1000">
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="100"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(BookDocStatus.BookID) HeaderText="Book ID" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="8%" Type="ColumnType.Integer" ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.BookFilename) HeaderText="Book PDF File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="40%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.DocCount) HeaderText="No Docs" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.Completed) HeaderText="Completed" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.HTML) HeaderText="HTML" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="6%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.HTMLStatus) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+@************************* End of NissayaSource DataGrid *************************@
+<br/>
+<label style="width:200px;">No. of Books</label>
+<label>:&nbsp&nbsp @noBooks</label><br/>
+<label style="width:200px;">No. of Pages</label>
+<label>:&nbsp&nbsp @totalPages</label><br/>
+<label style="width:200px;">No. of Docs</label>
+<label>:&nbsp&nbsp @totalDocs</label><br/>
+<label style="width:200px;">No. of Pages Completed</label>
+<label>:&nbsp&nbsp @totalCompleted (@totalCompletedStatus)</label><br/>
+<label style="width:200px;">No. of HTML Completed</label>
+<label>:&nbsp&nbsp @totalHTML (@totalHTMLStatus)</label><br/>
+@********************************** Grid styles **********************************@
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+
+    .e-grid .e-altrow {
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+</style>
+@****************************** End of Grid styles ******************************@
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    class BookDocStatus
+    {
+        public string BookID { get; set; } = default!;  // PDF Book ID
+        public string BookFilename { get; set; } = default!;
+        public int DocCount { get; set; } = default!;
+        public string DocNos { get; set; } = default!;
+        public int Pages { get; set; } = default!;
+        public int Completed { get; set; } = default!;
+        public string Status { get; set; } = default!;
+        public int HTML { get; set; } = default!;
+        public string HTMLStatus { get; set; } = default!;
+    };
+
+   SfGrid<BookDocStatus>? sfgrid;
+
+    int noBooks = 0;
+    int totalPages = 0;
+    int totalCompleted = 0;
+    int totalDocs = 0;
+    int totalHTML = 0;
+    bool hide_file_browser = true;
+    string totalCompletedStatus = "";
+    string totalHTMLStatus = "";
+    List<BookDocStatus> NissayaBookRecords = new List<BookDocStatus>();
+
+    protected override void OnInitialized()
+    {
+        PopulateGrid();
+    }
+
+    private void UploadMoreBooks()
+    {
+        hide_file_browser = false;
+    }
+    private void PopulateGrid()
+    {
+        int nPages = 0;
+        int rowIndex = 0;
+        List<BookDocStatus> list = new List<BookDocStatus>();
+
+        SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
+        foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
+        {
+            BookDocStatus bookDocStatus = new BookDocStatus();
+            bookDocStatus = new BookDocStatus()
+            {
+                BookID =  sourceBookInfo.RowKey,
+                BookFilename = sourceBookInfo.BookFilename,
+                DocCount = sourceBookInfo.DocCount,
+                DocNos = sourceBookInfo.DocNos,
+                Pages = sourceBookInfo.Pages,
+                Completed = sourceBookInfo.Completed,
+                HTML = sourceBookInfo.HTML,
+            };
+            if (sourceBookInfo.Completed > 0) 
+                bookDocStatus.Status = String.Format("{0}%", (int)(sourceBookInfo.Completed*100.0/sourceBookInfo.Pages));
+            if (sourceBookInfo.HTML > 0) 
+                bookDocStatus.HTMLStatus = String.Format("{0}%", (int)(sourceBookInfo.HTML*100.0/sourceBookInfo.DocCount));
+            list.Add(bookDocStatus);
+            nPages += sourceBookInfo.Pages;
+            totalCompleted += sourceBookInfo.Completed;
+            totalHTML += sourceBookInfo.HTML;
+            totalDocs += sourceBookInfo.DocCount;
+        }
+        NissayaBookRecords = list;
+        noBooks = NissayaBookRecords.Count;
+        totalPages = nPages;
+        if (totalCompleted == 0) totalCompletedStatus = "0%";
+        else
+        {
+            double pct = (double)totalCompleted*100.0/totalPages;
+            if (pct < 1.0) totalCompletedStatus = "<1%";
+            else totalCompletedStatus = String.Format("{0}%", (int)pct);
+        }
+
+        if (totalHTML == 0 || totalDocs == 0) totalHTMLStatus = "0%";
+        else
+        {
+            if (totalDocs > 0)
+            {
+                double pct = (double)totalHTML*100.0/totalDocs;
+                if (pct < 1.0) totalHTMLStatus = "<1%";
+                else totalHTMLStatus = String.Format("{0}%", (int)pct);
+            }
+        }
+    }
+}

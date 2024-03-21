@@ -1,0 +1,456 @@
+﻿@page "/user_profile/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+@using Newtonsoft.Json;
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
+<Administration componentName="UseProfile" email=@email userName=@userName userClass=@userClass flex_width="860px">
+    <adminMenuItem>User Profiles</adminMenuItem>
+</Administration>
+
+@**************************** User Profile DataGrid ****************************@
+<br />
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@UserDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Cancel", "ExcelExport", "Search" })" AllowTextWrap="true" Height="380" Width="1000">
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                            NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="UserDisplayProfile"></GridEvents>
+        <GridColumns>
+            <GridColumn Field=@nameof(UserDisplayProfile.userSrNo) HeaderText="No" IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" DefaultValue=@GetSrNo() ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(UserDisplayProfile.email) HeaderText="Email" TextAlign="TextAlign.Left" Width="24%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserDisplayProfile.name) HeaderText="Name" TextAlign="TextAlign.Left" Width="24%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserDisplayProfile.userClass) HeaderText="Class" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserDisplayProfile.loginCount) HeaderText="Logins" TextAlign="TextAlign.Center" AllowAdding="false" AllowEditing="false" Width="10%" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
+            <GridColumn Field=@nameof(UserDisplayProfile.joinedDate) HeaderText="Joined Date" TextAlign="TextAlign.Center" AllowAdding="false" AllowEditing="false" Width="13%" Type="ColumnType.String" DefaultValue=@State.dataFile.GetTodaysDate()></GridColumn>
+            <GridColumn Field=@nameof(UserDisplayProfile.lastDate) HeaderText="Last Date" TextAlign="TextAlign.Center" AllowAdding="false" AllowEditing="true" Width="13%" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+@************************* End of User Profile DataGrid *************************@
+@****************************** User Tasks DataGrid *****************************@
+<br />
+<h5><strong>User Tasks</strong></h5>
+<br />
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@UserTaskDisplayRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+            AllowSorting="true" Toolbar="@(new List<string>() { "ExcelExport", "Search" })" AllowTextWrap="true" Height="380" Width="1000">
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
+                            NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="UserTaskDisplay"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(UserTaskDisplay.userSrNo) HeaderText="No" IsPrimaryKey="true" AllowEditing="false" Width="6%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.name) HeaderText="Name" TextAlign="TextAlign.Left" Width="25%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.docNo) HeaderText="DocNo" TextAlign="TextAlign.Left" Width="12%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.task) HeaderText="Task" TextAlign="TextAlign.Center" Width="10%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.pages) HeaderText="Pages" TextAlign="TextAlign.Center" Width="8%" AllowAdding="false" AllowEditing="false" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.submitted) HeaderText="Submitted" TextAlign="TextAlign.Center" Width="12%" AllowAdding="false" AllowEditing="false" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.startDate) HeaderText="StartDate" TextAlign="TextAlign.Center"  Width="10%" AllowAdding="false" AllowEditing="false"Type="ColumnType.String" DefaultValue=@State.dataFile.GetTodaysDate()></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.lastDate) HeaderText="LastDate" TextAlign="TextAlign.Center" Width="12%" AllowAdding="false" AllowEditing="true" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.status) HeaderText="Status" TextAlign="TextAlign.Center" Width="10%" AllowAdding="false" AllowEditing="true" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+@************************* End of User Tasks DataGrid *************************@
+    <SfSpinner Type="spinnerType" @bind-Visible="@VisibleSpinner">
+    </SfSpinner>
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-grid .e-altrow {
+        /* background-color: #f2f2f2; */
+        /* background-color: #d8e1f2; */
+        /* background-color: #f7f8fa; */
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+</style>
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    SfGrid<UserDisplayProfile>? sfgrid;
+    SfGrid<UserTaskDisplay>? sfgrid2;
+
+    enum SfgState { _sfgNone, _sfgInit, _sfgAdd, _sfgDel, _sfgEdt };
+    static SfgState sfgUserState = SfgState._sfgInit;
+    public List<UserProfile>? UserRecords { get; set; }
+    public List<UserDisplayProfile>? UserDisplayRecords { get; set; }
+    public List<UserTaskDisplay>? UserTaskDisplayRecords { get; set; }
+    // public List<string> ListofClasses { get; set; }
+    private SpinnerType spinnerType { get; set; } = SpinnerType.Bootstrap4;
+    // private string cellUserClass { get; set; }
+    bool VisibleSpinner = false;
+
+    public class UserDisplayProfile()
+    {
+        public int userSrNo { get; set; }
+        public string email { get; set; }
+        public string name { get; set; }
+        public string userClass { get; set; }
+        public int loginCount { get; set; }
+        public string joinedDate { get; set; }
+        public string lastDate { get; set; }
+    }
+    public class UserTaskDisplay()
+    {
+        public int userSrNo { get; set; }
+        public string name { get; set; }
+        public string docNo { get; set; }
+        public string task { get; set; }
+        public int pages { get; set; }
+        public int submitted { get; set; }
+        public string startDate { get; set; }
+        public string lastDate { get; set; }
+        public string status { get; set; }
+    }
+    private DialogSettings DialogParams = new DialogSettings { Width = "800px", Height = "450px" };
+
+    protected override void OnInitialized()
+    {
+        // ListofClasses = new List<string>() { "U", "A" };
+        LoadUsers();
+        //if (State.dataFile != null) State.dataFile.FillTestData();
+        //State.dataFile.RemoveUserTask("user1@gmail.com", "MN-014");
+        LoadUserTasks();
+        // ResetTables();
+    }
+    int GetSrNo()
+    {
+        return sfgrid.TotalItemCount + 1;
+    }
+    private async Task LoadUsers()
+    {
+        if (UserDisplayRecords != null && UserDisplayRecords.Count > 0) return;
+        VisibleSpinner = true;
+        var result = State.dataFile.GetAllUserProfiles();
+        VisibleSpinner = false;
+        if (sfgrid == null) sfgrid = new SfGrid<UserDisplayProfile>();
+        UserRecords = (List<UserProfile>)result;
+        UserDisplayRecords = new List<UserDisplayProfile>();
+        int n = 0;
+        // sfgrid.
+        foreach(UserProfile user in UserRecords)
+        {
+            UserDisplayRecords.Add(new UserDisplayProfile()
+                {
+                    userSrNo = ++n,
+                    email = user.RowKey,
+                    name = user.Name_E,
+                    userClass = user.UserClass,
+                    loginCount = user.LoginCount,
+                    joinedDate = State.dataFile.GetUKDateOnly(user.JoinedDate.ToLocalTime().Date.ToString()),
+                    lastDate = user.LastDate,
+                });
+        }
+        foreach (UserDisplayProfile userRec in UserDisplayRecords)
+            sfgrid.AddRecordAsync(userRec);
+    }
+    private void LoadUserTasks()
+    {
+        ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+        if (clientKeyValueData == null || clientTaskAssignmentInfo == null) { return; }
+        
+        Dictionary<string, string> dictUserDoc = clientKeyValueData.GetUserTasks();
+        if (dictUserDoc.Count == 0) return;
+
+        Dictionary<string, List<UserTaskProgressInfo>> docTaskProgress = new Dictionary<string, List<UserTaskProgressInfo>>();
+        Dictionary<string, int> dictDocPages = new Dictionary<string, int>();
+
+        foreach(KeyValuePair<string, string> kv in dictUserDoc)
+        {
+            //string userID = kv.Key;
+            string[] dNos = kv.Value.Split(';');
+            foreach(string dNo in dNos)
+            {
+                if (dNo.Length > 0)
+                {
+                    if (docTaskProgress.ContainsKey(dNo)) { continue; }
+                    TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(dNo);
+                    if (taskAssignmentInfo != null)
+                    {
+                        string[] p = State.dataFile.ParsePageInfo(taskAssignmentInfo.PageNos);
+                        dictDocPages[dNo] = (p.Length == 3) ? Int32.Parse(p[2]) : 0;
+                        var listItems = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                        if (listItems != null && listItems.Count > 0) { docTaskProgress.Add(dNo, listItems); }
+                    }
+                }
+            }
+        }
+
+        string userID, docNo;
+        int srNo = 0;
+        UserTaskDisplayRecords = new List<UserTaskDisplay>();
+        foreach(KeyValuePair<string, string> kv in dictUserDoc)
+        {
+            userID = kv.Key;
+            docNo = kv.Value;
+            string[] f = kv.Value.Split(';');
+            foreach(string doc_No in f)
+            {
+                if (doc_No.Length == 0) continue;
+                if (docTaskProgress.ContainsKey(doc_No) && dictDocPages.ContainsKey(doc_No))
+                {
+                    List<UserTaskProgressInfo> listUserTaskProgressInfo = docTaskProgress[doc_No];
+                    var item = listUserTaskProgressInfo.Where(r => r.userID == userID).ToList();
+                    if (item.Count > 0)
+                    {
+                        UserTaskDisplayRecords.Add(new UserTaskDisplay()
+                        {
+                            userSrNo = ++srNo,
+                            name = State.dataFile.GetUserName(userID),
+                            docNo = doc_No,
+                            task = item[0].task,
+                            pages = dictDocPages[doc_No],
+                            submitted = item[0].submitted,
+                            startDate = item[0].startDate,
+                            lastDate = item[0].lastDate,
+                            status = item[0].status
+                        });
+                    }
+                }
+            }
+        }
+    }
+    public Dictionary<string, string> GetUserTasks(out Dictionary<string, List<UserTaskProgressInfo>> docTasks,
+        out Dictionary<string, TaskAssignmentInfo> taskAssignments)
+    {
+        Dictionary<string, string> dict = new Dictionary<string, string>();
+        Dictionary<string, List<UserTaskProgressInfo>> docTaskProgress = new Dictionary<string, List<UserTaskProgressInfo>>();
+        Dictionary<string, TaskAssignmentInfo> dictTaskAssignmentInfo = new Dictionary<string, TaskAssignmentInfo>();
+        docTasks = docTaskProgress;
+        taskAssignments = dictTaskAssignmentInfo;
+        ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+        if (clientKeyValueData == null || clientTaskAssignmentInfo == null) { return dict; }
+
+        List<UserTaskProgressInfo> userTaskProgressInfos = new List<UserTaskProgressInfo>();
+        dict = clientKeyValueData.GetUserTasks();
+        if (dict.Count > 0)
+        {
+            foreach(KeyValuePair<string, string> kv in dict)
+            {
+                string userID = kv.Key;
+                string[] dNos = kv.Value.Split(';');
+                foreach(string dNo in dNos)
+                {
+                    if (dNo.Length > 0)
+                    {
+                        if (docTaskProgress.ContainsKey(dNo)) { continue; }
+                        TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(dNo);
+                        if (taskAssignmentInfo != null)
+                        {
+                            dictTaskAssignmentInfo[dNo] = taskAssignmentInfo;
+                            var listItems = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                            if (listItems != null && listItems.Count > 0) { docTaskProgress.Add(dNo, listItems); }
+                        }
+                    }
+                }
+            }
+        }
+        return dict;
+    }
+
+    // private 
+    public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (userClass != "A" && userClass != "S")
+        {
+            args.Cancel = true;
+            AlertBtn("Only project manager can add/modify user profiles.", "Unauthorized Access");
+        }
+    }
+    public async Task ActionBeginUser(ActionEventArgs<UserDisplayProfile> args)
+    {
+        var reqType = args.RequestType;
+        var action = args.Action;
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Add")
+        {
+            sfgUserState = SfgState._sfgNone;
+
+        }
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete")
+        {
+            sfgUserState = SfgState._sfgDel;
+
+        }
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add) && args.Action == null)
+        {
+            // sfgUserState = SfgState._sfgAdd;
+        }
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Add")
+        {
+            if (args.RowData != null && args.RowData.email != null)
+            {
+                sfgUserState = SfgState._sfgAdd;
+                UserDisplayProfile rowData = args.Data;
+                rowData.email = rowData.email.ToLower();
+                var userData = from userRec in UserDisplayRecords
+                               where userRec.email == rowData.email
+                               select userRec;
+                if (userData.Count() > 0)
+                {
+                    args.Cancel = true;
+                    AlertBtn("User already registered.", "Duplicate Email");
+                    return;
+                }
+                //rowData.userClass = rowData.userClass.ToLower();
+                if (rowData.userClass != "A" && rowData.userClass != "Admin" && rowData.userClass != "U" && rowData.userClass != "User")
+                {
+                    args.Cancel = true;
+                    AlertBtn("User class can only be A or U.", "User Class Error");
+                    return;
+                }
+            }
+        }
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
+        {
+            sfgUserState = SfgState._sfgEdt;
+        }
+    }
+    public void ActionCompleteUser(ActionEventArgs<UserDisplayProfile> args)
+    {
+        var reqType = args.RequestType;
+        var action = args.Action;
+        if (sfgUserState == SfgState._sfgInit || sfgUserState == SfgState._sfgNone) return;
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Add"))
+        {
+            if (State.dataFile != null)
+            {
+                State.dataFile.AddUserProfile(args.Data.email, args.Data.name, "", args.Data.userClass.Substring(0,1), 0);
+                if (State.dataFile.ErrMsg.Length > 0)
+                    AlertBtn(State.dataFile.ErrMsg, "Error");
+                else
+                    AlertBtn("User profile added.", "Success");
+            }
+        }
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            if (State.dataFile != null)
+            {
+                State.dataFile.DelUserProfile(args.Data.email);
+                sfgUserState = SfgState._sfgNone;
+                if (State.dataFile.ErrMsg.Length > 0)
+                    AlertBtn(State.dataFile.ErrMsg, "Error");
+                else
+                    AlertBtn("User profile deleted.", "Success");
+            }
+        }
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Edit" && args.Data != null))
+        {
+            string s1 = "", s2 = "";
+            int key = Convert.ToInt16(args.Data.userSrNo);
+            bool modified = false;
+            if (key >= 0 && key <= UserDisplayRecords.Count && key <= UserRecords.Count)
+            {
+                s1 = UserDisplayRecords[key-1].name;
+                s2 = UserRecords[key - 1].Name_E;
+                modified = (s1 != s2);
+            }
+            string newName = s1;
+            string lastDate = "";
+            if (args.Data.lastDate != null && args.Data.lastDate.Length > 0)
+            {
+                modified = true;
+                string[] f = args.Data.lastDate.Split('/');
+                int mon, day, yr;
+                if (f.Length < 3 || f[0].Length == 0 || f[1].Length == 0 || f[2].Length == 0)
+                {
+                    args.Cancel = true;
+                    AlertBtn("Date format not recognized.", "Date Error");
+                    return;
+                }
+                day = Convert.ToInt16(f[0]);
+                mon = Convert.ToInt16(f[1]);
+                yr = Convert.ToInt16(f[2]);
+                if (day <= 0 || day > 31 || mon <= 0 || mon > 12 || yr < 2024 || yr > DateTime.Now.Year)
+                {
+                    args.Cancel = true;
+                    AlertBtn("Date value(s) out of range.", "Date Error");
+                    return;
+                }
+                DateTime dt = new DateTime(yr, mon, day);
+                lastDate = State.dataFile.GetUKDateOnly(dt.ToShortDateString());
+            }
+            if (modified)
+            {
+                UserProfile userProfile = new UserProfile()
+                {
+                        RowKey = args.Data.email,
+                        Name_E = newName,
+                        UserClass = args.Data.userClass,
+                        LastDate = lastDate, //.ToUniversalTime().ToShortDateString()),
+                };
+                State.dataFile.UpdateUserProfile(userProfile);
+                if (State.dataFile.ErrMsg.Length > 0) AlertBtn(State.dataFile.ErrMsg, "Error");
+                else AlertBtn("User profile updated.", "Success");
+            }
+            sfgUserState = SfgState._sfgNone;
+        }
+    }
+    private async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+    //********************************************************************************/
+    //*** Database reset. ***/
+    //********************************************************************************/
+    private async Task ConfirmBtn(string msg, string warn)
+    {
+        var result = await DialogService.ConfirmAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" },
+                CancelButtonOptions = new DialogButtonOptions() { Content = "Cancel" }
+            });
+        bool res = (bool)result;
+        DoDelete(res);
+    }
+    void ResetTables()
+    {
+        ConfirmBtn("Are you really resetting the data tables?", "****DESTROYING Data****");
+    }
+    void DoDelete(bool flag)
+    {
+        if (flag) return;
+    }
+}

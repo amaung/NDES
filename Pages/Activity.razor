@@ -1,0 +1,470 @@
+﻿@page "/activity/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Calendars
+@using System.Globalization
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    //***********************************************************************
+    //***************************** Initialize ******************************
+    //***********************************************************************
+    protected override async Task OnInitializedAsync()
+    {
+        FillDates();
+        if (State.clientTipitakaDB != null )
+        {
+            ClientActivityLog clientActivityLog = State.clientTipitakaDB.GetClientActivityLog();
+            //clientActivityLog.AddTestData();
+            _ = Task.Run(() => clientActivityLog.DeleteOldActivities(email, userName));
+        }
+        //https://stackoverflow.com/questions/53183370/how-to-start-an-async-method-without-await-its-completion
+        string month = DateTimeFormatInfo.CurrentInfo.GetMonthName(1);
+        int thisMonth = DateTime.Now.Month;
+        int thisYear = DateTime.Now.Year;
+        int idx = 0;
+        for(int i = thisMonth + 1; i <= 12; ++i)
+        {
+            listMons.Add(new DataItem()
+            {
+                ID = idx++.ToString("00"),
+                Text = String.Format("{0} {1}", DateTimeFormatInfo.CurrentInfo.GetMonthName(i), thisYear - 1)
+            });
+        }
+        if (thisMonth < 12)
+        {
+            for(int i = 1; i <= thisMonth; ++i)
+            {
+                listMons.Add(new DataItem()
+                {
+                    ID = idx++.ToString("00"),
+                    Text = String.Format("{0} {1}", DateTimeFormatInfo.CurrentInfo.GetMonthName(i), thisYear)
+                });
+            }
+        }
+    }
+}
+
+@* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
+@*****************************************************************************@
+@****************************** Base Document  *******************************@
+@*****************************************************************************@
+<Administration componentName="Activity" email=@email userName=@userName userClass=@userClass flex_width="870px">
+    <adminMenuItem>Activity Log</adminMenuItem>
+</Administration>
+
+<div>
+    <div style="width:200px" class="form-group col-md-2 column">
+        <label class="col-form-label">Select Date :</label>
+        <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="searchDate"
+                        MultiSelectMode="None" PopupHeight="300px" DataSource="@searchDates">
+            <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@SearchDateValueChangeHandler"></DropDownListEvents>
+            <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+        </SfDropDownList>
+    </div>
+</div>
+<br />
+<div style="width:180px;height:32px; padding-top:14px; margin-left:50px" class="form-group col-md-2 column">
+    <SfButton IsPrimary="true" CssClass="btn" OnClick="@ShowActivities"> Show </SfButton>
+</div>
+<br /><br />
+<label style="margin-left:780px;width:200px;text-align: right;"><strong>Total: </strong>@ActivityDataRecords.Count</label>
+<br />
+@*******************************************************************************@
+@****************************** Activity DataGrid ******************************@
+@*******************************************************************************@
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@ActivityDataRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="false" AllowTextWrap="true"  Height="450" Width="1000">
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(ActivityDataItem.SrNo) HeaderText="Sr No" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(ActivityDataItem.DateTime) HeaderText="DateTime" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="18%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(ActivityDataItem.Name) HeaderText="Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="22%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(ActivityDataItem.Activity) HeaderText="Activity" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="10%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(ActivityDataItem.Description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="40%" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+<br/>
+@*******************************************************************************@
+@*************************** Task Activity DataGrid ****************************@
+@*******************************************************************************@
+<h5><strong>Task Activity Log</strong></h5>
+
+<div id = "ControlRegion">
+	<div class=" column control-section">
+        <div id="wrapper" class="daterangepicker-section">
+            <div id="daterangepicker-control">
+                <Label>Select Dates :</label>
+                <SfDateRangePicker TValue="DateTime?" @ref="sfDateRange" Width="200px" Placeholder="Choose a Range" Format="d/M/yyyy" @bind-StartDate="@StartValue" EndDate="@EndValue">			
+			    <DateRangePickerEvents  TValue="DateTime?" ValueChange="DateRangePickerValueChangeHandler"></DateRangePickerEvents>
+                </SfDateRangePicker>			
+            </div>
+        </div>
+    </div>
+    <div class="column control-section">
+        <label>Select Month :</label>
+        <SfDropDownList TValue="string" TItem="DataItem" @ref=monDropdown MultiSelectMode="None" Width="200px" PopupHeight="500px"
+                        Placeholder="Select month" @bind-Value="@monDropDownValue" DataSource="@listMons">
+            <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@MonthValueChangeHandler"></DropDownListEvents>
+            <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+        </SfDropDownList>
+    </div>
+    <div style="width:180px;height:32px; padding-top:23px; margin-left:0px" class="form-group col-md-2 column">
+        <SfButton IsPrimary="true" CssClass="btn" OnClick="@ShowTaskActivities"> Show </SfButton>
+    </div>
+</div>
+<br/><br/>
+<label style="margin-left:780px;width:200px;text-align: right;"><strong>Total: </strong>@TaskActivityRecords.Count</label>
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@TaskActivityRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="false" AllowTextWrap="false" Toolbar="@(new List<string>() { "ExcelExport" })" Height="450" Width="1000">
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(TaskActivityItem.SrNo) HeaderText="Sr No" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Date) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="10%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Name) HeaderText="Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="10%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.DataEntry) HeaderText="Entry" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Review) HeaderText="Review" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Edit) HeaderText="Edit" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Upload) HeaderText="Upload" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.HTML) HeaderText="HTML" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="23%" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+<br/>
+
+<style>
+    .btn {
+        width: 140px; 
+    }
+    .column {
+        float: left;
+        padding: 0px;
+        width:250px;
+        /* height: 530px; /* Should be removed. Only for demonstration */
+    }
+
+    .column2 {
+        float: left;
+        padding: 0px;
+        width:250px;
+        /* height: 530px; /* Should be removed. Only for demonstration */
+    }
+</style>
+
+@********************************** Grid styles **********************************@
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+
+    .e-grid .e-altrow {
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+</style>
+@****************************** End of Grid styles ******************************@
+@code {
+    // classes
+    public class DataItem
+    {
+        public string ID { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+    public class ActivityDataItem
+    {
+        public int SrNo { get; set; } = 0;
+        public string DateTime { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string UserID { get; set; } = string.Empty;
+        public string Activity { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+    public class TaskActivityItem
+    {
+        public int SrNo { get; set; } = 0;
+        public string Date { get; set; } = default!;
+        public string Name { get; set; } = default!;
+        public string DocNo { get; set; } = default!;
+        public int DataEntry { get; set; } = default!;
+        public int Review {  get; set; } = default!;
+        public int Edit {  get; set; } = default!;
+        public int Upload {  get; set; } = default!;
+        public int HTML {  get; set; } = default!;
+        public string Description { get; set; } = default!;
+    }
+    //Administration admin;
+    // arrays
+    private List<DataItem> searchDates = new List<DataItem>();
+    private List<ActivityDataItem> ActivityDataRecords = new List<ActivityDataItem>();
+    private List<TaskActivityItem> TaskActivityRecords = new List<TaskActivityItem>();
+    // variables
+    string searchDate = "";
+    SfDateRangePicker<DateTime?> sfDateRange;
+    SfGrid<ActivityDataItem>? sfgrid;
+    SfGrid<TaskActivityItem>? sfgrid1;
+    SfDropDownList<string, DataItem> monDropdown;
+    List<DataItem> listMons = new List<DataItem>();
+
+    public DateTime? StartValue { get; set; } = DateTime.Now;
+    public DateTime? EndValue { get; set; } = DateTime.Now;
+    string monDropDownValue { get; set; } = "";
+
+    private void SearchDateValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        if (args != null && args.ItemData != null)
+            searchDate = args.ItemData.ID;
+
+    }
+    private void ShowActivities()
+    {
+        // retrieve
+        if (searchDate == null || searchDate.Length == 0)
+        {
+            string msg = "Date not selected.";
+            string warn = "Warning";
+            AlertBtn(msg, warn);
+            return;
+        }
+        int offset = Int32.Parse(searchDate) - 100;
+        DateTime today = DateTime.Now;
+        DateTime dt1 = new DateTime(today.Year, today.Month, today.Day, 0, 0, 0);
+        dt1 = dt1.AddDays(-offset);
+        DateTime utcDT1 = dt1.ToUniversalTime();
+        DateTime utcDT2 = dt1.AddDays(1).ToUniversalTime();
+        if (State.dataFile != null)
+        {
+            List<ActivityLog> activities = State.dataFile.GetActivities(utcDT1, utcDT2);
+            if (activities.Count > 0)
+            {
+                List<ActivityDataItem> listActivities = new List<ActivityDataItem>();
+                foreach(ActivityLog activityLog in activities)
+                {
+                    string dt = GetLocalTime(activityLog.RowKey);
+                    string name = State.dataFile.GetUserName(activityLog.UserID);
+                    listActivities.Add(new ActivityDataItem() 
+                    {
+                        SrNo = listActivities.Count + 1,
+                        DateTime = GetLocalTime(activityLog.RowKey),
+                        Name = State.dataFile.GetUserName(activityLog.UserID),
+                        UserID = activityLog.UserID,
+                        Activity = activityLog.Activity,
+                        Description = activityLog.Description
+                    });
+                }
+                ActivityDataRecords = listActivities;
+            }
+        }
+    }
+    private void ShowTaskActivities()
+    {
+        DateTime startDate = DateTime.Now;
+        DateTime endDate = DateTime.Now;
+        if (monDropDownValue == null || monDropDownValue.Length == 0)
+        {
+            // month specidied
+            DateTime dt = (DateTime)StartValue;
+            startDate = new DateTime(dt.Year, dt.Month, dt.Day);
+            DateTime ed = ((DateTime)EndValue).AddDays(1);
+            endDate = new DateTime(ed.Year, ed.Month, ed.Day, 0, 0, 0);
+            // dateStartEnd = GetStartEndDateTimeStrings(startDate, endDate);
+        }
+        if (StartValue == null && EndValue == null)
+        {
+            // date range specified
+            int idx = Int32.Parse(monDropDownValue);
+            string[] MMyy = listMons[idx].Text.Split(' ');
+            int yy = Int32.Parse(MMyy[1]);
+            int mm = DateTimeFormatInfo.CurrentInfo.MonthNames.ToList().IndexOf(MMyy[0]) + 1;
+            // int days =  DateTime.DaysInMonth(yy, mm);
+            startDate = new DateTime(yy, mm, 1, 0, 0, 0);
+            if (mm < 12) ++mm;
+            else
+            {
+                ++yy; mm = 1;
+            }
+            endDate = new DateTime(yy, mm, 1, 0, 0, 0);
+        }
+        TaskActivityRecords.Clear();
+        List<TaskActivityItem> listTaskRecord = new List<TaskActivityItem>();
+        ClientTaskActivityLog clientTaskActivityLog = State.dataFile.GetClientTaskActivityLog();
+        if (clientTaskActivityLog == null) return;
+        List<TaskActivityLog> listTaskActivities = clientTaskActivityLog.GetActivities(startDate.ToUniversalTime(), endDate.ToUniversalTime());
+        if (listTaskActivities.Count == 0)
+        {
+            AlertBtn("No task activities found for the given date(s).", "Alert"); return;
+        }
+        int n = 0;
+        foreach(TaskActivityLog taskActivityLog in listTaskActivities)
+        {
+            DateTime dt = ConvertDateTimeFromString(taskActivityLog.RowKey).ToLocalTime();
+            TaskActivityItem taskItem = new TaskActivityItem() 
+            {
+                SrNo = ++n,
+                Date = String.Format("{0}/{1}/{2}", dt.Day, dt.Month, dt.Year),
+                Name = State.dataFile.GetUserName(taskActivityLog.UserID),
+                DocNo = taskActivityLog.DocNo,
+                Description = taskActivityLog.Description
+            };
+            string activity = taskActivityLog.Activity.StartsWith("Review") ? "Review" : taskActivityLog.Activity;
+            switch(activity)
+            {
+                case "DataEntry":
+                    taskItem.DataEntry = taskActivityLog.SubmittedPages;
+                    break;
+                case "Review":
+                    taskItem.Review = taskActivityLog.SubmittedPages;
+                    break;  
+                case "Edit":
+                    taskItem.Edit = taskActivityLog.SubmittedPages;
+                    break;            
+                case "Edit-Upload":
+                    taskItem.Upload = taskActivityLog.SubmittedPages;
+                    break;
+                case "HTML":
+                    taskItem.HTML = taskActivityLog.SubmittedPages;
+                    break;
+            }
+            listTaskRecord.Add(taskItem);
+        }
+        TaskActivityRecords = listTaskRecord;
+    }
+    DateTime ConvertDateTimeFromString(string s)
+    {
+        string[] f = s.Split("T");
+        string[] ff = f[0].Split('-');
+        int y = 0, m = 0, d = 0;
+        int hr = 0, min = 0, sec = 0;
+        if (ff.Length == 3)
+        {
+            y = Int32.Parse(ff[0]);
+            m = Int32.Parse(ff[1]);
+            d = Int32.Parse(ff[2]);
+        }
+        ff = f[1].Split(':');
+        if (ff.Length == 3)
+        {
+            hr = Int32.Parse(ff[0]);
+            min = Int32.Parse(ff[1]);
+            sec = Int32.Parse(ff[2].Split('.')[0]);
+        }
+        DateTime dt = new DateTime(y, m, d, hr, min, sec);
+        return dt;
+    }
+    private void MonthValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        // Here, you can customize your code.
+        DataItem item = args.ItemData;
+        if (monDropDownValue != null)
+        {
+            StartValue = EndValue = null;
+        }
+    }
+    public void DateRangePickerValueChangeHandler(RangePickerEventArgs<DateTime?> args)
+    {
+        // Here, you can customize your code.
+        sfDateRange.Value = args.Text;
+        StartValue = args.StartDate;
+        EndValue = args.EndDate;
+        monDropDownValue = "";
+    }
+    private string GetLocalTime(string dt)
+    {
+        DateTime dt0;
+        if (dt.IndexOf("T") == -1) dt += "T00:02:42.4835";
+        string[] t = dt.Split('T');
+        string[] dd = t[0].Split('-');
+        int yy = Int32.Parse(dd[0]);
+        int mm = Int32.Parse(dd[1]);
+        int dy = Int32.Parse(dd[2]);
+ 
+        string[] tt = t[1].Split(':');
+        int hh = Int32.Parse(tt[0]);
+        int min = Int32.Parse(tt[1]);
+        float sec = float.Parse(tt[2]);
+
+        dt0 = new DateTime(yy, mm, dy, hh, min, (int)sec);
+        dt0 = dt0.ToLocalTime();
+        return dt0.ToString("dd-MM-yyyy HH:mm:ss");
+    }
+    public async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+    private void FillDates()
+    {
+        int n = 0;
+        DateTime dt = DateTime.Now;
+        searchDates.Add(new DataItem()
+        {
+            ID = (n+100).ToString(), 
+            Text = "Today"
+        });
+        while (++n < 7)
+        {
+            searchDates.Add(new DataItem()
+                {
+                    ID = (n+100).ToString(),
+                    Text = dt.AddDays(-n).ToString("yyyy-MM-dd")
+                });
+        }
+        searchDate = searchDates[0].ID;
+    }
+    private string GetLocalDateTime(DateTimeOffset utcTime)
+    {
+        DateTimeOffset dt = utcTime.ToLocalTime();
+        string d = dt.ToString();
+        return dt.ToString("yyyy-MM-dd HH:mm:ss");;
+    }
+}

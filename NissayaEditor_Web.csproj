@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Remove="Data\BaseDataComponent.cs" />
+    <Compile Remove="Data\Json.cs" />
     <Compile Remove="Data\WeatherForecast.cs" />
     <Compile Remove="Data\WeatherForecastService.cs" />
     <Compile Remove="Pages\Error.cshtml.cs" />
@@ -31,12 +32,15 @@
     <Content Remove="Pages\MessageFeatures.razor" />
     <Content Remove="Pages\TextBoxFeatures.razor" />
     <Content Remove="Pages\ToolbarFeatures.razor" />
+    <Content Remove="Pages\UserProfile.razor" />
   </ItemGroup>
   
    <ItemGroup>
          <PackageReference Include="Azure.Data.Tables" Version="12.8.2" />
          <PackageReference Include="Azure.Storage.Files.Shares" Version="12.17.1" />
          <PackageReference Include="IPInfo" Version="3.0.0" />
+         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+         <PackageReference Include="RCommon.Json.NewtonSoft" Version="1.0.1.71" />
          <PackageReference Include="Syncfusion.Blazor.Grid" Version="23.1.43" />
     <PackageReference Include="Syncfusion.Blazor.DropDowns" Version="23.1.43" />
     <PackageReference Include="Syncfusion.Blazor.Popups" Version="23.1.43" />

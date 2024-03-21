@@ -1,0 +1,148 @@
+﻿@page "/administration/"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+
+<body id="maincontainer" style="background-color:#f7f0df">
+    <div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
+        <div class="menu-control">
+            <SfMenu Items="@MenuData">
+                <MenuEvents TValue="MenuItem" ItemSelected="menuitemSelected"></MenuEvents>
+            </SfMenu>
+        </div>
+    </div>
+    <br />
+    <div>
+        <label style="font-size:20px"><strong>@adminMenuItem</strong></Label>
+        <label Class="label_class">User: @userName</label>
+    </div>
+</body>
+@******** Documents DataGrid Style ***********@
+@****** https://www.syncfusion.com/forums/183296/how-to-programmatically-hide-and-show-grid ******@
+@*https://blazor.syncfusion.com/documentation/sidebar/getting-started-webapp*@
+@***********************************************@
+<style>
+    .menu-control, .e-menu-container, .e-menu-container.e-menu-popup,
+    .e-menu-container ul .e-menu-item, .e-menu-container .e-ul .e-menu-item {
+        background-color: #ded8ca;
+        font-size: 18px;
+        /* padding: 60 0px; */
+        /* letter-spacing: -.01em; */
+    }
+    .label_class
+    {
+        width:@flex_width;
+        text-align:right;
+    }
+</style>
+@code {
+    [Parameter]
+    public RenderFragment adminMenuItem { get; set; }
+    [Parameter]
+    public string componentName { get; set; }
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+    [Parameter]
+    public string flex_width { get; set; } = "";
+
+    // ***************************************************************************************
+    //
+    // Page variables and initializations
+    //
+    // ***************************************************************************************
+#pragma warning disable
+    const string _Main = "MainPage";
+    const string _Users = "Users";
+    const string _TaskAssignments = "TaskAssignments";
+    const string _Documents = "Documents";
+    const string _Activities = "Activities";
+    const string _NissayaSource = "SourceBooks";
+    const string _Project = "Project";
+    const string _DataPage = "DataPage";
+    const string _Logout = "Logout";
+
+#pragma warning disable
+    protected override void OnInitialized()
+    {
+        MenuData[0].Disabled = (componentName == "UseProfile");
+        MenuData[1].Disabled = (componentName == "Document");
+        MenuData[2].Disabled = (componentName == "TaskAssignment");
+        MenuData[3].Disabled = (componentName == "Activity");
+        MenuData[4].Disabled = (componentName == "NissayaSource");
+        MenuData[5].Disabled = (componentName == "Project");
+        State.screenID = 3;
+    }
+    // ***************************************************************************************
+    //
+    // Menu Code
+    //
+    // ***************************************************************************************
+#pragma warning restore
+    private List<MenuItem> MenuData = new List<MenuItem>{
+        new MenuItem { Text = _Users },
+        new MenuItem { Text = _Documents },
+        new MenuItem { Text = _TaskAssignments },
+        new MenuItem { Text = _Activities },
+        new MenuItem { Text = _NissayaSource },
+        new MenuItem { Text = _Project },
+        new MenuItem { Text = _DataPage },
+        new MenuItem { Text = _Logout },
+        };
+    // https://www.syncfusion.com/blogs/post/preview-file-blazor-file-manager.aspx
+    private async Task menuitemSelected(MenuEventArgs<MenuItem> args)
+    {
+        var item = adminMenuItem.ToString();
+        var selectedItem = args.Item.Text;
+        switch (selectedItem)
+        {
+            case _DataPage:
+                NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Users:
+                NavManager.NavigateTo(String.Format("/user_profile/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Documents:
+                NavManager.NavigateTo(String.Format("/document/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Activities:
+                NavManager.NavigateTo(String.Format("/activity/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _TaskAssignments:
+                NavManager.NavigateTo(String.Format("/task_assignment/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _NissayaSource:
+                NavManager.NavigateTo(String.Format("/nissaya_source/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Project:
+                NavManager.NavigateTo(String.Format("/project/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Logout:
+                NavManager.NavigateTo("/");
+                break;
+        }
+    }
+    public async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+}

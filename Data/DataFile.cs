@@ -3,22 +3,24 @@
 //using System.Collections.Generic;
 //using System.Linq;
 using System.Text;
-//using System;
 //using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-//using System.Xml.XPath;
-//using static System.Runtime.InteropServices.JavaScript.JSType;
-//using System.Net.NetworkInformation;
-//using System.IO;
 using Tipitaka_DBTables;
 using Tipitaka_DB;
 using System.Diagnostics;
+using static Azure.Core.HttpHeader;
+using Syncfusion.Blazor.Popups;
+using System.Net.NetworkInformation;
+using Syncfusion.PdfExport;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+//using static NissayaEditor_Web.Data.Document;
+using System.Linq;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
+using Syncfusion.Blazor.DropDowns;
 
-//using Microsoft.AspNetCore.Http;
-//using Microsoft.AspNetCore.Mvc;
-//using System.Security.Cryptography;
-//using Azure;
-//using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 // https://stackoverflow.com/questions/25391244/how-to-create-and-save-a-temporary-file-on-microsoft-azure-virtual-server
 
@@ -39,6 +41,11 @@ namespace NissayaEditor_Web.Data
             RecNo = null; Pali = Trans = Trans2 = Footnote = Remarks = "";
         }
     }
+    public class SourceDocInfo()
+    {
+        public string docPDFfile = "";
+        public int pages = 0;
+    }
     public class DataFile
     {
         public string fname = string.Empty;
@@ -49,21 +56,33 @@ namespace NissayaEditor_Web.Data
         public string newParaMarker = "။ ။";    // default
         public string email = string.Empty;
         public string userName = string.Empty;
+        public string userClass = string.Empty;
         public string DocID { get; set; } = string.Empty;
         public string DocTitle { get; set; } = string.Empty;
         public Dictionary<string, List<NIS>> Pages = new Dictionary<string, List<NIS>>();
+        public List<UserProfile> UserProfiles = new List<UserProfile>();
         public List<string> pageNos = new List<string>();
         public char[] fieldSeparators = { ',', '\t' };
         public string ErrMsg = string.Empty;
         private bool currentPageUploaded = false;
         ClientTipitakaDB_w? clientUserTipitakaDB = null;
+        ClientUserProfile? clientUserProfile = null;
         ClientSuttaInfo? clientSuttaInfo = null;
         ClientSuttaPageData? clientSuttaPageData = null;
         ClientKeyValueData? clientKeyValueData = null;
         ClientActivityLog? clientActivityLog = null;
+        ClientTaskActivityLog? clientTaskActivityLog = null;
         ClientUserPageActivity? clientUserPageActivity = null;
-        TipitakaFileStorage? tipitakaFileStorage = new TipitakaFileStorage();
+        ClientSourceBookInfo? clientSourceBookInfo = null;
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = null;
+        ClientCorrectionLog? clientCorrectionLog = null;
+        //TipitakaFileStorage? tipitakaFileStorage = new TipitakaFileStorage();
+        //Dictionary<string, SuttaInfo> dictSuttaInfo = new Dictionary<string, SuttaInfo>();
 
+        public ClientKeyValueData? GetClientKeyValueData() { return clientKeyValueData;  }
+        public ClientTaskAssignmentInfo? GetClientTaskAssignmentInfo() { return clientTaskAssignmentInfo; }
+        public ClientCorrectionLog? GetClientCorrectionLog() { return clientCorrectionLog; }
+        public ClientTaskActivityLog? GetClientTaskActivityLog() { return clientTaskActivityLog; }
         public DataFile(ClientTipitakaDB_w? clientUserTipitakaDB)
         {
             if (clientUserTipitakaDB != null)
@@ -71,8 +90,10 @@ namespace NissayaEditor_Web.Data
                 this.clientSuttaInfo = clientUserTipitakaDB.GetClientSuttaInfo();
                 this.clientSuttaPageData = clientUserTipitakaDB.GetClientSuttaPageData();
                 this.clientKeyValueData = clientUserTipitakaDB.GetClientKeyValueData();
-                //this.clientActivityLog = clientUserTipitakaDB.GetClientActivityLog();
+                this.clientUserProfile = clientUserTipitakaDB.GetClientUserProfile();
                 this.clientUserPageActivity = clientUserTipitakaDB.GetClientUserPageActivity();
+                this.clientActivityLog = clientUserTipitakaDB.GetClientActivityLog();
+                this.clientSourceBookInfo = clientUserTipitakaDB.GetClientSourceBookInfo();
             }
         }
         public DataFile(ClientTipitakaDB_w? clientUserTipitakaDB, string email, string userName)
@@ -85,8 +106,13 @@ namespace NissayaEditor_Web.Data
                 this.clientSuttaInfo = clientUserTipitakaDB.GetClientSuttaInfo();
                 this.clientSuttaPageData = clientUserTipitakaDB.GetClientSuttaPageData();
                 this.clientKeyValueData = clientUserTipitakaDB.GetClientKeyValueData();
-                //this.clientActivityLog = clientUserTipitakaDB.GetClientActivityLog();
+                this.clientUserProfile = clientUserTipitakaDB.GetClientUserProfile();
                 this.clientUserPageActivity = clientUserTipitakaDB.GetClientUserPageActivity();
+                this.clientActivityLog = clientUserTipitakaDB.GetClientActivityLog();
+                this.clientTaskActivityLog = clientUserTipitakaDB.GetClientTaskActivityLog();
+                this.clientSourceBookInfo = clientUserTipitakaDB.GetClientSourceBookInfo();
+                this.clientTaskAssignmentInfo = clientUserTipitakaDB.GetClientTaskAssignmentInfo();
+                this.clientCorrectionLog = clientUserTipitakaDB.GetClientCorrectionLog();
             }
         }
         public void ClearPageData() { Pages = new Dictionary<string, List<NIS>>(); }
@@ -192,6 +218,8 @@ namespace NissayaEditor_Web.Data
                             {
                                 pgno = s1.Substring(1, p - 1).Trim();
                                 s1 = s1.Substring(p);
+                                p = pgno.IndexOf(" ");
+                                if (p > -1) { pgno = pgno.Substring(0, p).Trim(); }
                             }
                         }
                         string[] nisRecords = s1.Split(new char[] { '*' });
@@ -207,7 +235,12 @@ namespace NissayaEditor_Web.Data
                                     nis.RecNo = ++recno;
                                     nis.Pali = f[0].Trim();
                                     if (f.Length > 1) nis.Trans = f[1].Trim();
-                                    if (f.Length == 3) nis.Footnote = f[2].Trim();
+                                    if (f.Length == 3)
+                                    {
+                                        string[] ff = f[2].Trim().Split(new char[] { '?', '!' });
+                                        nis.Footnote = ff[0].Trim();
+                                        if (ff.Length > 1) nis.Remarks = ff[1].Trim();
+                                    }
                                     listNISRecords.Add(nis);
                                 }
                             }
@@ -372,38 +405,308 @@ namespace NissayaEditor_Web.Data
         public int GetNoPages() { return Pages.Count; }
         public void AddNewPage(string pgno)
         {
-            if(!pageNos.Contains(pgno)) { pageNos.Add(pgno);}
+            if (!pageNos.Contains(pgno)) { pageNos.Add(pgno); }
             if (!Pages.ContainsKey(pgno))
                 Pages[pgno] = new List<NIS>();
         }
-        public Dictionary<string, string> GetUploadPageData()
+        public int GetFirstPageNo() { return Pages.Count > 0 ? Convert.ToInt16(Pages.First().Key) : 0; }
+        public int GetLastPageNo() { return Pages.Count > 0 ? Convert.ToInt16(Pages.Last().Key) : 0; }
+        //public Dictionary<string, string> GetUploadPageData()
+        //{
+        //    Dictionary<string, string> pageData = new Dictionary<string, string>();
+        //    int n = 0; ErrMsg = "";
+        //    foreach (KeyValuePair<string, List<NIS>> kv in Pages)
+        //    {
+        //        string page_data = string.Empty;
+        //        n = 0;
+        //        foreach (NIS nis in kv.Value)
+        //        {
+        //            ++n;
+        //            if (nis.Pali!.Length == 0 || nis.Trans!.Length == 0)
+        //            {
+        //                ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. ", kv.Key, n);
+        //                return pageData;
+        //            }
+        //            if (nis.Pali!.Length > 0)
+        //            {
+        //                if (page_data.Length > 0) page_data += " *" + nis.Pali;
+        //                else page_data += "*" + nis.Pali;
+        //                if (nis.Trans != null && nis.Trans.Length > 0) { page_data += " ^" + nis.Trans; }
+        //                if (nis.Footnote != null && nis.Footnote.Length > 0) { page_data += " @" + nis.Footnote; }
+        //                if (nis.Remarks != null && nis.Remarks.Length > 0) { page_data += " ?" + nis.Remarks; }
+        //            }
+        //        }
+        //        pageData[kv.Key] = page_data;
+        //    }
+        //    return pageData;
+        //}
+        public Dictionary<string, string> GetUploadPageData(string startPage = "", string endPage = "")
         {
             Dictionary<string, string> pageData = new Dictionary<string, string>();
             int n = 0; ErrMsg = "";
+            bool firstPageFound = false, lastPageFound = false;
+            bool allPages = startPage.Length == 0 && endPage.Length == 0;
             foreach (KeyValuePair<string, List<NIS>> kv in Pages)
             {
                 string page_data = string.Empty;
                 n = 0;
-                foreach (NIS nis in kv.Value)
-                {
-                    ++n;
-                    if (nis.Pali!.Length == 0 || nis.Trans!.Length == 0)
+                if (!firstPageFound && startPage == kv.Key) { firstPageFound = true; }
+                if (allPages || (firstPageFound && !lastPageFound))
+                {  
+                    foreach (NIS nis in kv.Value)
                     {
-                        ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. ", kv.Key, n);
-                        return pageData;
+                        ++n;
+                        if (nis.Pali!.Length == 0 || nis.Trans!.Length == 0)
+                        {
+                            ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. ", kv.Key, n);
+                            return pageData;
+                        }
+                        if (nis.Pali!.Length > 0)
+                        {
+                            if (page_data.Length > 0) page_data += " *" + nis.Pali;
+                            else page_data += "*" + nis.Pali;
+                            if (nis.Trans != null && nis.Trans.Length > 0) { page_data += " ^" + nis.Trans; }
+                            if (nis.Footnote != null && nis.Footnote.Length > 0) { page_data += " @" + nis.Footnote; }
+                            if (nis.Remarks != null && nis.Remarks.Length > 0) 
+                            {
+                                if (nis.Footnote == null || nis.Footnote.Length == 0)
+                                    // this is the case where no Footnote but Remarks exist
+                                    page_data += " @"; // preceded with footnote symbol first
+                                page_data += "?" + nis.Remarks; 
+                            }
+                        }
                     }
-                    if (nis.Pali!.Length > 0)
-                    {
-                        if (page_data.Length > 0) page_data += " *" + nis.Pali;
-                        else page_data += "*" + nis.Pali;
-                        if (nis.Trans != null && nis.Trans.Length > 0) { page_data += " ^" + nis.Trans; }
-                        if (nis.Footnote != null && nis.Footnote.Length > 0) { page_data += " @" + nis.Footnote; }
-                        if (nis.Remarks != null && nis.Remarks.Length > 0) { page_data += " !" + nis.Remarks; }
-                    }
+                    pageData[kv.Key] = page_data;
                 }
-                pageData[kv.Key] = page_data;
+                if (!lastPageFound && endPage == kv.Key) { lastPageFound = true; }
+                if (firstPageFound && lastPageFound) { break; }
             }
             return pageData;
+        }
+        public async Task<string> UploadDocument(string startPage, string endPage)
+        {
+            Dictionary<string, string> data = GetUploadPageData(startPage, endPage);
+            if (clientKeyValueData != null)
+            {
+                await clientSuttaPageData!.InsertTableRecBatch(DocID, email, data);
+                if (clientSuttaPageData.StatusCode != 202)
+                {
+                    ErrMsg = clientSuttaPageData.DBErrMsg;
+                }
+            }
+            return ErrMsg;
+        }
+        public List<CorrectionLog> listOfCorrections = new List<CorrectionLog>();
+        public List<CorrectionLog> GetCorrectionLog() { return listOfCorrections; }
+        public int Update_Document(string startPage, string endPage, string userTask)
+        {
+            List<int> pageNosToUpdate = new List<int>();
+            List<object> listCorrections = new List<object>();
+            listOfCorrections = new List<CorrectionLog>();
+            CorrectionLog? correctionLog = null;
+            string NISRecNo = "", NISRecNo_Type = "";
+            bool diff = false;
+            Dictionary<string, string> data = GetUploadPageData(startPage, endPage);
+            if (clientSuttaPageData != null)
+            {
+                int start = Int32.Parse(startPage);
+                int end = Int32.Parse(endPage);
+                for (int i = start; i <= end; i++)
+                {
+                    diff = false;
+                    SuttaPageData? suttaPageData = clientSuttaPageData.GetPageData(DocID, i.ToString("d3"));
+                    if (suttaPageData != null)
+                    {
+                        List<NIS> userData = GetPageData(i.ToString()); //GetNISDataFromPage 1124
+                        List<NIS> serverData = GetNISDataFromPage(suttaPageData.PageData);
+                        int idx = 0;
+                        foreach (NIS nis in userData)
+                        {
+                            NISRecNo = (idx+1).ToString("d2");
+                            // compare userData and serverData
+                            // check for Pali data
+                            if (nis.Pali != null && idx < serverData.Count && serverData[idx].Pali != null && 
+                                nis.Pali != serverData[idx].Pali)
+                            {
+                                NISRecNo_Type = NISRecNo + "P";
+                                correctionLog = new CorrectionLog()
+                                {
+                                    RowKey = String.Format("{0}-{1}-{2}-{3}", DocID, i.ToString("d3"), NISRecNo_Type, DateTime.Now.Ticks),
+                                    UserID = email,
+                                    Task = userTask,
+                                    PageNo = i,
+                                    NISRec = NISRecNo_Type,
+                                    OrigText = serverData[idx].Pali!,
+                                    EditedText = nis.Pali,
+                                    Timestamp = DateTime.Now,
+                                };
+                                listCorrections.Add(correctionLog);
+                                listOfCorrections.Add(correctionLog);
+                                diff = true;
+                            }
+                            // check for translation
+                            if (nis.Trans != null && idx < serverData.Count && serverData[idx].Trans != null &&
+                                nis.Trans != serverData[idx].Trans)
+                            {
+                                NISRecNo_Type = NISRecNo + "T";
+                                correctionLog = new CorrectionLog()
+                                {
+                                    RowKey = String.Format("{0}-{1}-{2}-{3}", DocID, i.ToString("d3"), NISRecNo_Type, DateTime.Now.Ticks),
+                                    UserID = email,
+                                    Task = userTask,
+                                    PageNo = i,
+                                    NISRec = NISRecNo_Type,
+                                    OrigText = serverData[idx].Trans!,
+                                    EditedText = nis.Trans,
+                                    Timestamp = DateTime.Now,
+                                };
+                                listCorrections.Add(correctionLog);
+                                listOfCorrections.Add(correctionLog);
+                                diff = true;
+                            }
+                            // check for footnote
+                            if (nis.Footnote != null && idx < serverData.Count && serverData[idx].Footnote != null &&
+                                nis.Footnote != serverData[idx].Footnote)
+                            {
+                                NISRecNo_Type = NISRecNo + "F";
+                                correctionLog = new CorrectionLog()
+                                {
+                                    RowKey = String.Format("{0}-{1}-{2}-{3}", DocID, i.ToString("d3"), NISRecNo_Type, DateTime.Now.Ticks),
+                                    UserID = email,
+                                    Task = userTask,
+                                    PageNo = i,
+                                    NISRec = NISRecNo_Type,
+                                    OrigText = serverData[idx].Footnote!,
+                                    EditedText = nis.Footnote,
+                                    Timestamp = DateTime.Now,
+                                };
+                                listCorrections.Add(correctionLog);
+                                listOfCorrections.Add(correctionLog);
+                                diff = true;
+                            }
+                            // check for remarks
+                            if (nis.Remarks != null && idx < serverData.Count && serverData[idx].Remarks != null &&
+                                nis.Remarks != serverData[idx].Remarks)
+                            {
+                                diff = true;
+                            }
+                            ++idx;
+                        }
+                        if (diff) pageNosToUpdate.Add(i);
+                    }
+                    else
+                        ErrMsg = clientSuttaPageData.DBErrMsg;
+                }
+                if (pageNosToUpdate.Count > 0) 
+                {
+                    // update those pages
+                    foreach(int pageno  in pageNosToUpdate)
+                    {
+                        string pNo = pageno.ToString();
+                        UpdateCurrentPage(DocID, pNo, GetPageData(pNo));
+                    }
+                }
+                // if there correctionlog data 
+                if (clientCorrectionLog != null && listCorrections != null && listCorrections.Count > 0)
+                {
+                    clientCorrectionLog.InsertBatch(listCorrections).Wait();
+                }
+            }
+            return (listCorrections == null) ? 0 : listCorrections.Count;
+        }
+        public void LogUserTaskActivity(Dictionary<string, string> dictUserTask, string userTask)
+        {
+            string desc = "";
+            int pages = Int32.Parse(dictUserTask["NoPages"]);
+            int totalSubmitted = Int32.Parse(dictUserTask["PagesSubmitted"]);
+            int pagesToSubmit = Int32.Parse(dictUserTask["PagesToSubmit"]);
+            int newSubmittedPages = Math.Min(pages, totalSubmitted);
+            string userStatus = String.Empty;
+            int correctionCount = 0;
+            if (dictUserTask.ContainsKey("CorrectionCount")) correctionCount = Int32.Parse(dictUserTask["CorrectionCount"]);
+            
+            if (clientActivityLog != null)
+            {
+                desc = String.Format("DocNo={0}; Pages={1}", DocID, pagesToSubmit);
+                clientActivityLog.AddActivityLog(email, "Upload", desc);
+            }
+
+            if (newSubmittedPages == pages) 
+            { 
+                userStatus = dictUserTask["Task"].Contains("Upload") ? "Uploaded" : "Completed";
+                // remove from user task list when completed
+                if (clientKeyValueData != null)
+                {
+                    clientKeyValueData.RemoveUserTask(email, DocID);
+                    clientKeyValueData.RemoveUserDocByCategory(email, TaskCategories._Assigned_, DocID);
+                    clientKeyValueData.AddUserDocByCategory(email, TaskCategories._Recent_, DocID);
+                }
+            }
+            else { userStatus = String.Format("{0}%", (int) (newSubmittedPages * 100.0 / pages )); }
+            AddTaskActivityLog(DocID, email, dictUserTask["Task"], pages, totalSubmitted, pagesToSubmit);
+
+            // update SuttaInfo
+            if (clientSuttaInfo != null)
+            {
+                SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo(dictUserTask["DocNo"]);
+                if (suttaInfo != null)
+                {
+                    suttaInfo.PagesSubmitted = newSubmittedPages;
+                    if (dictUserTask["Task"].StartsWith("Edit") && newSubmittedPages == pages)
+                    {
+                        // work on this doc is complete now 
+                        suttaInfo.Status = userStatus;
+                        // update in the project 
+                        UpdateSourceBookCompletedPages(suttaInfo.BookID, pages);
+                    }
+                    else 
+                        suttaInfo.Status = dictUserTask["Task"];
+                    clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+                }
+            }
+            // update TaskAssignmentInfo
+            if (clientTaskAssignmentInfo != null)
+            {
+                TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(dictUserTask["DocNo"]);
+                if (taskAssignmentInfo != null)
+                {
+                    taskAssignmentInfo.PagesSubmitted = newSubmittedPages;
+                    taskAssignmentInfo.CorrectionCount += correctionCount;
+                    taskAssignmentInfo.Status = userStatus;
+                    
+                    var listUserTaskProgressInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                    if (listUserTaskProgressInfo != null && listUserTaskProgressInfo.Count > 0)
+                    {
+                        foreach(UserTaskProgressInfo userTaskProgressInfo in listUserTaskProgressInfo)
+                        {
+                            if (userTaskProgressInfo.userID == email)
+                            {
+                                if (userTaskProgressInfo.startDate.Length == 0)
+                                    userTaskProgressInfo.startDate = DateTime.Now.ToString("d/M/yyyy");
+                                userTaskProgressInfo.lastDate = DateTime.Now.ToString("d/M/yyyy");
+                                userTaskProgressInfo.submitted = newSubmittedPages;
+                                userTaskProgressInfo.status = userStatus;
+                                userTaskProgressInfo.corrections += correctionCount;
+                                break;
+                            }
+                        }
+                        taskAssignmentInfo.AssigneeProgress = JsonConvert.SerializeObject(listUserTaskProgressInfo);
+                        clientTaskAssignmentInfo.UpdateTableRec(taskAssignmentInfo).Wait();
+                    }
+                }
+            }
+        }
+        public void UpdateSourceBookCompletedPages(string bookID, int pageCount)
+        {
+            if (clientSourceBookInfo != null)
+            {
+                SourceBookInfo? sourceBookInfo = clientSourceBookInfo.GetSourceBookInfo(bookID);
+                if (sourceBookInfo != null)
+                {
+                    sourceBookInfo.Completed += pageCount;
+                    clientSourceBookInfo.UpdateSourceBookInfo(sourceBookInfo).Wait();
+                }
+            }
         }
         public async Task<string> UploadDocument()
         {
@@ -414,48 +717,31 @@ namespace NissayaEditor_Web.Data
                 ErrMsg = "ClientTipitakaDB is null.";
                 return ErrMsg;
             }
-            bool newSuttaInfo = false;
             SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo(DocID);
-            if (suttaInfo != null)
-            {
-                // existing doc
-                if (!suttaInfo.SubmittedBy.Contains(email))
-                {
-                    suttaInfo.SubmittedBy += ", " + email;
-                }
-            }
-            else
-            {
-                // new doc
-                newSuttaInfo = true;
-                suttaInfo = new SuttaInfo();
-                suttaInfo.SubmittedBy = email;
-                suttaInfo.NISRecCount = 0;
-                suttaInfo.StartPage = Convert.ToInt16(Pages.First().Key);
-                suttaInfo.EndPage = Convert.ToInt16(Pages.Last().Key);
-            }
-            suttaInfo.Title = DocTitle;
-            suttaInfo.RowKey = DocID;
-            //suttaInfo.SubmittedBy = email;
-            suttaInfo.NoPages += Pages.Count();
-            suttaInfo.StartPage = Math.Min(suttaInfo.StartPage, Convert.ToInt16(Pages.First().Key));
-            suttaInfo.EndPage = Math.Max(suttaInfo.EndPage, Convert.ToInt16(Pages.Last().Key));
-            foreach (string pgno in Pages.Keys)
-            {
-                suttaInfo.NISRecCount += Pages[pgno].Count();
-            }
-            if (newSuttaInfo)
-                clientSuttaInfo.AddSuttaInfo(suttaInfo);
-            else
-                clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+            if (userName.Length == 0) 
+                userName = GetUserName(email);
 
+            // new doc
+            suttaInfo = new SuttaInfo()
+            {
+                RowKey = DocID,
+                Title = DocTitle,
+                StartPage = Convert.ToInt16(Pages.First().Key),
+                EndPage = Convert.ToInt16(Pages.Last().Key),
+                NoPages = Pages.Count(),
+                PagesSubmitted = Pages.Count(),
+                Status = "Uploaded",
+                Team = userName,
+
+            };
+            
+            clientSuttaInfo.AddSuttaInfo(suttaInfo);
             if (clientSuttaInfo.StatusCode != 204) ErrMsg = clientSuttaInfo.DBErrMsg;
-
             if (ErrMsg.Length == 0)
             {
                 // https://stackoverflow.com/questions/19003594/fire-callback-after-async-task-method
                 Dictionary<string, string> data = GetUploadPageData();
-                if (ErrMsg.Length == 0) 
+                if (ErrMsg.Length == 0)
                 {
                     //UploadDocument2(data, callback);
                     await clientSuttaPageData!.InsertTableRecBatch(DocID, email, data);
@@ -464,13 +750,76 @@ namespace NissayaEditor_Web.Data
                         ErrCode = clientSuttaPageData.StatusCode;
                         ErrMsg = clientSuttaPageData.DBErrMsg;
                     }
-                    if (clientUserPageActivity != null)
+                    if (clientActivityLog != null)
                     {
-                        clientUserPageActivity.AddUserPageActivity(email, DocID, "Upload", suttaInfo.StartPage, suttaInfo.EndPage);
+                        string desc = String.Format("{0}; DocNo={1}; Pages={2}", userName, DocID, Pages.Count);
+                        clientActivityLog.AddActivityLog(email, "Upload", desc);
                     }
                 }
             }
             return ErrMsg;
+        }
+        Dictionary<string, string> dictServerDocInfo = new Dictionary<string, string>();
+        public Dictionary<string, string> GetServerDocInfo(string docNo, string task)
+        {
+            if (dictServerDocInfo.ContainsKey("DocNo") && docNo != null && dictServerDocInfo["DocNo"] == docNo) 
+            {
+                return dictServerDocInfo;
+            }
+            // this is for new docNo
+            dictServerDocInfo = new Dictionary<string, string>();
+            if (clientSuttaInfo != null && clientTaskAssignmentInfo != null)
+            {
+                TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(DocID);
+                if (taskAssignmentInfo != null)
+                {
+                    string[] f = ParsePageInfo(taskAssignmentInfo.PageNos);
+                    dictServerDocInfo["DocNo"] = taskAssignmentInfo.RowKey;
+                    if (f != null && f.Length == 3)
+                    {
+                        dictServerDocInfo["BookDocStartPage"] = f[0];
+                        dictServerDocInfo["BookDocEndPage"] = f[1];
+                        dictServerDocInfo["NoPages"] = f[2];
+                    }
+                    Dictionary<string, string> dict = GetUserTaskProgressInfo(task, taskAssignmentInfo.AssigneeProgress);
+                    if (dict.ContainsKey("PagesSubmitted")) dictServerDocInfo["PagesSubmitted"] = dict["PagesSubmitted"];
+                    if (dict.ContainsKey("Status")) dictServerDocInfo["Status"] = dict["Status"];
+                    dictServerDocInfo["ImportedStartPage"] = Pages.First().Key;
+                    dictServerDocInfo["ImportedEndPage"] = Pages.Last().Key;
+                    dictServerDocInfo["ImportedNoPages"] = Pages.Count().ToString();
+
+                }
+            }
+            return dictServerDocInfo;
+        }
+        public string[] ParsePageInfo(string  pageInfo)
+        {
+            List<string> listPageInfo = new List<string>();
+            if (pageInfo != null && pageInfo.Length > 0) 
+            {
+                string[] f = pageInfo.Trim().Split(new char[] { '-', ' ' });
+                if (f.Length == 3) 
+                {
+                    listPageInfo.Add(f[0]);
+                    listPageInfo.Add(f[1]);
+                    listPageInfo.Add(f[2].Substring(1, f[2].Length - 2));
+                }
+            }
+            return listPageInfo.ToArray();
+        }
+        private Dictionary<string, string> GetUserTaskProgressInfo(string task, string progressInfo)
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            var listNDESItems = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(progressInfo);
+            var taskList = (from item in listNDESItems
+                            where item.task == task
+                            select item).ToList();
+            if (taskList.Count == 1 ) 
+            {
+                dict["PagesSubmitted"] = taskList[0].submitted.ToString();
+                dict["Status"] = taskList[0].status;
+            }
+            return dict;
         }
         public void UpdateCurrentPage(string docID, string pgno, List<NIS> nisRecords)
         {
@@ -529,6 +878,7 @@ namespace NissayaEditor_Web.Data
                         if (pno == pno2 + 1) pno2++;
                         userPageActivity.Pages = pno2 - pno1 + 1;
                         userPageActivity.PageRange = string.Format("{0}-{1}", pno1, pno2);
+                        userPageActivity.Activity = "Update";
                         clientUserPageActivity.UpdateUserPageActivity(userPageActivity);
                     }
                     else
@@ -571,31 +921,212 @@ namespace NissayaEditor_Web.Data
                 rec += space + "*" + page.Pali;
                 rec += " ^" + page.Trans;
                 if (page.Footnote != null && page.Footnote.Length > 0) rec += " @" + page.Footnote;
-                if (includeRemarks && page.Remarks != null && page.Remarks.Length > 0) rec += " !" + page.Remarks;
+                if (includeRemarks && page.Remarks != null && page.Remarks.Length > 0)
+                {
+                    if (page.Footnote == null || page.Footnote.Length == 0) rec += " @";
+                    rec += "?" + page.Remarks;
+                }
             }
             return rec;
         }
         public string PagesToFileContent()
         {
-            fileContent = "";
-            foreach (KeyValuePair<string, List<NIS>> kv in Pages)
+            try
             {
-                if (fileContent.Length > 0) fileContent += "\r\n\r\n";
-                fileContent += "#" + kv.Key;
-                fileContent += NISPageDataToServerData(kv.Value, false);
+                ErrMsg = "";
+                // header
+                //  {"Version":"2.0","DocNo":"MN-001","Title":"မူလပရိယာယသုတ္တံ"}
+                //fileContent = String.Format("{2}Version=2.0; DocNo=\"{0}\"; Title=\"{1}\"; NewParaMarker=\"။ ။\"{3}\r\n", DocID, DocTitle, "{", "}");
+                fileContent = "";
+                int line = 0;
+                foreach (KeyValuePair<string, List<NIS>> kv in Pages)
+                {
+                    if (line++ > 0) fileContent += "\r\n\r\n";
+                    fileContent += String.Format("#{0} ", kv.Key);
+                    fileContent += NISPageDataToServerData(kv.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrMsg = ex.Message;
             }
             return fileContent;
         }
-        public List<string> GetSuttaList(string docType)
+        //***************************************************************************************
+        //*** SuttaInfo functions
+        //***************************************************************************************
+        // TaskCategories defined in TipitakaDBTables_w.cs
+        public List<string> listDocSearchTypes = new List<string>()
         {
-            List<string> suttaList = new List<string>();
+            TaskCategories._Recent_, TaskCategories._New_, TaskCategories._Assigned_, TaskCategories._Completed_, TaskCategories._Uploaded_,
+            TaskCategories._HTMLCompleted_, TaskCategories._HTMLToDo_, TaskCategories._ExactMatch_,
+            TaskCategories._StartsWith_
+        };
+        public List<string> listTaskSearchTypes = new List<string> 
+        {
+            TaskCategories._Recent_, TaskCategories._Assigned_, TaskCategories._Completed_, TaskCategories._Uploaded_,
+            TaskCategories._HTMLCompleted_, TaskCategories._ExactMatch_, TaskCategories._StartsWith_ 
+        };
+        public SuttaInfo? GetSuttaInfo(string rowKey)
+        {
+            SuttaInfo? suttaInfo = null;
             if (clientSuttaInfo != null)
             {
-                List<SuttaInfo> suttaInfo = clientSuttaInfo.QuerySuttaInfo(docType);
-                foreach (SuttaInfo item in suttaInfo)
+                suttaInfo = clientSuttaInfo.GetSuttaInfo(rowKey);
+            }
+            return suttaInfo;
+        }
+        public void RemoveSuttaInfo(string rowKey)
+        {
+            if (clientSuttaInfo != null)
+            {
+                SuttaInfo suttaInfo = new SuttaInfo();
+                suttaInfo.RowKey = rowKey;
+                clientSuttaInfo.DeleteSuttaInfo(suttaInfo);
+                if (clientSuttaInfo.StatusCode != 204) 
                 {
-                    suttaList.Add(string.Format("{0}|{1}", item.RowKey, item.Title));
+                    ErrMsg = "Error deleting " + rowKey;
                 }
+            }
+        }
+        public Dictionary<string, List<TaskAssignmentInfo>> dict_UserTaskAssignmentInfo = new Dictionary<string, List<TaskAssignmentInfo>>();
+        public List<TaskAssignmentInfo> GetUserTaskInfoList(string userID, string curRecentTask)
+        {
+            string key = "";
+            List<TaskAssignmentInfo> taskAssignmentInfoList = new List<TaskAssignmentInfo>();
+            switch (curRecentTask)
+            {
+                case TaskCategories._Current_:
+                    key = String.Format("{0}-Task-Current", userID);
+                    //if (dict_UserTaskAssignmentInfo.ContainsKey(key))
+                    //{
+                    //    return dict_UserTaskAssignmentInfo[key];
+                    //}
+                    break;
+                case TaskCategories._Recent_:
+                    key = String.Format("{0}-Task-Recent", userID);
+                    //if (dict_UserTaskAssignmentInfo.ContainsKey(key))
+                    //{
+                    //    return dict_UserTaskAssignmentInfo[key];
+                    //}
+                    break;
+            }
+            //string query = String.Format("(RowKey gt '{0}-Task-A') and (RowKey lt '{0}-Task-Z')", email);
+
+            if (clientKeyValueData != null && clientTaskAssignmentInfo != null)
+            {
+                KeyValueData? keyValueData = clientKeyValueData.GetKeyValueData(key);
+                if (keyValueData != null && keyValueData.Value != null)
+                {
+                    string[] docNos = keyValueData.Value.Split('|');
+                    foreach(string docNo in docNos)
+                    {
+                        TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(docNo);
+                        if (taskAssignmentInfo != null)
+                        {
+                            taskAssignmentInfoList.Add(taskAssignmentInfo);
+                        }
+                    }
+                }
+            }
+            return taskAssignmentInfoList;
+        }
+        public List<SuttaInfo> GetSuttaList(string searchType, string matchPattern = "", string userClass = "U")
+        {
+            string query = "";
+            nextStartingIndex = 0;
+            List<SuttaInfo> suttaList = new List<SuttaInfo>();
+            if (searchType == TaskCategories._Recent_ || (userClass == "U" && 
+                (searchType == TaskCategories._Completed_ || searchType == TaskCategories._Uploaded_ || 
+                searchType == TaskCategories._HTMLCompleted_ || searchType == TaskCategories._Assigned_))) 
+                return GetRecentSuttaList(searchType, userClass);
+            if (clientSuttaInfo != null)
+            {
+                switch(searchType)
+                {
+                    case TaskCategories._Current_:
+                        query = "Status ne 'Completed' and Status ne 'Uploaded' and Status ne 'HTML'";
+                        break;
+                    case TaskCategories._New_:     // New
+                        query = "Status eq 'Created'";
+                        break;
+                    case TaskCategories._Assigned_:     // Assigned
+                        query = "Status eq 'Assigned'";
+                        break;
+                    case TaskCategories._OnGoing_:     // Ongoing
+                        query = "Status eq 'DataEntry' or Status eq 'Review' or Status eq 'Edit'";
+                        break;
+                    case TaskCategories._Completed_:     // Completed
+                        query = "Status eq 'Completed'";
+                        break;
+                    case TaskCategories._Uploaded_:     // Uploaded
+                        query = "Status eq 'Uploaded'";
+                        break;
+                    case TaskCategories._HTMLCompleted_:     // HTML Complete
+                        query = "Status eq 'HTML'";
+                        break;
+                    case TaskCategories._HTMLToDo_:     // HTML Todo
+                        query = "Status eq 'Completed' or Status eq 'Uploaded'";
+                        break;
+                    case TaskCategories._ExactMatch_:     // Exact match
+                        query = String.Format("RowKey eq '{0}'", matchPattern);
+                        break;
+                    case TaskCategories._StartsWith_:     // Starting with
+                        query = String.Format("RowKey ge '{0}' and RowKey ge '{0}~'", matchPattern);
+                        break;
+                }
+                suttaList = clientSuttaInfo.QuerySuttaInfo(query);
+                CurrentSearchedDocNos.Clear();
+                foreach (var sutta in suttaList) CurrentSearchedDocNos.Add(sutta.RowKey);
+            }
+            return suttaList;
+        }
+        List<string> CurrentSearchedDocNos = new List<string>();
+        int nextStartingIndex = 0;
+        const int _GetSuttaBatchSize_ = 10;
+        public int GetSearchResultCount () { return CurrentSearchedDocNos.Count; }
+        public List<SuttaInfo> GetRecentSuttaList(string searchType, string userClass = "U")
+        {
+            string query = "";
+            List<SuttaInfo> suttaList = new List<SuttaInfo>();
+            if (clientKeyValueData != null)
+            {
+                if (clientSuttaInfo == null) { return suttaList; }
+                string userID = (userClass == "U") ? email : "admin";
+                CurrentSearchedDocNos = clientKeyValueData.GetUserDocs(userID, searchType);// TaskCategories._Recent_);
+                if (CurrentSearchedDocNos.Count > 0)
+                {
+                    int n = nextStartingIndex;
+                    foreach (string doc in CurrentSearchedDocNos)
+                    {
+                        if (query.Length == 0) query = String.Format("RowKey eq '{0}'", doc);
+                        else query += String.Format(" or RowKey eq '{0}'", doc);
+                        ++nextStartingIndex;
+                        if (++n >= _GetSuttaBatchSize_) break;
+                    }
+                    suttaList = clientSuttaInfo.QuerySuttaInfo(query);
+                }
+            }
+            return suttaList;
+        }
+        public List<SuttaInfo> GetNextBatchSearchedSuttas()
+        {
+            List<SuttaInfo> suttaList = new List<SuttaInfo>();
+            if (clientSuttaInfo != null &&
+                CurrentSearchedDocNos != null && 
+                CurrentSearchedDocNos.Count > 0 && 
+                nextStartingIndex < CurrentSearchedDocNos.Count)
+            {
+                string query = "";
+                int lastIndex = Math.Min(CurrentSearchedDocNos.Count, nextStartingIndex + _GetSuttaBatchSize_);
+                for(int i = nextStartingIndex; i < lastIndex; ++i)
+                {
+                    if (query.Length == 0) query = String.Format("(RowKey eq '{0}')", CurrentSearchedDocNos[i]);
+                    else query += String.Format(" or (RowKey eq '{0}')", CurrentSearchedDocNos[i]);
+                    ++nextStartingIndex;
+                }
+                if (nextStartingIndex >= CurrentSearchedDocNos.Count) nextStartingIndex = 0;
+                suttaList = clientSuttaInfo.QuerySuttaInfo(query);
             }
             return suttaList;
         }
@@ -627,61 +1158,95 @@ namespace NissayaEditor_Web.Data
             List<SuttaPageData> listSuttaPageData = (List<SuttaPageData>)objResult;
 
             string pgno;
-            List<NIS> listNIS;
-            char[] fn_rm = new char[] { '@', '!' };
+            //List<NIS> listNIS;
             foreach (var item in listSuttaPageData)
             {
                 pgno = item.PageNo.ToString();
                 pageNos.Add(pgno);
-                listNIS = new List<NIS>();
-                string[] f = item.PageData.Split("*");
-                string[] ff2;
-                int recNo = 0;
-                foreach (var nisRec in f)
-                {
-                    if (nisRec.Length == 0) continue;
-                    NIS nis = new NIS();
-                    nis.RecNo = ++recNo;
-                    string[] ff = nisRec.Split("^");
-                    if (ff.Length > 1)
-                    {
-                        nis.Pali = ff[0].Trim();
-                        int pos1 = ff[1].IndexOf("@");
-                        int pos2 = ff[1].IndexOf("!");
-                        int n = 0;
-                        if (pos1 == -1 && pos2 == -1) n = 1;
-                        if (pos1 != -1 && pos2 != -1) n = 2;
-                        if (pos1 != -1 && pos2 == -1) n = 3;
-                        if (pos1 == -1 && pos2 != -1) n = 4;
+                //listNIS = new List<NIS>();
+                //string[] f = item.PageData.Split("*");
+                //int recNo = 0;
+                //foreach (var nisRec in f)
+                //{
+                //    if (nisRec.Length == 0) continue;
+                //    NIS nis = new NIS();
+                //    nis.RecNo = ++recNo;
+                //    string[] f2 = nisRec.Split("^");
+                //    if (f2.Length > 1)
+                //    {
+                //        int n = 0, pos1 = 0, pos2 = 0; char remarkSymbol = ' ';
+                //        string footnote = "", remarks = "";
+                //        nis.Pali = f2[0].Trim();
+                //        string[] f3 = f2[1].Split('@');
+                //        if (f3.Length == 2) 
+                //        { 
+                //            // footnote exists
+                //            footnote = f3[1].Trim(); 
+                //            pos2 = footnote.IndexOfAny(new char[] { '!', '?' });
+                //            if (pos2 == -1)
+                //            {
+                //                remarkSymbol = footnote[pos2];
+                //                string[] f4 = footnote.Split(remarkSymbol);
+                //                footnote = f4[0].Trim();
+                //                remarks = f4[1].Trim();
+                //            }
+                //        }
+                //        nis.Trans = f2[0].Trim();
+                //        nis.Footnote = footnote;
+                //        nis.Remarks = remarks;
 
-                        switch (n)
-                        {
-                            case 1:
-                                nis.Trans = ff[1].Trim();
-                                break;
-                            case 2:
-                                ff2 = ff[1].Split(fn_rm);
-                                nis.Trans = ff2[0].Trim();
-                                nis.Footnote = ff2[1].Trim();
-                                nis.Remarks = ff2[2].Trim();
-                                break;
-                            case 3:
-                                ff2 = ff[1].Split('@');
-                                nis.Trans = ff2[0].Trim();
-                                nis.Footnote = ff2[1].Trim();
-                                break;
-                            case 4:
-                                ff2 = ff[1].Split('!');
-                                nis.Trans = ff2[0].Trim();
-                                nis.Remarks = ff2[1].Trim();
-                                break;
-                        }
-                    }
-                    listNIS.Add(nis);
-                }
-                Pages[pgno] = listNIS;
+                //    }
+                //    listNIS.Add(nis);
+                //}
+                //Pages[pgno] = listNIS;
+                Pages[pgno] = GetNISDataFromPage(item.PageData);
             }
             callback(DocTitle);
+        }
+        public List<NIS> GetNISDataFromPage(string page)
+        {
+            List<NIS> listNIS = new List<NIS>();
+            string[] f = page.Split("*");
+            // ဧဝံမေသုတန္တိ ^ဧဝံ မေ သုတံ အစရှိသောသုတ်သည် @?Remarks 
+            // ရထဝိနီတသုတ္တံ ^ရထဝီနိတသုတ်တည်း @Footnote?Remarks 
+            int recNo = 0;
+            foreach (var nisRec in f)
+            {
+                if (nisRec.Length == 0) continue;
+                NIS nis = new NIS();
+                nis.RecNo = ++recNo;
+                string[] f2 = nisRec.Split("^");
+                // ဧဝံမေသုတန္တိ
+                // ဧဝံ မေ သုတံ အစရှိသောသုတ်သည် @?Remarks 
+                if (f2.Length > 1)
+                {
+                    int n = 0, pos2 = 0; char remarkSymbol = ' ';
+                    string trans = "", footnote = "", remarks = "";
+                    nis.Pali = f2[0].Trim();    // Pali text
+                    string[] f3 = f2[1].Split('@');
+                    // ဧဝံ မေ သုတံ အစရှိသောသုတ်သည်
+                    // ?Remarks 
+                    trans = f3[0].Trim();
+                    if (f3.Length == 2)
+                    {
+                        // footnote exists
+                        footnote = f3[1].Trim(); // ?Remarks
+                        pos2 = footnote.IndexOfAny(new char[] { '!', '?' });
+                        if (pos2 != -1) // remarks
+                        {
+                            remarkSymbol = footnote[pos2];
+                            string[] f4 = footnote.Split(remarkSymbol);
+                            footnote = f4[0].Trim();
+                            remarks = f4[1].Trim();
+                        }
+                    }
+                    nis.Trans = trans;
+                    nis.Footnote = footnote;
+                    nis.Remarks = remarks;
+                }
+                listNIS.Add(nis);
+            }
+            return listNIS;
         }
         public List<string> GetRUFList(List<string>? RUFlist = null)
         {
@@ -694,7 +1259,7 @@ namespace NissayaEditor_Web.Data
                     if (RUFlist == null) return list;
                 }
                 else list = kvdata.Value.Split("|").ToList();
-                if (RUFlist != null) 
+                if (RUFlist != null)
                 {
                     //if (clientKeyValueData.StatusCode == 404)
                     //{
@@ -709,7 +1274,7 @@ namespace NissayaEditor_Web.Data
             }
             return list;
         }
-        public void CreaetNewDoc(string docID, string title, string email, int startPage) 
+        public void CreaetNewDoc(string docID, string title, string email, int startPage)
         {
             ErrMsg = "";
             SuttaInfo suttaInfo = new SuttaInfo()
@@ -719,7 +1284,7 @@ namespace NissayaEditor_Web.Data
                 StartPage = startPage,
                 EndPage = startPage,
                 NoPages = 1,
-                SubmittedBy = email,
+                Team = email,
             };
             if (clientSuttaInfo != null)
             {
@@ -727,163 +1292,608 @@ namespace NissayaEditor_Web.Data
                 if (clientSuttaInfo.StatusCode != 204) ErrMsg = "New document create error.";
             }
         }
-        public void AddDummySuttaInfo()
+        public void AddNewSuttaInfo(List<SuttaInfo> suttaList)
         {
-            Dictionary<int, string> MN_Titles = new Dictionary<int, string>()
+            if (clientSuttaInfo == null) return;
+            clientSuttaInfo.InsertSuttaInfoRecBatch(suttaList).Wait();
+            ErrMsg = "";
+            if (clientSuttaInfo.StatusCode != 202)
             {
-                { 1, "မူလပရိယာယသုတ်" },
-                { 2, "သဗ္ဗာသဝသုတ်" },
-                { 3, "ဓမ္မဒါယာဒသုတ်" },
-                { 4, "ဘယဘေရဝသုတ်" },
-                { 5, "အနင်္ဂဏသုတ်" },
-                { 6, "အာကင်္ခေယျသုတ်" },
-                { 7, "ဝတ္ထသုတ်" },
-                { 8, "သလ္လေခသုတ်" },
-                { 9, "သမ္မာဒိဋ္ဌိသုတ်" },
-                { 10, "မဟာသတိပဋ္ဌာနသုတ်" },
-                { 11, "စူဠသီဟနာဒသုတ်" },
-                { 12, "မဟာသီဟနာဒသုတ်" },
-                { 13, "မဟာဒုက္ခက္ခန္ဓသုတ်" },
-                { 14, "စူဠဒုက္ခက္ခန္ဓသုတ်" },
-                { 15, "အနုမာနသုတ်" },
-                { 16, "စေတောခိလသုတ်" },
-                { 17, "ဝနပတ္တသုတ်" },
-                { 18, "မဓုပဏ္ဍိကသုတ်" },
-                { 19, "ဒွေဓာဝိတက္ကသုတ်" },
-                { 20, "ဝိတက္ကသဏ္ဍာနသုတ်" },
-                { 21, "ကကစူပမသုတ်" },
-                { 22, "အလဂဒ္ဒူပမသုတ်" },
-                { 23, "ဝမ္မိကသုတ်" },
-                { 24, "ရထဝိနီတသုတ်" },
-                { 25, "နိဝါပသုတ်" },
-                { 26, "ပါသရာသိသုတ်" },
-                { 27, "စူဠဟတ္ထိပဒေါပမသုတ်" },
-                { 28, "မဟာသာရောပမသုတ်" },
-                { 29, "မဟာသာရောပမသုတ်" },
-                { 30, "စူဠသာရောပမသုတ်" },
-                { 31, "စူဠဂေါသိင်္ဂသုတ်" },
-                { 32, "မဟာဂေါသိင်္ဂသုတ်" },
-                { 33, "မဟာဂေါပါလကသုတ်" },
-                { 34, "စူဠဂေါပါလကသုတ်" },
-                { 35, "စူဠသစ္စကသုတ်" },
-                { 36, "မဟာသစ္စကသုတ်" },
-                { 37, "စူဠတဏှာသင်္ခယသုတ်" },
-                { 38, "မဟာတဏှာသင်္ခယသုတ်" },
-                { 39, "မဟာအဿပုရသုတ်" },
-                { 40, "စူဠအဿပုရသုတ်" },
-                { 41, "သာလေယျကသုတ်" },
-                { 42, "ဝေရဉ္ဇကသုတ်" },
-                { 43, "မဟာဝေဒလဒသုတ်" },
-                { 44, "စူဠဝေဒလဒသုတ်" },
-                { 45, "စူဠဓမ္မသမာဒါနသုတ်" },
-                { 46, "မဟာဓမ္မသမာဒါနသုတ်" },
-                { 47, "ဝီမံသကသုတ်" },
-                { 48, "ကောသမ္ဗိယသုတ်" },
-                { 49, "ဗြဟ္မနိမန္တနိကသုတ်" },
-                { 50, "မာရတဇ္ဇနီယသုတ်" },
-                { 51, "ကန္ဒရကသုတ်" },
-                { 52, "အဋ္ဌကနာဂရသုတ်" },
-                { 53, "သေခသုတ်" },
-                { 54, "ပေါတလိယသုတ်" },
-                { 55, "ဇီဝကသုတ်" },
-                { 56, "ဥပါလိသုတ်" },
-                { 57, "ကုက္ကုရဝတိကသုတ်" },
-                { 58, "အဘယရာဇကုမာရသုတ်" },
-                { 59, "ဗဟုဝေဒနီယသုတ်" },
-                { 60, "အပဏ္ဏကသုတ်" },
-                { 61, "အမ္ဗလဋ္ဌိကရာဟုလောဝါဒသုတ်" },
-                { 62, "မဟာရာဟုလောဝါဒသုတ်" },
-                { 63, "စူဠမာလုကျသုတ်" },
-                { 64, "မဟာမာလုကျသုတ်" },
-                { 65, "ဘဒ္ဒါလိသုတ်" },
-                { 66, "ကဋုကိကောပမသုတ်" },
-                { 67, "စတုမသုတ်" },
-                { 68, "နဠကပါနသုတ်" },
-                { 69, "ဂေါလိယာနိသုတ်" },
-                { 70, "ကီဋာဂိရိသုတ်" },
-                { 71, "တေဝိဇ္ဇဝစ္ဆသုတ်" },
-                { 72, "အဂ္ဂိဝစ္ဆသုတ်" },
-                { 73, "မဟာဝစ္ဆသုတ်" },
-                { 74, "ဒီဃနခသုတ်" },
-                { 75, "မာဂဏ္ဍိယသုတ်" },
-                { 76, "သန္ဒကသုတ်" },
-                { 77, "မဟာသကုလုဒါယိသုတ်" },
-                { 78, "သမဏမုဏ္ဍိကသုတ်" },
-                { 79, "စူဠသကုလုဒါယိသုတ်" },
-                { 80, "ဝေခနသသုတ်" },
-                { 81, "ဃဋိကာရသုတ်" },
-                { 82, "ရဋ္ဌပါလသုတ်" },
-                { 83, "မဃဒေဝသုတ်" },
-                { 84, "မဓုရသုတ်" },
-                { 85, "ဗောဓိရာဇကုမာရသုတ်" },
-                { 86, "အင်္ဂုလိမာလသုတ်" },
-                { 87, "ပိယဇာတိကသုတ်" },
-                { 88, "ဗာဟိဘိကသုတ်" },
-                { 89, "ဓမ္မစေတိယသုတ်" },
-                { 90, "ကဏ္ဏကတ္ထလသုတ်" },
-                { 91, "ဗြဟ္မာယုသုတ်" },
-                { 92, "သေလသုတ်" },
-                { 93, "အဿလာယနသုတ်" },
-                { 94, "ဃောဋမုခသုတ်" },
-                { 95, "စင်္ကီသုတ်" },
-                { 96, "ဧသုကာရီသုတ်" },
-                { 97, "ဓနဉ္ဇာနိသုတ်" },
-                { 98, "ဝါသေဋ္ဌသုတ်" },
-                { 99, "သုဘသုတ်" },
-                { 100, "သင်္ဂါရဝသုတ်" },
-                { 101, "ဒေဝဒဟသုတ်" },
-                { 102, "ပဉ္စတ္တယသုတ်" },
-                { 103, "ကိန္တိသုတ်" },
-                { 104, "သာမဂါမသုတ်" },
-                { 105, "သုနက္ခတ္တသုတ်" },
-                { 106, "အာနေဉ္ဇသပ္ပါယသုတ်" },
-                { 107, "ဂဏကမောဂ္ဂလ္လာနသုတ်" },
-                { 108, "ဂေါပကမောဂ္ဂလ္လာနသုတ်" },
-                { 109, "မဟာပုဏ္ဏမသုတ်" },
-                { 110, "စူဠပုဏ္ဏမသုတ်" },
-                { 111, "အနုပဒသုတ်" },
-                { 112, "ဆဗ္ဗိသောဓနသုတ်" },
-                { 113, "သပ္ပုရိသသုတ်" },
-                { 114, "သေဝိတဗ္ဗာသေဝိတဗ္ဗသုတ်" },
-                { 115, "ဗဟုဓာတုကသုတ်" },
-                { 116, "ဣသိဂိလိသုတ်" },
-                { 117, "မဟာစတ္တာရီသကသုတ်" },
-                { 118, "အာနာပါနဿတိသုတ်" },
-                { 119, "ကာယဂတာသတိသုတ်" },
-                { 120, "သင်္ခါရုပပတ္တိသုတ်" },
-                { 121, "စူဠသုညတသုတ်" },
-                { 122, "မဟာသုညတသုတ်" },
-                { 123, "အစ္ဆရိယအဗ္ဘုတသုတ်" },
-                { 124, "ဗာကုလသုတ်" },
-                { 125, "ဒန္တဘူမိသုတ်" },
-                { 126, "ဘူမိဇသုတ်" },
-                { 127, "အနုရုဒ္ဓသုတ်" },
-                { 128, "ဥပက္ကိလေသသုတ်" },
-                { 129, "ဗာလပဏ္ဍိတသုတ်" },
-                { 130, "ဒေဝဒူတသုတ်" },
-                { 131, "ဘဒ္ဒေကရတ္တသုတ်" },
-                { 132, "အာနန္ဒဘဒ္ဒေကရတ္တသုတ်" },
-                { 133, "မဟာကစ္စာနဘဒ္ဒေကရတ္တသုတ်" },
-                { 134, "လောမသကင်္ဂိယဘဒ္ဒေကရတ္တသုတ်" },
-                { 135, "စူဠကမ္မဝိဘင်္ဂသုတ်" },
-                { 136, "မဟာကမ္မဝိဘင်္ဂသုတ်" },
-                { 137, "သဠာယတနဝိဘင်္ဂသုတ်" },
-                { 138, "ဥဒ္ဒေသဝိဘင်္ဂသုတ်" },
-                { 139, "အရဏဝိဘင်္ဂသုတ်" },
-                { 140, "ဓာတုဝိဘင်္ဂသုတ်" },
-                { 141, "သစ္စဝိဘင်္ဂသုတ်" },
-                { 142, "ဒက္ခိဏာဝိဘင်္ဂသုတ်" },
-                { 143, "အနာထပိဏ္ဍိကောဝါဒသုတ္တံ" },
-                { 144, "ဆန္နောဝါဒသုတ္တံ" },
-                { 145, "ပုဏ္ဏောဝါဒသုတ္တံ" },
-                { 146, "နန္ဒကောဝါဒသုတ္တံ" },
-                { 147, "စူဠရာဟုလောဝါဒသုတ္တံ" },
-                { 148, "ဆဆက္ကသုတ္တံ" },
-                { 149, "မဟာသဠာယတနိကသုတ္တံ" },
-                { 150, "နဂရဝိန္ဒေယျသုတ္တံ" },
-                { 151, "ပိဏ္ဍပါတပါရိသုဒ္ဓိသုတ္တံ" },
-                { 152, "ဣန္ဒြိယဘာဝနာသုတ္တံ" }
+                ErrMsg = clientSuttaInfo.DBErrMsg;
+            }
+        }
+        //***************************************************************************************
+        //*** TaskAssignment functions
+        //***************************************************************************************
+        public List<string> UserTasks = new List<string> 
+        {
+            TaskCategories._DataEntry_, TaskCategories._Review_, TaskCategories._Edit_, 
+            TaskCategories._EditUpload_, TaskCategories._HTML_ 
+        };
+        public void AddTaskAssignmentInfo(TaskAssignmentInfo taskAssignmentInfo)
+        {
+            if (clientTaskAssignmentInfo == null) return;
+            clientTaskAssignmentInfo.AddTaskAssignmentInfo(taskAssignmentInfo);
+            if (clientTaskAssignmentInfo.StatusCode != 204)
+                ErrMsg = clientTaskAssignmentInfo.DBErrMsg; 
+            else ErrMsg = "";
+        }
+        public TaskAssignmentInfo? GetTaskAssignmentInfo(string docNo)
+        {
+            TaskAssignmentInfo? taskAssignmentInfo = null;
+            if (clientTaskAssignmentInfo == null) return taskAssignmentInfo;
+            taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(docNo);
+            if (clientTaskAssignmentInfo.StatusCode != 204)
+                ErrMsg = clientTaskAssignmentInfo.DBErrMsg;
+            else ErrMsg = "";
+            return taskAssignmentInfo;
+        }
+        public void UpdateTaskAssignmentInfo(TaskAssignmentInfo taskAssignmentInfo, string docNo)
+        {
+            if (clientTaskAssignmentInfo != null && clientKeyValueData != null)
+            {
+                clientTaskAssignmentInfo.UpdateTaskAssignmentInfo(taskAssignmentInfo);
+                //string assignedUsers = taskAssignmentInfo.AssigneeProgress;
+                //string[] assignments = assignedUsers.Split(new char[] { '|' });
+                //List<UserTaskProgressInfo>? userTaskProgressInfo = new List<UserTaskProgressInfo>();
+                if (taskAssignmentInfo.AssigneeProgress != null)
+                {
+                    List<UserTaskProgressInfo>? userTaskProgressInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                    if (userTaskProgressInfo != null)
+                    {
+                        //clientKeyValueData.AddUserDocByCategory("admin", TaskCategories._Recent_, docNo);
+                        foreach (UserTaskProgressInfo item in userTaskProgressInfo)
+                        {
+                            if (item.status == "Assigned")
+                                clientKeyValueData.AddUserDocByCategory(item.userID, TaskCategories._Assigned_, docNo);
+                        }
+                    }
+                }
+            }
+        }
+        //public List<string> GetTaskAssignments(string userID)
+        //{
+        //    List<string> taskAssignments = new List<string>();
+        //    if (clientKeyValueData != null)
+        //    {
+        //        string qualifier = String.Format("RowKey gt '{0}-Task-A' and RowKey lt '{0}-Task-Z", userID);
+        //        List<KeyValueData> tasks = clientKeyValueData.QueryKeyValueData(qualifier);
+        //    }
+        //    return taskAssignments;
+        //}
+        public string UserTaskAssignment(string taskAssignments, string userID, string task, string startDate, string lastDate, int submitted, string status)
+        {
+            string userTaskInfo = String.Format("{0},{1},{2},{3},{4},{5}", userID, task, startDate, lastDate, submitted, status);
+            if (taskAssignments != null && taskAssignments.Length == 0) { return userTaskInfo; }
+            return taskAssignments + "|" + userTaskInfo;
+        }
+        //public string GetTaskStatus(TaskAssignmentInfo taskAssignmentInfo, string userProgress)
+        //{
+        //    string status = "";
+        //    string[] f = userProgress.Split(',');
+        //    if (f.Length == 6)
+        //    {
+        //        if (f[1] == "NewDoc") { status = f[5]; }
+        //        else
+        //        {
+        //            string[] ff = taskAssignmentInfo.PageNos.Split(' ');
+        //            // get total no of pages
+        //            ff[1] = ff[1].Substring(1);
+        //            ff[1] = ff[1].Substring(0, ff[1].Length - 1);
+        //            // get no of submitted pages
+        //            int n = Int32.Parse(f[4]);
+        //            // if task has already started and no submitted pages equals total doc pages
+        //            // then the task is complete
+        //            if (f[2].Length > 0 && n > 0 && n == Int32.Parse(ff[1])) status = "Completed";
+        //            else status = f[5];
+        //        }
+        //    }
+        //    return status;
+        //}
+        public string GetTaskStatus(TaskAssignmentInfo taskAssignmentInfo, UserTaskProgressInfo userTaskProgressInfo)
+        {
+            string status = "";
+            if (userTaskProgressInfo != null)
+            {
+                if (userTaskProgressInfo.task == "NewDoc") status = userTaskProgressInfo.status;
+                else
+                {
+                    string[] ff = taskAssignmentInfo.PageNos.Split(' ');
+                    // get total no of pages
+                    ff[1] = ff[1].Substring(1);
+                    ff[1] = ff[1].Substring(0, ff[1].Length - 1);
+                    int n = Int32.Parse(ff[1]);
+                    // if task has already started and # of submitted pages equals total doc pages
+                    // then the task is complete
+                    if (userTaskProgressInfo.startDate.Length > 0 && n > 0 && userTaskProgressInfo.submitted == n) status = "Completed";
+                    else status = userTaskProgressInfo.status;
+                }
+            }
+            return status;
+        }
+        public void UpdateSuttaInfo(string docNo, string status, string team)
+        {
+            if (clientSuttaInfo == null) { return; }
+            clientSuttaInfo.UpdateSuttaInfo(docNo, status, team);
+        }
+        public string GetTeamMembers(string assigneeProgress)
+        {
+            string teamMembers = "", separator = "";
+            var listUserTaskProgressInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(assigneeProgress);
+            if (listUserTaskProgressInfo != null)
+            {
+                foreach (UserTaskProgressInfo userTaskProgressInfo in listUserTaskProgressInfo)
+                {
+                    separator = (teamMembers.Length > 0) ? "," : "";
+                    teamMembers += separator + GetUserName(userTaskProgressInfo.userID.Trim());
+                }
+            }
+            return teamMembers;
+        }
+        //***************************************************************************************
+        //*** UserProfile functions
+        //***************************************************************************************
+        public List<UserProfile> AllUserProfiles = new List<UserProfile>();
+        public List<UserProfile> GetAllUserProfiles()
+        {
+            bool inclDev = false;
+            if (UserProfiles != null && UserProfiles.Count == 0)
+            {
+                if (clientUserProfile != null)
+                {
+                    UserProfiles = clientUserProfile.GetAllUsers(inclDev, false);
+                    foreach (UserProfile user in UserProfiles)
+                    {
+                        //if (user.UserClass == "S") user.UserClass = "SysAdmin";
+                        //if (user.UserClass == "A") user.UserClass = "Admin";
+                        //if (user.UserClass == "P") user.UserClass = "Project Manager";
+                        //if (user.UserClass == "U") user.UserClass = "User";
+                        if (user.LastLogin != null) user.LastLogin = user.LastLogin.Value.ToLocalTime();
+                        //if (user.LastDate != null && user.LastDate != "")
+                        //{
+                        //    string[] f = user.LastDate.Split("/");
+                        //    // convert to local date
+                        //    DateTime dt = new DateTime(Convert.ToInt16(f[2]), Convert.ToInt16(f[1]), Convert.ToInt16(f[0]));
+                        //    f = dt.ToLocalTime().ToShortDateString().Split('/');
+                        //    user.LastDate = f[1] + "/" + f[0] + "/" + f[2];
+                        //}
+                    }
+
+                }
+            }
+            return UserProfiles!;
+        }
+        public void AddUserProfile(string email, string name, string nameM = "", string userClass = "U", int loginCount = 1)
+        {
+            if (clientUserProfile != null)
+            {
+                clientUserProfile.AddUserProfile(email, name, nameM, userClass, loginCount);
+                ErrMsg = string.Empty;
+                if (clientUserProfile.StatusCode != 204) { ErrMsg = "User profile add error."; }
+            }
+        }
+        public void DelUserProfile(string email)
+        {
+            if (clientUserProfile != null)
+            {
+                ErrMsg = string.Empty;
+                UserProfile userProfile = new UserProfile() { RowKey = email };
+                clientUserProfile.DeleteTableRec(userProfile).Wait();
+                if (clientUserProfile.StatusCode != 204) { ErrMsg = "User profile add error."; }
+            }
+        }
+        public void UpdateUserProfile(UserProfile userProfile)
+        {
+            if (clientUserProfile != null && userProfile != null)
+            {
+                clientUserProfile.UpdateUserProfile(userProfile);
+                ErrMsg = clientUserProfile.ErrMsg;
+            }
+        }
+        public void UpdateUserProfile(string userID, string nameE, string nameM, string userClass = "U")
+        {
+            UserProfile userProfile = new UserProfile()
+            {
+                RowKey = userID,
+                Name_E = nameE,
+                Name_M = nameM,
+                UserClass = userClass
             };
+            if (clientUserProfile != null && userProfile != null)
+            {
+                clientUserProfile.UpdateUserProfile(userProfile);
+                ErrMsg = clientUserProfile.ErrMsg;
+            }
+        }
+        public string GetUserName(string email)
+        {
+            if (email == "dhammayaungchi2011@gmail.com") return "System Admin";
+            List<UserProfile> AllUserProfiles = new List<UserProfile>();
+            if (AllUserProfiles.Count == 0) AllUserProfiles = GetAllUserProfiles();
+            var userName = (from user in AllUserProfiles
+                              where user.RowKey == email select user.Name_E).ToList();
+            return userName.Count == 0 ? "" : userName[0];
+        }
+        public string GetFileName()
+        {
+            //OpenFileDialog dlg = new OpenFileDialog(); 
+            // dlg.Title = 'Open text file' ; 
+            // dlg.InitialDirectory = @'c:\' ; 
+            // dlg.Filter = 'txt files (*.txt)|*.txt|All files (*.*)|*.*' ; 
+
+            // if(dlg.ShowDialog() == DialogResult.OK) 
+            // { 
+            // 	StreamReader sr = File.OpenText(dlg.FileName);
+
+            // 	string s = sr.ReadLine();
+            // 	StringBuilder sb = new StringBuilder();
+            // 	while (s != null)
+            // 	{
+            // 		sb.Append(s);
+            // 		s = sr.ReadLine();
+            // 	}
+            // 	sr.Close();
+            // 	textBox1.Text = sb.ToString();
+            // }
+            // this.UploadObj.DirectoryUpload = true;
+            // await this.UploadObj.UploadAsync();
+            return "";
+        }
+        //***************************************************************************************
+        //*** ီDocType functions
+        //***************************************************************************************
+        public List<string> DocTypes = new List<string>();
+        public List<string> DocSubTypes = new List<string>();
+        //***************************************************************************************
+        //*** ီSourceBook Info functions
+        //***************************************************************************************
+        private SortedDictionary<string, SourceBookInfo> dicSourceDocInfo = new SortedDictionary<string, SourceBookInfo>();
+        public List<SourceBookInfo> listSourceBookInfo = new List<SourceBookInfo>();
+        public SourceBookInfo? GetSourceBookInfo(string bookID)
+        {
+            SourceBookInfo? sourceBookInfo = null;
+            if (clientSourceBookInfo == null) return sourceBookInfo;
+;
+            if (listSourceBookInfo.Count == 0)
+                listSourceBookInfo = clientSourceBookInfo.GetSourceBookInfo().Result;
+            var list = (from n in listSourceBookInfo
+                        where n.RowKey == bookID select n).ToList();
+            if (list.Count > 0) sourceBookInfo = list[0];
+            return sourceBookInfo;
+        }
+        public SortedDictionary<string, SourceBookInfo> GetSourceBookInfo()
+        {
+            if (clientKeyValueData != null && dicSourceDocInfo.Count == 0)
+            {
+                string qualifier = "all";
+                if ((listSourceBookInfo.Count > 0 && dicSourceDocInfo.Count > 0) || clientSourceBookInfo == null) return dicSourceDocInfo;
+                //listSourceBookInfo = clientSourceBookInfo.GetSourceBookInfo(qualifier);
+                listSourceBookInfo = clientSourceBookInfo.GetSourceBookInfo().Result;//.ConfigureAwait(false);
+                if (listSourceBookInfo != null && listSourceBookInfo.Count > 0)
+                {
+                    foreach(SourceBookInfo sourceBookInfo in listSourceBookInfo) 
+                    {
+                        if (sourceBookInfo.RowKey.Contains("MN-01"))
+                        {
+                            qualifier = sourceBookInfo.RowKey;
+                        }
+                        dicSourceDocInfo.Add(sourceBookInfo.RowKey, sourceBookInfo);
+                    }
+                }
+            }
+            return dicSourceDocInfo!;
+        }
+        public void AddSourceBookInfo(string[] recs)
+        {
+            if (recs == null || recs.Length == 0) return;
+            if (clientSourceBookInfo != null && clientKeyValueData != null)
+            {
+                int n = 0;
+                foreach (string rec in recs)
+                {
+                    string[] f = rec.Split(',');
+                    if (f.Length == 3)
+                    {
+                        clientSourceBookInfo.AddSourceBookInfo(new SourceBookInfo()
+                        {
+                            RowKey = f[0],
+                            BookFilename = f[1],
+                            DocCount = 0,
+                            DocNos = "",
+                            Pages = (f[2].Length > 0) ? Convert.ToInt32(f[2]) : 0,
+                            Completed = 0,
+                            HTML = 0
+                        });
+                    }
+                }
+            }
+        }
+        public List<string> GetDocTypes()
+        {
+            if (clientKeyValueData != null && DocTypes.Count == 0)
+            {
+                KeyValueData kvd = clientKeyValueData.GetKeyValueData("DocTypes");
+                if (kvd.Value.Length > 0)
+                {
+                    DocTypes = kvd.Value.Split(',').ToList();
+                    for (int i = 0; i < DocTypes.Count; i++)
+                    {
+                        DocTypes[i] = DocTypes[i].Trim();
+                    }
+                }
+            }
+            return DocTypes;
+        }
+        public List<string> GetDocSubTypes()
+        {
+            if (clientKeyValueData != null && DocSubTypes.Count == 0)
+            {
+                KeyValueData kvd = clientKeyValueData.GetKeyValueData("DocSubTypes");
+                if (kvd != null && kvd.Value != null && kvd.Value.Length > 0)
+                {
+                    DocSubTypes = kvd.Value.Split(',').ToList();
+                    for (int i = 0; i < DocSubTypes.Count; i++)
+                    {
+                        DocSubTypes[i] = DocSubTypes[i].Trim();
+                    }
+                }
+            }
+            return DocSubTypes;
+        }
+        public void AddDocSubType(string subType)
+        {
+            if (subType == null || subType.Length == 0) return;
+            DocSubTypes.Add(subType);
+            if (clientKeyValueData != null)
+            {
+                clientKeyValueData.UpdateKeyValueData(new KeyValueData()
+                {
+                    PartitionKey = "KeyValueData",
+                    RowKey = "DocSubTypes",
+                    Value = String.Join(",", DocSubTypes),
+                });
+            }
+        }
+        public void UpdateSourceBookDocInfo(Dictionary<string, List<string>> dictBookDocList)
+        {
+            if (clientSourceBookInfo == null) { return; }
+            string separator;
+            int totalPages = 0;
+            //dicSourceDocInfo.Add(sourceBookInfo.RowKey, sourceBookInfo);
+            foreach (string bookID in dictBookDocList.Keys)
+            {
+                SourceBookInfo? sourceBookInfo = clientSourceBookInfo.GetSourceBookInfo(bookID);
+                if (sourceBookInfo != null)
+                {
+                    totalPages = 0;
+                    List<string> listDoc = dictBookDocList[bookID];
+                    sourceBookInfo.DocCount += listDoc.Count;
+                    separator = (sourceBookInfo.DocNos.Length == 0) ? "" : ",";
+                    totalPages += TotalPagesInDocs(listDoc);
+                    if (sourceBookInfo.DocNos.Length > 0) totalPages += TotalPagesInDocs(sourceBookInfo.DocNos.Split(',').ToList());
+                    if (totalPages > sourceBookInfo.Pages) sourceBookInfo.Pages = totalPages;
+                    sourceBookInfo.DocNos += separator + String.Join(',', listDoc);
+                    dicSourceDocInfo[bookID] = sourceBookInfo;
+                    clientSourceBookInfo.UpdateSourceBookInfo(sourceBookInfo).Wait();
+                    ErrMsg = "";
+                    if (clientSourceBookInfo.StatusCode != 204) ErrMsg = clientSourceBookInfo.DBErrMsg;
+                }
+            }
+        }
+        private int TotalPagesInDocs(List<string> listDoc)
+        {
+            int totalPages = 0;
+            foreach (string doc in listDoc)
+            {
+                totalPages += Int32.Parse(doc.Split(":")[1]);
+            }
+            return totalPages;
+        }
+        public bool DocAlreadyExists(string docNo)
+        {
+            if (clientSuttaInfo == null) { return false; }
+            SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo(docNo);
+            return (suttaInfo == null) ? false : true;
+        }
+        public void RemoveDocInfo(string bookID, string docNo)
+        {
+            if (clientSourceBookInfo == null || bookID == null || bookID.Length == 0 || 
+                docNo == null || docNo.Length == 0) { return; }
+            SourceBookInfo? sourceBookInfo = clientSourceBookInfo.GetSourceBookInfo(bookID);
+            if (sourceBookInfo == null) { return; }
+            string[] f = sourceBookInfo.DocNos.Split(',');
+            List<string> list = new List<string>();
+            int nPages = 0;
+            foreach (string s in f)
+            {
+                if (!s.StartsWith(docNo + ":"))
+                {
+                    string[] p = s.Split(":");
+                    if (p.Length == 2)
+                    {
+                        nPages += Int32.Parse(p[1]);
+                        list.Add(s);
+                    }
+                }
+            }
+            sourceBookInfo.DocCount = list.Count;
+            sourceBookInfo.DocNos = String.Join(",", list.ToArray());
+            clientSourceBookInfo.UpdateSourceBookInfo(sourceBookInfo).Wait();
+            RemoveSuttaInfo(docNo);
+        }
+        public string GetSourceBook(string docID)
+        {
+            string book = "";
+            if (clientSuttaInfo == null) return book;
+            SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo(docID);
+            if (suttaInfo != null)
+            {
+                SourceBookInfo? sourceBookInfo = GetSourceBookInfo(suttaInfo.BookID);
+                if (sourceBookInfo != null)
+                {
+                    book = sourceBookInfo.BookFilename;
+                }
+            }
+            return book;
+        }
+        //***************************************************************************************
+        //*** ီActivityLog & TaskActivityLog functions
+        //***************************************************************************************
+        public List<ActivityLog> GetActivities(DateTime dt1, DateTime dt2)
+        {
+            List < ActivityLog > activities = new List < ActivityLog >();
+            if (clientActivityLog != null)
+            {
+                activities = clientActivityLog.GetActivities(dt1, dt2);
+            }
+            return activities;
+        }
+        public void AddActivityLog(string userID, string activity, string desc)
+        {
+            if (clientActivityLog != null)
+            {
+                clientActivityLog.AddActivityLog(userID, activity, desc);
+            }
+        }
+        public void AddTaskActivityLog(string docNo, string userID, string activity, int pages, int totalSubmittedPages,
+                    int submittedPages, string desc = "")
+        {
+            if (clientTaskActivityLog != null && clientKeyValueData != null)
+            {
+                if (desc.Length == 0)
+                {
+                    //int totalSubmittedPagesAfterThisTask = totalSubmittedPages + submittedPages;
+                    if (totalSubmittedPages >= pages) desc = "Completed";
+                    else desc = String.Format("{0}%", (int)(totalSubmittedPages * 100 / pages));
+                }
+                // TaskActivityLog
+                clientTaskActivityLog.AddTaskActivityLog(docNo, userID, activity, pages, totalSubmittedPages, submittedPages, desc);
+                string uid = (userClass != null && userClass == "U") ? userID : "admin";
+                if (userClass == "U") clientKeyValueData.AddUserDocByCategory(uid, TaskCategories._Assigned_, docNo);
+                if (desc == "Completed")
+                {
+                    // Update KeyValueData4Task
+                    clientKeyValueData.AddUserDocByCategory(userID, TaskCategories._Completed_, docNo);
+                    //clientKeyValueData.UpdateKeyValueData4Task(userID, docNo);
+                    //clientKeyValueData.RemoveKeyValueData4Task(userID, docNo);
+                }
+            }
+        }
+        public void AddDocNoToRecent()
+        {
+            if (clientKeyValueData != null)
+            {
+                clientKeyValueData.AddUserDocByCategory(email, TaskCategories._Recent_, DocID);
+            }
+        }
+        //***************************************************************************************
+        //*** JSON functions
+        //***************************************************************************************
+        //public class NDESTask
+        //{
+        //    public string userID = "";
+        //    public string task = "";
+        //    public string startDate = "";
+        //    public string lastDate = "";
+        //    public int submitted= 0;
+        //    public NDESTask(string userID, string task, string startDate, string lastDate, int submitted)
+        //    {
+        //        this.userID = userID; this.task = task; this.startDate = startDate;
+        //        this.lastDate = lastDate; this.submitted = submitted;
+        //    }
+        //}
+        // https://www.newtonsoft.com/json
+
+        //const string jsonRecord = "{\"UserID\":\"user0@gmail.com\", \r\n\"Task:\"NewDoc\", \r\n\"StartDate\":\"\", \r\n\"LastUpdated\":\"\", \r\n\"Submitted\":0}";
+        public void FillTestData(int nCount = 1)
+        {
+            if (clientSuttaInfo == null || clientTaskAssignmentInfo == null || clientKeyValueData == null) return;
+            string[] userIDs = { "user1@gmail.com", "user2@gmail.com", "user3@gmail.com", "user4@gmail.com" };
+            clientKeyValueData.AddUserTask(userIDs, "MN-014");
+            //SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo("MN-014");
+            //if (suttaInfo == null) return;
+            //// generate SuttaInfo
+            //List<object> listObjects = new List<object>();
+            //string suttaNo = "";
+            //List<string> listDoc = new List<string>() { "MN-014" };
+            //for (int i = 0; i < nCount; i++)
+            //{
+            //    suttaNo = (i + 1).ToString("d3");
+            //    listDoc.Add("Test-" + suttaNo);
+            //    SuttaInfo suttaInfo1 = new SuttaInfo()
+            //    {
+            //        RowKey = "Test-" + suttaNo,
+            //        Title = "Sutta-" + suttaNo,
+            //        StartPage = suttaInfo.StartPage,
+            //        EndPage = suttaInfo.EndPage,
+            //        NoPages = suttaInfo.NoPages,
+            //        PagesSubmitted = suttaInfo.PagesSubmitted,
+            //        Status = suttaInfo.Status,
+            //        Team = suttaInfo.Team,
+            //        BookID = suttaInfo.BookID
+            //    };
+            //    listObjects.Add(suttaInfo1);
+            //}
+            //clientSuttaInfo.InsertBatch(listObjects).Wait();
+            //// generate TaskAssignmentInfo
+            //listObjects.Clear();
+            //TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo("MN-014");
+            //if (taskAssignmentInfo == null) return;
+            //for (int i = 0; i < nCount; i++)
+            //{
+            //    suttaNo = (i + 1).ToString("d3");
+            //    listObjects.Add(new TaskAssignmentInfo()
+            //    {
+            //        RowKey = "Test-" + suttaNo,
+            //        DocTitle = "Sutta-" + suttaNo,
+            //        PageNos = taskAssignmentInfo.PageNos,
+            //        PagesSubmitted = taskAssignmentInfo.PagesSubmitted,
+            //        AssigneeProgress = taskAssignmentInfo.AssigneeProgress,
+            //        StartDate = taskAssignmentInfo.StartDate,
+            //        LastDate = taskAssignmentInfo.LastDate,
+            //        CorrectionCount = taskAssignmentInfo.CorrectionCount,
+            //        Status = taskAssignmentInfo.Status,
+            //    });
+            //}
+            //clientTaskAssignmentInfo.InsertBatch(listObjects).Wait();
+            //// generate KeyValueData
+            //listObjects.Clear();
+            //string docNos = String.Join('|', listDoc);
+            //KeyValueData keyValueData = new KeyValueData()
+            //            {
+            //                RowKey = "admin-Task-Recent",
+            //                Value = docNos,
+            //            };
+            //clientKeyValueData.UpdateKeyValueData(keyValueData);
+            //keyValueData.RowKey = "user1@gmail.com-Task-Recent";
+            //clientKeyValueData.UpdateKeyValueData(keyValueData);
+            //keyValueData.RowKey = "user2@gmail.com-Task-Recent";
+            //clientKeyValueData.UpdateKeyValueData(keyValueData);
+            //keyValueData.RowKey = "user3@gmail.com-Task-Recent";
+            //clientKeyValueData.UpdateKeyValueData(keyValueData);
+            //keyValueData.RowKey = "user4@gmail.com-Task-Recent";
+            //clientKeyValueData.UpdateKeyValueData(keyValueData);
+        }
+        public void ResetDataTables()
+        {
+            string qualifier = "";
+            if (clientKeyValueData != null)
+            {
+                qualifier = "RowKey ne 'DocSubTypes' and RowKey ne 'DocTypes'";
+                List<KeyValueData> listData = clientKeyValueData.QueryKeyValueData(qualifier);
+                if (listData.Count > 0)
+                {
+                    clientKeyValueData.DeleteTableRecBatch((object)listData).Wait();
+                }
+            }
+            //clientSuttaInfo = null; 
+            //clientTaskAssignmentInfo = null;
+        }
+        //***************************************************************************************
+        //*** Other functions
+        //***************************************************************************************
+        public void ExportAsHTML()
+        {
             string type = "MN-";
             for(int i = 5; i <= 150; i++)
             {
@@ -891,20 +1901,34 @@ namespace NissayaEditor_Web.Data
                 SuttaInfo suttaInfo = new SuttaInfo()
                 {
                     RowKey = type + i.ToString("D3"),
-                    Title = MN_Titles[i],
+                    Title = "",
                     StartPage = 1,
                     EndPage = 100,
                     NoPages = 100,
-                    NISRecCount = 1000,
-                    SubmittedBy = "AuzM",
+                    Team = "AuzMaung",
                 };
                 if (clientSuttaInfo != null) clientSuttaInfo.AddSuttaInfo(suttaInfo);
             }
         }
+        public string GetUKDateOnly(string dt)
+        {
+            if (dt.Length == 0) return dt;
+            string[] f = dt.Split('/');
+            string t = f[0];
+            f[0] = f[1]; f[1] = t;
+            dt = String.Join('/', f);
+            int p = dt.IndexOf(' ');
+            if (p == -1) return dt;
+            return dt.Substring(0, p);
+        }
+        public string GetTodaysDate()
+        {
+            return GetUKDateOnly(DateTime.Today.ToShortDateString());
+        }
     }
 }
 
-    public class SpellChecker
+public class SpellChecker
     {
         public string errMsg = string.Empty;
         const char thaythayTin = '\u1036';
