@@ -2,6 +2,7 @@
 using Azure.Storage.Files.Shares;
 using Azure.Storage.Files.Shares.Models;
 using Tipitaka_DBTables;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Tipitaka_DB
 {
@@ -17,7 +18,7 @@ namespace Tipitaka_DB
         public string DBErrMsg = string.Empty;
         public object objResult = new object();
         public string ErrMsg = string.Empty;
-        public static bool devModeDebug = true;
+        public static bool devModeDebug = false;
         public TipitakaDB_w(string partitionKey)
         {
             try
@@ -97,7 +98,7 @@ namespace Tipitaka_DB
                         if (tableClient != null)
                         {
                             var result = await tableClient.GetEntityAsync<TaskActivityLog>(
-                                partitionKey: PartitionKey,
+                                partitionKey: SubPartitionKey,
                                 rowKey: rowKey
                             ).ConfigureAwait(false);
 
@@ -257,7 +258,7 @@ namespace Tipitaka_DB
                         {
                             List<ActivityLog> listActivities = new List<ActivityLog>();
                             string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
-                            if (qualifier != null && qualifier.Length > 0) filter += String.Format(" and ({0})", qualifier);
+                            if (qualifier != null && qualifier.Length > 0) filter += string.Format(" and ({0})", qualifier);
                             token = null;
                             var pages = tableClient.QueryAsync<ActivityLog>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
                             await foreach (var page in pages)
@@ -291,9 +292,9 @@ namespace Tipitaka_DB
                         List<UserPageActivity> listUserPageActivity = new List<UserPageActivity>();
                         if (tableClient != null)
                         {
-                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
                             if (qualifier.Length > 0)
-                                filter += String.Format(" and {0}", qualifier);
+                                filter += string.Format(" and {0}", qualifier);
 
                             var pages = tableClient.QueryAsync<UserPageActivity>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
                             await foreach (var page in pages)
@@ -301,7 +302,7 @@ namespace Tipitaka_DB
                                 listUserPageActivity.AddRange(page.Values.ToList());
                                 token = page.ContinuationToken; // usage ?
                             }
-                            objResult = (Object)listUserPageActivity;
+                            objResult = (object)listUserPageActivity;
                         }
                         break;
                     case "SuttaPageData":
@@ -328,7 +329,7 @@ namespace Tipitaka_DB
                         List<KeyValueData> listKeyValueData = new List<KeyValueData>();
                         if (tableClient != null)
                         {
-                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<KeyValueData>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -344,7 +345,7 @@ namespace Tipitaka_DB
                         List<SourceBookInfo> listSourceBookInfo = new List<SourceBookInfo>();
                         if (tableClient != null)
                         {
-                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<SourceBookInfo>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -360,7 +361,7 @@ namespace Tipitaka_DB
                         List<TaskAssignmentInfo> listTaskAssignmentInfo = new List<TaskAssignmentInfo>();
                         if (tableClient != null)
                         {
-                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<TaskAssignmentInfo>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -376,7 +377,7 @@ namespace Tipitaka_DB
                         List<CorrectionLog> listCorrectionLog = new List<CorrectionLog>();
                         if (tableClient != null)
                         {
-                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<CorrectionLog>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -392,7 +393,7 @@ namespace Tipitaka_DB
                         List<TaskActivityLog> listTaskActivityLog = new List<TaskActivityLog>();
                         if (tableClient != null)
                         {
-                            string filter = String.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", SubPartitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<TaskActivityLog>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -402,6 +403,22 @@ namespace Tipitaka_DB
                                 token = page.ContinuationToken;
                             }
                             objResult = (object)listTaskActivityLog;
+                        }
+                        break;
+                    case "Timesheet":
+                        List<Timesheet> listTimesheet = new List<Timesheet>();
+                        if (tableClient != null)
+                        {
+                            string filter = string.Format("(PartitionKey eq '{0}')", SubPartitionKey);
+                            if (qualifier.Length > 0) { filter += " and " + qualifier; }
+
+                            var pages = tableClient.QueryAsync<Timesheet>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                            await foreach (var page in pages)
+                            {
+                                listTimesheet.AddRange(page.Values.ToList());
+                                token = page.ContinuationToken;
+                            }
+                            objResult = (object)listTimesheet;
                         }
                         break;
                 }
@@ -581,7 +598,6 @@ namespace Tipitaka_DB
                 {
                     ProcessCatchErrorMessage(e.Message.Split('\n'));
                 }
-
             }
             return;
         }
@@ -666,6 +682,14 @@ namespace Tipitaka_DB
                             StatusCode = result.Status;
                         }
                         break;
+                    case "Timesheet":
+                        Timesheet timesheet = (Timesheet)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.AddEntityAsync<Timesheet>(timesheet).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                        }
+                        break;
                 }
             }
             catch (Exception e)
@@ -746,6 +770,15 @@ namespace Tipitaka_DB
                             DBErrMsg = string.Empty;
                         }
                         break;
+                    case "TaskActivityLog":
+                        TaskActivityLog taskActivityLog = (TaskActivityLog)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.UpdateEntityAsync(taskActivityLog, taskActivityLog.ETag).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
                 }
             }
             catch (Exception e)
@@ -770,7 +803,7 @@ namespace Tipitaka_DB
                         {
                             var result = await tableClient.DeleteEntityAsync(rec.PartitionKey, rec.RowKey).ConfigureAwait(false);
                             StatusCode = result.Status;
-                            DBErrMsg = String.Empty;
+                            DBErrMsg = string.Empty;
                         }
                         break;
                     case "SuttaInfo":
@@ -779,18 +812,18 @@ namespace Tipitaka_DB
                         {
                             var result = await tableClient.DeleteEntityAsync(suttaInfo.PartitionKey, suttaInfo.RowKey).ConfigureAwait(false);
                             StatusCode = result.Status;
-                            DBErrMsg = String.Empty;
+                            DBErrMsg = string.Empty;
                         }
                         break;
-                        //case "UserPageActivity":
-                        //    UserPageActivity userPageActivity = (UserPageActivity)obj;
-                        //    if (tableClient != null)
-                        //    {
-                        //        var result = await tableClient.DeleteEntityAsync(userPageActivity.PartitionKey, userPageActivity.RowKey).ConfigureAwait(false);
-                        //        StatusCode = result.Status;
-                        //        DBErrMsg = String.Empty;
-                        //    }
-                        //    break;
+                    case "TaskAssignmentInfo":
+                        TaskAssignmentInfo taskAssignmentInfo = (TaskAssignmentInfo)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.DeleteEntityAsync(taskAssignmentInfo.PartitionKey, taskAssignmentInfo.RowKey).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
                 }
             }
             catch (Exception e)
@@ -851,6 +884,72 @@ namespace Tipitaka_DB
                 }
             }
             return;
+        }
+        public async Task DeleteTableRecBatch(List<object> dataList)
+        {
+            if (tableClient != null)
+            {
+                var transactionActions = new List<TableTransactionAction>();
+                try
+                {
+                    int n = 0;
+                    //ITableEntity entity = null;
+                    foreach (var data in dataList)
+                    {
+                        if (data != null)
+                        {
+                            switch (PartitionKey)
+                            {
+                                case "SuttaInfo":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (SuttaInfo)data));
+                                    break;
+                                case "SuttaPageData":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (SuttaPageData)data));
+                                    break;
+                                case "TaskAssignmentInfo":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (TaskAssignmentInfo)data));
+                                    break;
+                                case "KeyValueData":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (KeyValueData)data));
+                                    break;
+                                case "CorrectionLog":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (CorrectionLog)data));
+                                    break;
+                                case "ActivityLog":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (ActivityLog)data));
+                                    break;
+                                case "TaskActivityLog":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (TaskActivityLog)data));
+                                    break;
+                                case "Timesheet":
+                                    transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Delete, (Timesheet)data));
+                                    break;
+                            }
+                            ++n;
+                            //transactionActions.Add(new TableTransactionAction(TableTransactionActionType.Add, entity));
+                            if (n == 100)
+                            {
+                                var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                                ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                if (StatusCode != 202) return;
+                                DBErrMsg = string.Empty;
+                                n = 0;
+                                transactionActions.Clear();
+                            }
+                        }
+                    }
+                    if (n > 0)
+                    {
+                        var result = await tableClient.SubmitTransactionAsync(transactionActions).ConfigureAwait(false);
+                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                        if (StatusCode == 202) DBErrMsg = string.Empty;
+                    }
+                }
+                catch (Exception e)
+                {
+                    ProcessCatchErrorMessage(e.Message.Split('\n'));
+                }
+            }
         }
         //*******************************************************************
         //*** ProcessCatchErrorMessage

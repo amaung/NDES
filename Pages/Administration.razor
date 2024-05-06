@@ -73,6 +73,9 @@
     const string _TaskAssignments = "TaskAssignments";
     const string _Documents = "Documents";
     const string _Activities = "Activities";
+    const string _Reports = "Reports";
+    const string _UserTask = "User-Task Report";
+    const string _DocReport = "Document Report";
     const string _NissayaSource = "SourceBooks";
     const string _Project = "Project";
     const string _DataPage = "DataPage";
@@ -85,8 +88,10 @@
         MenuData[1].Disabled = (componentName == "Document");
         MenuData[2].Disabled = (componentName == "TaskAssignment");
         MenuData[3].Disabled = (componentName == "Activity");
-        MenuData[4].Disabled = (componentName == "NissayaSource");
-        MenuData[5].Disabled = (componentName == "Project");
+        MenuData[4].Items[0].Disabled = (componentName == _UserTask);
+        MenuData[4].Items[1].Disabled = (componentName == _DocReport);
+        MenuData[5].Disabled = (componentName == "NissayaSource");
+        MenuData[6].Disabled = (componentName == "Project");
         State.screenID = 3;
     }
     // ***************************************************************************************
@@ -100,6 +105,13 @@
         new MenuItem { Text = _Documents },
         new MenuItem { Text = _TaskAssignments },
         new MenuItem { Text = _Activities },
+        new MenuItem { Text = _Reports,
+            Items = new List<MenuItem>
+            {
+                new MenuItem { Text = _UserTask },
+                new MenuItem { Text = _DocReport },
+            }
+        },
         new MenuItem { Text = _NissayaSource },
         new MenuItem { Text = _Project },
         new MenuItem { Text = _DataPage },
@@ -123,6 +135,12 @@
                 break;
             case _Activities:
                 NavManager.NavigateTo(String.Format("/activity/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _UserTask:
+                NavManager.NavigateTo(String.Format("/reports/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _DocReport:
+                NavManager.NavigateTo(String.Format("/document_report/{0}/{1}/{2}", email, userName, userClass));
                 break;
             case _TaskAssignments:
                 NavManager.NavigateTo(String.Format("/task_assignment/{0}/{1}/{2}", email, userName, userClass));

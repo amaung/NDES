@@ -228,6 +228,33 @@ namespace Tipitaka_DB
             }
             return result.ToArray();
         }
+        public void DeleteAll(string userID)
+        {
+            if (userID == null || userID != "dhammayaungchi2011@gmail.com") return;
+            string query = "";
+            QueryTableRec(query).Wait();
+            List<SuttaPageData> list = (List<SuttaPageData>)objResult;
+            if (list.Count > 0)
+            {
+                List<object> list1 = list.ToList<object>();
+                List<object> listByDocNo = new List<object>();
+                string curDocNo = string.Empty;
+                foreach(object item in list1)
+                {
+                    SuttaPageData suttaPageData = (SuttaPageData)item;
+                    if (curDocNo != suttaPageData.PartitionKey)
+                    {
+                        // delete the current docNo
+                        if (listByDocNo.Count > 0) DeleteTableRecBatch(listByDocNo).Wait();
+                        curDocNo = suttaPageData.PartitionKey;
+                        listByDocNo = new List<object> { item };
+                    }
+                    else 
+                        listByDocNo.Add(item);
+                }
+                if (listByDocNo.Count > 0) DeleteTableRecBatch(listByDocNo).Wait();
+            }
+        }
     }
 #nullable disable
 }

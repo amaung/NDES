@@ -65,5 +65,17 @@ namespace Tipitaka_DB
                 sortedSuttaList.Add(suttaInfo.RowKey, suttaInfo.Title);
             return sortedSuttaList;
         }
+        public void DeleteAll(string userID)
+        {
+            if (userID == null || userID != "dhammayaungchi2011@gmail.com") return;
+            string query = "";
+            QueryTableRec(query).Wait();
+            List<SuttaInfo> list = (List<SuttaInfo>)objResult;
+            if (list.Count > 0)
+            {
+                List<object> list1 = list.ToList<object>();
+                DeleteTableRecBatch(list1).Wait();
+            }
+        }
     }
 }

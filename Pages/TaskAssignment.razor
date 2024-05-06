@@ -72,9 +72,6 @@
                     });
             }
         }
-        // show Recent tasks by default
-        // searchTypeValue = docSearchTypes[0].ID;
-        // ShowTasks();
     }
 }
 
@@ -129,13 +126,13 @@
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick"></GridEvents>
+        <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick" DataBound="TaskDataBound"></GridEvents>
         @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(TaskInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
                         IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(TaskInfo.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                        AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
             <GridColumn Field=@nameof(TaskInfo.DocTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
                         TextAlign="TextAlign.Left" AllowEditing="false" Width="28%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(TaskInfo.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
@@ -445,6 +442,7 @@
     List<TaskInfo> TaskInfoRecords = new List<TaskInfo>();
     List<TaskDetailedInfo> TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
     List<CorrectionInfo> CorrectionInfoRecords = new List<CorrectionInfo>();
+    TaskInfo? selectedTaskInfo = null;
     SfGrid<TaskInfo> sfgrid;
     SfGrid<TaskDetailedInfo> sfgrid1;
     SfGrid<CorrectionInfo> sfgrid2;
@@ -544,6 +542,7 @@
         idxTaskRowSelect = -1;
         idxTaskAssignmentRowSelect = -1;
         TaskInfoRecords = listTaskInfo;
+
         TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
         if (TaskInfoRecords.Count < totalCount)
         {
@@ -582,6 +581,23 @@
         }
         else showNextButton = "none";
     }
+    private async Task TaskDataBound()
+    {
+        if (selectedTaskInfo != null)
+        {
+            var listTask = (from item in TaskInfoRecords 
+                  where item.DocNo == selectedTaskInfo.DocNo 
+                  select item).ToList();
+            var totalPages = (int)((TaskInfoRecords.Count - 1) / 5) + 1;
+            var curPage = (int)((listTask[0].SrNo - 1) / 5) + 1;
+            int rowIdx = (listTask[0].SrNo % 5);
+            rowIdx = (rowIdx == 0) ? 4 : rowIdx - 1; 
+            await sfgrid.GoToPageAsync(curPage);
+            await sfgrid.SelectRowAsync(rowIdx);
+            selectedTaskInfo = null;
+        }
+    }
+
     private void onCancelNewDoc()
     {
         ErrMsgNewDocInfo = String.Empty;
@@ -761,10 +777,10 @@
         }
         TaskDetailedInfoRecords = listTaskDetailedInfo;
     }
-    //********************************
+    //************************************************************************************************
     //******** SaveTaskClick()
-    //**https://www.newtonsoft.com/json/help/html/DeserializeObject.htm*/
-    //********************************
+    //*** https://www.newtonsoft.com/json/help/html/DeserializeObject.htm*/
+    //************************************************************************************************
     private void SaveTaskClick()
     {
         List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>();
@@ -777,7 +793,7 @@
         string key;
         foreach (var item in TaskDetailedInfoRecords)
         {
-            if (item.Status.Length == 0) item.Status = "Assigned";
+            if (item.Status.Length == 0) item.Status = TaskCategories._Assigned_; 
             if (item.PagesSubmitted == null) item.PagesSubmitted = 0;
             userTaskAssignments = State.dataFile.UserTaskAssignment(userTaskAssignments, item.UserID, item.Task,
                                   item.StartDate, item.LastUpdate, (int)item.PagesSubmitted, item.Status);
@@ -839,6 +855,8 @@
                 clientKeyValueData.AddUserDocByCategory("admin", TaskCategories._Recent_, docNo);
                 clientKeyValueData.AddUserDocByCategory(userList.ToArray(), TaskCategories._Assigned_, docNo);
             }
+            searchTypeValue = TaskCategories._Assigned_;
+            ShowTasks();
         }
     }
     /************************************************************************************/
@@ -887,6 +905,7 @@
     {
         if (State.dataFile == null) return;
         TaskInfo taskInfo = args.Data;
+        selectedTaskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;
         //TaskInfo taskInfo = listTaskInfo[taskInfo.SrNo];
         TaskAssignmentInfo taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(taskInfo.DocNo);

@@ -1,0 +1,254 @@
+﻿@page "/document_report/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Calendars
+@using System.Globalization
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    // **************************************************
+    // *** class DataItem
+    // **************************************************
+    public class DataItem
+    {
+        public string ID { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+    // **************************************************
+    // *** class DocInfo
+    // **************************************************
+    // public class DocInfo()
+    // {
+    //     public int srNo { get; set; }
+    //     public string docNo { get; set; }
+    //     public string docTitle { get; set; }
+    //     public string sourceFileCode { get; set; }
+    //     public int startPage { get; set; }
+    //     public int endPage { get; set; }
+    //     public string pages { get; set; }
+    //     public int pageCount { get; set; }
+    //     public int pagesSubmitted { get; set; }
+    //     public string lastUpdate { get; set; }
+    //     public string status { get; set; }
+    //     public string team { get; set; }
+    // };
+
+    // **************************************************
+    // *** AlertBtn : Alert message box
+    // **************************************************
+    private async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+    //***********************************************************************
+    //***************************** Initialize ******************************
+    //***********************************************************************
+    protected override async Task OnInitializedAsync()
+    {
+        List<string> listDocSearchTypes = new List<string>()
+        {
+            TaskCategories._Completed_, TaskCategories._ExactMatch_, TaskCategories._StartsWith_
+        };
+        foreach (var item in listDocSearchTypes)
+        {
+            searchTypes.Add(new DataItem()
+            {
+                ID = item,
+                Text = item
+            });
+        }
+    }
+}
+
+@*****************************************************************************@
+@****************************** Base Document  *******************************@
+@*****************************************************************************@
+<Administration componentName="Document Report" email=@email userName=@userName userClass=@userClass flex_width="820px">
+    <adminMenuItem>Document Report</adminMenuItem>
+</Administration>
+
+@*****************************************************************************@
+@******************************* Top Section *********************************@
+@*****************************************************************************@
+<div>
+    <div style="width:200px" class="form-group col-md-2 column">
+        <label class="col-form-label">Search Type</label>
+        <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="searchTypeValue"
+                        MultiSelectMode="None" PopupHeight="335px" DataSource="@searchTypes">
+            <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@SearhTypeValueChangeHandler"></DropDownListEvents>
+            <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+        </SfDropDownList>
+    </div>
+    <div style="width:200px" class="form-group col-md-2 column">
+        <label class="col-form-label">Search Text</label>
+        <SfTextBox TValue="string" @bind-Value="@pattern"></SfTextBox>
+    </div>
+</div>
+<br />
+<div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
+    <SfButton IsPrimary="true" OnClick="@ShowDocs"> Show Documents </SfButton>
+</div>
+@* <div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class=" form-group col-md-2 column">
+    <SfButton CssClass="e-custom" OnClick="@ShowNextDocs"> Show Next @nextCount </SfButton>
+</div> *@
+<br /><br />
+<label style="margin-left:380px;width:200px;text-align: right;"><strong>Total: </strong>@DocDisplayRecords.Count</label>
+<br />
+
+@*******************************************************************************@
+@****************************** Document DataGrid ******************************@
+@*******************************************************************************@
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowSelection="true"
+            AllowSorting="true" AllowTextWrap="false" Height="380" Width="1000">
+            @* AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents RowSelected="RowSelectHandler" TValue="DocInfo" OnToolbarClick="ToolbarClick" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser"></GridEvents> *@
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
+        <GridColumns>
+            <GridColumn Field=@nameof(DocReportInfo.srNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                IsPrimaryKey="true" AllowEditing="false" Width="6%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(DocReportInfo.date) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(DocReportInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                AllowEditing="false" Width="13%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+            <GridColumn Field=@nameof(DocReportInfo.docTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                TextAlign="TextAlign.Left" AllowEditing="false" Width="30%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(DocReportInfo.pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(DocReportInfo.sourceFile) HeaderText="Source File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                TextAlign="TextAlign.Left" AllowEditing="false" Type="ColumnType.String"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+<br />
+
+@*****************************************************************************@
+@********************************* Styles ************************************@
+@*****************************************************************************@
+<style>
+    .e-headercell.e-attr1 {
+        background: #e3e6e8;
+    }
+    .e-ddl.e-input-group.e-control-wrapper .e-input {
+        font-size: 14px;
+        background: #32a5ab;
+        /* width:150px; */
+    }
+    .column {
+        float: left;
+        padding: 9px;
+        width:250px;
+        /* height: 530px; /* should be removed. only for demonstration */
+    }
+    .column-dialog {
+        float: left;
+        padding: 10px;
+    }
+    .left-dialog {
+        width: 33%;
+    }
+    .middle-dialog {
+        width: 33%;
+    }
+    .right-dialog {
+        width: 33%;
+    }
+    .left-col2-dialog {
+        width: 50%;
+    }
+    .right-col2-dialog {
+        width: 50%;
+    }
+</style>
+
+@code {
+    string searchTypeValue = "";
+    string searchType = "", pattern = "";
+    // int totalCount = 0;
+    List<DataItem> searchTypes = new List<DataItem>();
+    List<DocReportInfo> DocDisplayRecords = new List<DocReportInfo>();
+    SfGrid<DocReportInfo>? sfgrid;
+
+    //************************************************************************************/
+    //******** Search value change events
+    /************************************************************************************/
+    private void SearhTypeValueChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        if (args != null && args.ItemData != null)
+            searchType = args.ItemData.Text;
+        else searchType = String.Empty;
+    }
+    //************************************************************************************/
+    //******** ShowDocs
+    //************************************************************************************/
+    private void ShowDocs()
+    {
+        // retrieve
+        if (State.dataFile == null) return;
+        if (searchTypeValue == null) searchTypeValue = searchTypes[0].ID;
+        if (State.listDocReportInfo != null && State.listDocReportInfo.Count > 0)
+        {
+            DocDisplayRecords = new List<DocReportInfo>(State.listDocReportInfo);
+            return;
+        }
+        if (searchType == TaskCategories._Completed_) searchType = TaskCategories._Completion_Report_;
+        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchType, pattern, userClass);
+
+        SortedDictionary<string, SuttaInfo> sortedSuttaInfo = new SortedDictionary<string, SuttaInfo>();
+        foreach(SuttaInfo suttaInfo in listSuttaInfo)
+        {
+            DateTimeOffset dto = ((DateTimeOffset)suttaInfo.Timestamp).ToLocalTime();
+            DateTime dt = dto.DateTime;
+            string dtkey = dt.ToString("yyyy-MM-dd");
+            sortedSuttaInfo.Add(String.Format("{0}${1}", dtkey, suttaInfo.RowKey), suttaInfo);
+        }
+        DocDisplayRecords = new List<DocReportInfo>();
+        int n = 0;
+        Dictionary<string, SuttaInfo> ReverseSuttaInfo = new Dictionary<string, SuttaInfo>(sortedSuttaInfo.Reverse());
+        foreach(string key in ReverseSuttaInfo.Keys)
+        {
+            SuttaInfo suttaInfo = sortedSuttaInfo[key];
+            string[] f = key.Split("$");
+            DocReportInfo docReportInfo = new DocReportInfo()
+            {
+                srNo = ++n,
+                date = (f?.Length >= 1) ? f[0] : "",
+                docNo = suttaInfo.RowKey,
+                docTitle = suttaInfo.Title,
+                pages = String.Format("{0}-{1}", suttaInfo.StartPage, suttaInfo.EndPage),
+                sourceFileCode = suttaInfo.BookID,
+                sourceFile = State.dataFile.GetSourceBookInfo(suttaInfo.BookID).BookFilename
+            };
+            DocDisplayRecords.Add(docReportInfo);
+        }
+    }
+}

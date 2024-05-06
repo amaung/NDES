@@ -8,8 +8,10 @@
 @using Syncfusion.Blazor.Inputs
 @using System.ComponentModel.DataAnnotations;
 @using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Calendars
 @using Syncfusion.Blazor.Spinner
 @using System.IO
+@inject SfDialogService DialogService
 @inject SfDialogService DialogService
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
@@ -117,11 +119,11 @@
                 <GridEvents QueryCellInfo="CustomizeCell" OnToolbarClick="ToolbarClick" RowSelected="RowSelectHandler" OnCellEdit="CellEditHandler"
                 OnActionBegin="ActionBegin" OnActionComplete="ActionComplete" TValue="NIS"></GridEvents>
                 <GridColumns>
-                    <GridColumn Field=@nameof(NIS.RecNo) HeaderText="Sr No" IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.Integer" DefaultValue=@GetSrNo() ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
-                    <GridColumn Field=@nameof(NIS.Pali) HeaderText="Pāḷi" TextAlign="TextAlign.Left" Width="25%" Type="ColumnType.String"></GridColumn>
-                    <GridColumn Field=@nameof(NIS.Trans) HeaderText="Translation" TextAlign="TextAlign.Left" Width="35%" Type="ColumnType.String"></GridColumn>
-                    <GridColumn Field=@nameof(NIS.Footnote) HeaderText="Footnote" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String"></GridColumn>
-                    <GridColumn Field=@nameof(NIS.Remarks) HeaderText="Remarks" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.RecNo) HeaderText="Sr No" IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.Pali) HeaderText="Pāḷi" TextAlign="TextAlign.Left" Width="25%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.Trans) HeaderText="Translation" TextAlign="TextAlign.Left" Width="35%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.Footnote) HeaderText="Footnote" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.Remarks) HeaderText="Remarks" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                 </GridColumns>
             </SfGrid>
         </div>
@@ -296,6 +298,7 @@
     private bool isPageDisabled = true;
     private bool IsVisible_NewDocInfo = false;
     private bool IsVisible_DocSelection = false;
+    bool IsVisible_StartDateDialog = false;
     private bool hide_file_browser = true;
     private bool currentPageDirty = false;
     private bool ServerUploadRequired = false;
@@ -303,6 +306,7 @@
     string doc_ID = "";
     string doc_Title = "";
     string page_No = "";
+    string UserTaskStartDate = "";
     string docSelectionDialHeader = "";
     int srno = 0;
     int? srno_field = 0;
@@ -319,6 +323,9 @@
     private int add_dialog_field_no = -1;
     private string newParaMarker = "။ ။";
     DataFile dataFile;
+
+    DateTime? StartDateValue { get; set; } = new DateTime(DateTime.Now.Year,DateTime.Now.Month,DateTime.Now.Day);
+    DateTime MaxStartDate { get; set; } = new DateTime(DateTime.Now.Year,DateTime.Now.Month,DateTime.Now.Day);
 
     SortedDictionary<string, string>? allDocList = null;
     public string[] Value = new string[] { "Pg-01" };
@@ -499,7 +506,8 @@
         doc_ID = State.doc_ID;
         doc_Title = State.doc_Title;
         dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded);
-
+        // set start date if not set yet
+        dataFile.LogTaskStartDate(doc_ID, State.UserTaskInfo);
     }
     private void LoadDocumentFromServer(string docID)
     {
@@ -522,7 +530,7 @@
         //LoadFirstPage();
         VisibleSpinner = fileUpload = false;
         enableServerUploadMenu();
-        UpdateRecentlyUsedFileList(doc_ID);
+        //UpdateRecentlyUsedFileList(doc_ID);
     }
     private void onDocSelCancelClick()
     {
@@ -622,6 +630,7 @@
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
         {
             NIS nis = args.Data;
+            int n = NISRecords.Count();
             //currentSelectedRowIndex = await sfgrid.GetSelectedRowIndexesAsync();
             // if (currentSelectedRowIndex.Count > 0) deletedRecNo = (int)NISRecords[currentSelectedRowIndex[0]].RecNo;
         }
@@ -637,7 +646,8 @@
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
         {
             NIS nis = args.Data;
-            dataFile.DelNISRecord(page_No, nis);
+            int n = NISRecords.Count();
+            //dataFile.DelNISRecord(page_No, nis);
         }
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Edit"))
         {
@@ -701,6 +711,9 @@
         LoadPageMenu();
         Value = new string[] { Pages[0].Id };
         LoadPageData(Pages[0].Text);
+        InvalidNISRecordErrMsg = dataFile.GetFootnoteRemarkCountWarning();
+        var dict = dataFile.GetInvalidNISRecords();
+        if (dict.Count > 0 || InvalidNISRecordErrMsg.Length > 0) ShowInvalidNISDial(dict);
         // doc_ID = dataFile.GetDocID();
         // doc_Title = dataFile.GetDocTitle();
         // newParaMarker = dataFile.GetNewParaMarker();
@@ -740,11 +753,11 @@
     private bool CheckServerUploadRequired()
     {
         bool flag = false;
-        if (ServerUploadRequired)
-        {
-            AlertBtn("Upload data to server first before performing adding or editing.", "Attention");
-            flag = true;
-        }
+        // if (ServerUploadRequired)
+        // {
+        //     AlertBtn("Upload data to server first before performing adding or editing.", "Attention");
+        //     flag = true;
+        // }
         return flag;
     }
     private void LoadFirstPage()
@@ -969,6 +982,8 @@
     const string documents = "Documents";
     const string activities = "Activities"; 
     const string reports = "Reports";
+    const string invalidNISList = "Invalid NIS List";
+    const string timesheet = "Timesheet";
 
     #pragma warning disable
     private List<MenuItem> MenuData = new List<MenuItem>{
@@ -1002,6 +1017,7 @@
             {
                 new MenuItem { Text = currentPage },
                 new MenuItem { Text = allPages },
+                new MenuItem { Text = invalidNISList },
             }
         },
         new MenuItem
@@ -1011,6 +1027,7 @@
             {
                 new MenuItem { Text = taskAssignment },
                 new MenuItem { Text = userProfile },
+                new MenuItem { Text = timesheet, Disabled=true },
             }
         },        
         new MenuItem
@@ -1070,24 +1087,21 @@
                     AlertBtn("Document No and/or Title empty.", "No document info");
                     return;
                 }
-                if (NISRecords.Count() == 0)
+                if (NISRecords == null || NISRecords.Count() == 0 || Pages == null || Pages.Count() == 0)
                 {
                     AlertBtn("No data loaded yet.", "No data");
                     return;
                 }
-                if (NISRecords.Count() == 0 || Pages.Count() == 0)
-                {
-                    AlertBtn("There are no records to view.", "No Data");
-                    return;
-                }
                 SaveRestoreDataState(true);
+                // remove '/' from doc_Title so that it can be passed as a parameter
+                string title = doc_Title.Replace("/", "$");
                 switch (selectedItem)
                 {
                     case currentPage:
-                        NavManager.NavigateTo(String.Format("/viewdocument/{0}/{1}/{2}/{3}", doc_ID, doc_Title, page_No, newParaMarker));
+                        NavManager.NavigateTo(String.Format("/viewdocument/{0}/{1}/{2}/{3}", doc_ID, title, page_No, newParaMarker));
                         break;
                     case allPages:
-                        NavManager.NavigateTo(String.Format("/viewdocument/{0}/{1}/{2}/{3}", doc_ID, doc_Title, "0", newParaMarker));
+                        NavManager.NavigateTo(String.Format("/viewdocument/{0}/{1}/{2}/{3}", doc_ID, title, "0", newParaMarker));
                         break;
                 }
                 break;
@@ -1125,6 +1139,14 @@
             case userProfile:
                 IsUserProfileVisible = true;
                 break;
+            case timesheet:
+                NavManager.NavigateTo(String.Format("/timesheetuser/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case invalidNISList:
+                if (InvalidNISDisplayRecords.Count == 0)
+                    AlertBtn("The Probable Invalid NIS Records list is empty.", "Info");
+                else IsVisible_InvalidNIS = true;
+                break;
             default:
                 if ("12345".Contains(selectedItem[0]) && selectedItem[1] == '.')
                 {
@@ -1153,7 +1175,8 @@
         int bookDocEndPage = Int32.Parse(dictServerDocInfo["BookDocEndPage"]);
         int bookDocPages = Int32.Parse(dictServerDocInfo["NoPages"]);
         // check if the file contains pages that are in the book pages
-        if (fileFirstPage >= bookDocStartPage && fileFirstPage <= bookDocEndPage &&
+        if (fileFirstPage == bookDocStartPage && fileFirstPage <= bookDocEndPage &&
+            // fileFirstPage >= bookDocStartPage && fileFirstPage <= bookDocEndPage &&
             fileLastPage >= bookDocStartPage && fileLastPage <= bookDocEndPage)
         {
             doc_Pages = String.Format("{0}-{1} ({2})", bookDocStartPage, bookDocEndPage, bookDocPages);
@@ -1187,18 +1210,38 @@
         }
         else
         {
-            string msg = String.Format("File pages {0}-{1} are outside of book pages {2}-{3}.", fileFirstPage, 
+            string msg = "";
+            if (fileFirstPage != bookDocStartPage)
+                msg = String.Format("File start page ({0}) and doc start page ({1}) are different. Start pages must be the same.", fileFirstPage, bookDocStartPage);
+            else
+                msg = String.Format("File pages {0}-{1} are outside of doc pages {2}-{3}.", fileFirstPage, 
                         fileLastPage, bookDocStartPage, bookDocEndPage);
             AlertBtn(msg, "Error");
         }
     }
     private void UploadToServer()
     {
+        string sdate = dataFile.GetTaskStartDate(doc_ID);
+        string userTask = State.UserTaskInfo[email + "-Task"];
+        if ((userTask == Tipitaka_DBTables.TaskCategories._DataEntry_ || 
+            userTask == Tipitaka_DBTables.TaskCategories._EditUpload_) && sdate.Length == 0)
+        {
+            // start date has not been set
+            IsVisible_StartDateDialog = true;
+        }
+        else UploadToServer(sdate);
+    }
+    private void UploadToServer(string taskStartDate)
+    {
         string userTask = "";
+        int fileFirstPage = dataFile.GetFirstPageNo();
+        int fileLastPage = dataFile.GetLastPageNo();
+
         if (State.UserTaskInfo.ContainsKey(email + "-Task")) userTask = State.UserTaskInfo[email + "-Task"];
         Dictionary<string, string> dictServerDocInfo = dataFile.GetServerDocInfo(doc_ID, userTask);
 
         int bookDocStartPage = Int32.Parse(dictServerDocInfo["BookDocStartPage"]);
+        int bookDocEndPage = Int32.Parse(dictServerDocInfo["BookDocEndPage"]);
         int pagesSubmitted = Int32.Parse(dictServerDocInfo["PagesSubmitted"]);
         int submitStartPage = bookDocStartPage + pagesSubmitted;
         int submitEndPage = Int32.Parse(dictServerDocInfo["ImportedEndPage"]);
@@ -1219,63 +1262,64 @@
         dictServerDocInfo["PagesToSubmit"] = submitPages.ToString();
         dictServerDocInfo["PagesSubmitted"] = (pagesSubmitted + submitPages).ToString();
         dataFile.userClass = userClass;
-        dataFile.LogUserTaskActivity(dictServerDocInfo, userTask);
+        
+        dataFile.LogUserTaskActivity(dictServerDocInfo, userTask, taskStartDate);
         TaskComplete(dataFile.ErrMsg);
     }
     private void UpdateRecentlyUsedFileList(string docNo = "")
     {
-        bool addFlag = true;
-        // no longer use this feature, just return
-        if (addFlag) return;
+        // bool addFlag = true;
+        // // no longer use this feature, just return
+        // if (addFlag) return;
 
-        if (RUFList.Count > 0)
-        {
-            if (RUFList[RUFList.Count - 1] == docNo) return;
-        }
-        var menu = MenuData.First();
-        if (menu.Items.Count == 6 && dataFile != null)
-        {
-            RUFList.Clear();
-            List<string> RUFList_tmp = dataFile.GetRUFList();
-            // remove erroneous empty lines
-            foreach(string t in RUFList_tmp)
-            {
-                if (t.Trim().Length > 0) RUFList.Add(t.Trim());
-            }
-            if (docNo.Length == 0 && RUFList.Count == 0) return;
-            menu.Items.Add(new MenuItem() { Separator = true });
-        }
-        if (docNo.Length > 0 && RUFList.Contains(docNo))
-        {
-            if (RUFList.IndexOf(docNo) < RUFList.Count() - 1)
-                RUFList.Remove(docNo);
-            else addFlag = false;
-        }
-        if (docNo.Length > 0 && addFlag)
-        {
-            RUFList.Add(docNo);
-            if (RUFList.Count() > RUFList_MaxSize) RUFList.RemoveAt(0);
-        }
+        // if (RUFList.Count > 0)
+        // {
+        //     if (RUFList[RUFList.Count - 1] == docNo) return;
+        // }
+        // var menu = MenuData.First();
+        // if (menu.Items.Count == 6 && dataFile != null)
+        // {
+        //     RUFList.Clear();
+        //     List<string> RUFList_tmp = dataFile.GetRUFList();
+        //     // remove erroneous empty lines
+        //     foreach(string t in RUFList_tmp)
+        //     {
+        //         if (t.Trim().Length > 0) RUFList.Add(t.Trim());
+        //     }
+        //     if (docNo.Length == 0 && RUFList.Count == 0) return;
+        //     menu.Items.Add(new MenuItem() { Separator = true });
+        // }
+        // if (docNo.Length > 0 && RUFList.Contains(docNo))
+        // {
+        //     if (RUFList.IndexOf(docNo) < RUFList.Count() - 1)
+        //         RUFList.Remove(docNo);
+        //     else addFlag = false;
+        // }
+        // if (docNo.Length > 0 && addFlag)
+        // {
+        //     RUFList.Add(docNo);
+        //     if (RUFList.Count() > RUFList_MaxSize) RUFList.RemoveAt(0);
+        // }
 
-        int idx = 0;
-        int numRUF = menu.Items.Count - 8;  // separator index = 7, count = 8
-        int last = Math.Min(RUFList_MaxSize, RUFList.Count());
-        if (last > 0)
-        {
-            for(int i = last - 1; i >= 0; i--)
-            {
-                string t = string.Format("{0}. {1}", ++idx, RUFList[i]);
-                if (numRUF-- >= 1) menu.Items[idx + 7].Text = t;
-                else menu.Items.Add(new MenuItem() { Text = t });
-            }
-        }
-        else 
-        {
-            RUFList.Add(docNo);
-            menu.Items.Add(new MenuItem() { Text = string.Format("1. {0}", docNo) });
-        }
+        // int idx = 0;
+        // int numRUF = menu.Items.Count - 8;  // separator index = 7, count = 8
+        // int last = Math.Min(RUFList_MaxSize, RUFList.Count());
+        // if (last > 0)
+        // {
+        //     for(int i = last - 1; i >= 0; i--)
+        //     {
+        //         string t = string.Format("{0}. {1}", ++idx, RUFList[i]);
+        //         if (numRUF-- >= 1) menu.Items[idx + 7].Text = t;
+        //         else menu.Items.Add(new MenuItem() { Text = t });
+        //     }
+        // }
+        // else 
+        // {
+        //     RUFList.Add(docNo);
+        //     menu.Items.Add(new MenuItem() { Text = string.Format("1. {0}", docNo) });
+        // }
 
-        if (docNo.Length > 0 && dataFile != null) dataFile.GetRUFList(RUFList);
+        // if (docNo.Length > 0 && dataFile != null) dataFile.GetRUFList(RUFList);
     }
 
 }
@@ -1622,8 +1666,11 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         IsUserProfileVisible = false;
     }
 }
+@**********************************************************************************************************@
+@********************************            Import Data Details           ********************************@
+@**********************************************************************************************************@
 <div>
-    <SfDialog Width="425px" MinHeight="360px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsImportInfoDialogVisible">
+    <SfDialog Width="425px" MinHeight="420px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsImportInfoDialogVisible">
         <DialogEvents OnOpen="ImportInfoDialogOpen"></DialogEvents>
         <DialogTemplates>
             <Header> Import Data Details </Header>
@@ -1716,5 +1763,159 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     {
         // setting maximum height to the Dialog
         args.MaxHeight = "350px";
+    }
+}
+@**********************************************************************************************************@
+@***************************            Probable Invalid NIS Records            ***************************@
+@**********************************************************************************************************@
+<div>
+    <SfDialog Width="550px" MinHeight="400px" ShowCloseIcon="false" AllowDragging="true" IsModal="false" @bind-Visible="@IsVisible_InvalidNIS">
+        <DialogTemplates>
+            <Header>Probable Invalid NIS Records</Header>
+            <Content>
+                <div id="ControlRegion">
+                    <SfGrid ID="selDocGrid" DataSource="@InvalidNISDisplayRecords" @ref="sfgridInvalidNIS" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="false"
+                        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="400" Width="500">
+                        <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="false" Mode="@EditMode.Normal"></GridEditSettings>
+                        <GridPageSettings PageSize="10"></GridPageSettings>
+                        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
+                        <GridEvents OnRecordClick="InvalidNISRecordClickHandler" TValue="InvalidNISDisplay"></GridEvents>
+                        @* <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="InvalidNISDisplay"></GridEvents> *@
+                        <GridColumns>
+                            @* <GridColumn Field=@nameof(InvalidNISDisplay.srNo) HeaderText="SrNo" IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn> *@
+                            <GridColumn Field=@nameof(InvalidNISDisplay.pgNo) HeaderText="Page" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                            <GridColumn Field=@nameof(InvalidNISDisplay.nisRecNo) HeaderText="NIS" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                            <GridColumn Field=@nameof(InvalidNISDisplay.nisRec) HeaderText="NIS Data" TextAlign="TextAlign.Left" Width="50%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                            @* <GridColumn Field=@nameof(InvalidNISDisplay.nis.Trans) HeaderText="Trans" TextAlign="TextAlign.Left" Width="20%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn> *@
+                            @* <GridColumn Field=@nameof(InvalidNISDisplay.nis.Footnote) HeaderText="Footnote" TextAlign="TextAlign.Left" Width="20%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn> *@
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+                <div>
+                    <br/>
+                    <p style="color:brown">@InvalidNISRecordErrMsg</p>
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Close" IsPrimary="true" OnClick="@onOK_InvalidNISDial" />
+            @* <DialogButton Content="Cancel" OnClick="@onDocSelCancelClick" /> *@
+        </DialogButtons>
+    </SfDialog>
+</div>
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+</style>
+@code {
+    public class InvalidNISDisplay
+    {
+        public int srNo { get; set; }
+        public int pgNo { get; set; }
+        public int nisRecNo { get; set; }
+        public string nisRec { get; set; }
+    }
+    string InvalidNISRecordErrMsg = "";
+    SfGrid<InvalidNISDisplay> sfgridInvalidNIS;
+    List<InvalidNISDisplay> InvalidNISDisplayRecords = new List<InvalidNISDisplay>();
+    bool IsVisible_InvalidNIS = false;
+
+    private void onOK_InvalidNISDial()
+    {
+        IsVisible_InvalidNIS = false;
+        if (!InvalidNISRecordErrMsg.Contains("ALERT:")) InvalidNISRecordErrMsg = "";
+    }
+    private void ShowInvalidNISDial(Dictionary<string, List<NIS>> dict)
+    {
+        if (dict == null || dict.Count == 0) return;
+        InvalidNISDisplayRecords = new List<InvalidNISDisplay>();
+        int n = 0;
+        foreach(string pgno in dict.Keys)
+        {
+            string[] f = pgno.Split("-");
+            int iPgNo = f.Length >= 1 ? Int32.Parse(f[0]) : 0;
+            int recNo = f.Length >= 2 ? Int32.Parse(f[1]) : 0;
+            foreach(NIS nis in dict[pgno])
+            {
+                InvalidNISDisplayRecords.Add(new InvalidNISDisplay()
+                {
+                    srNo = ++n,
+                    pgNo = iPgNo,
+                    nisRecNo = recNo,
+                    nisRec = String.Format("*{0} | ^{1} | @{2} | ?{3}", nis.Pali, nis.Trans, nis.Footnote, nis.Remarks)
+                });
+            }
+        }
+        IsVisible_InvalidNIS = true;
+    }
+    // https://blazor.syncfusion.com/documentation/datagrid/paging
+    private async Task InvalidNISRecordClickHandler(RecordClickEventArgs<InvalidNISDisplay> args)
+    {
+        var r = args;
+        var rec = args.RowData;
+        int tabNo = (int)(rec.nisRecNo/10) + 1;
+        int rowIdx = (rec.nisRecNo % 10) - 1;
+        page_No = rec.pgNo.ToString();
+        LoadPageData(page_No);
+        await Task.Delay(50);
+        int totalTabs = (int)(NISRecords.Count/10) + 1;
+        if (tabNo > totalTabs || rec.nisRecNo > NISRecords.Count)
+        {
+            InvalidNISRecordErrMsg = "NIS record no longer exists in the page."; return;
+        }
+        InvalidNISRecordErrMsg = "";
+        //sfgrid.PageSettings.CurrentPage = (int)tabNo;
+        // await sfgrid.GoToPageAsync(2);
+        await sfgrid.GoToPageAsync((int)tabNo);
+        sfgrid.SelectRow(rowIdx);
+
+        var pageList = (from item in Pages 
+                  where item.Text == page_No 
+                  select item).ToList();
+        if (pageList.Count > 0)
+            await ListBoxObj.SelectItemsAsync(pageList[0], true);
+
+        //await sfgrid.Refresh();
+        // await sfgrid.GoToPage(tabNo);
+        //await Task.Delay(200);
+        // await Grid.SelectRowAsync(j);
+    }
+}
+@**********************************************************************************************************@
+@*******************************            Get StartDate Dialog            *******************************@
+@**********************************************************************************************************@
+<div>
+    <SfDialog Width="500px" MinHeight="200px" ShowCloseIcon="false" AllowDragging="true" IsModal="true" @bind-Visible="@IsVisible_StartDateDialog">
+        <DialogTemplates>
+            <Header>Start Date Required</Header>
+            <Content>
+                <p>Start date is not set for this task yet.</p>
+                <div id = "ControlRegion">
+	                @* <div class="column control-section"> *@
+                        @* <div id="wrapper"> *@
+                            <div id="date-control">
+                                <Label>Select start date for the task : &nbsp&nbsp</label>
+                                <SfDatePicker TValue="DateTime?" @bind-Value='@StartDateValue' Max='@MaxStartDate' Width="150px" Placeholder="Select a date" Format="d/M/yyyy"></SfDatePicker>		
+                            </div>
+                        @* </div> *@
+                    @* </div> *@
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Ok" IsPrimary="true" OnClick="@onOK_StartDate" />
+        </DialogButtons>
+    </SfDialog>
+</div>
+@code {
+    void onOK_StartDate()
+    {
+        IsVisible_StartDateDialog = false;
+        UploadToServer(StartDateValue?.ToString("d/M/yyyy"));
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Tipitaka_DB;
+using Tipitaka_DBTables;
 using static NissayaEditor_Web.Data.NissayaEditor;
 
 namespace NissayaEditor_Web.Data
@@ -19,5 +20,6 @@ namespace NissayaEditor_Web.Data
         public string userName = string.Empty;
         public string userName_M = string.Empty;
         public Dictionary<string, string> UserTaskInfo = new Dictionary<string, string>();
+        public List<DocReportInfo> listDocReportInfo = new List<DocReportInfo>();
     }
 }

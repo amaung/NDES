@@ -55,9 +55,6 @@
                 });
             }
         }
-        // show Recent tasks by default
-        // searchTypeValue = docSearchTypes[0].ID;
-        // ShowTasks();
     }
 }
 @* *************************************************************************** *@
@@ -155,7 +152,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             <GridColumn Field=@nameof(TaskInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
                         IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(TaskInfo.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                        AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
             <GridColumn Field=@nameof(TaskInfo.DocTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
                         TextAlign="TextAlign.Left" AllowEditing="false" Width="28%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(TaskInfo.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
@@ -453,7 +450,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     public SfDropDownList<string, DataItem> docDropdown;
     public SfDropDownList<string, DataItem> srcPDFDropdown;
     public SfComboBox<string, DataItem> docSubTypeCombo;
-
+    private TaskInfo? rowSelectedTaskInfo = null;
     string formattedDocNo = "";
     string doc_No = "", doc_Title = "", doc_SubTitle = "", pages_Count = "";
     string sourcePDF = "", SourceBookLabel = "";
@@ -574,24 +571,36 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             AlertBtn("No task has been selected.", "Error");
             return;
         }
+        string errMsg = "";
         // check if the user is allowed to import data at this point
         var taskList = (from item in TaskDetailedInfoRecords
                         where item.UserID == email
                         select item).ToList();
         if (taskList.Count > 0)
         {
-            string errMsg = "";
+            if (taskList[0].Status == "Created") errMsg = "You are not assigned to import data.";
             if (taskList[0].Status == "Not Ready") errMsg = "You are not ready to import data yet.";
-            if (taskList[0].Status == "Completed") errMsg = "You have no more data to import.";
+            if (taskList[0].Status == "Completed" || taskList[0].Status == "Uploaded") 
+                errMsg = "You have completed data import.";
             if (errMsg.Length > 0)
             {
-                AlertBtn(errMsg, "Alert"); return;
+                AlertBtn(errMsg, "Alert"); 
+                return;
             }
         }
-        State.dataFile.DocID = TaskInfoRecords[idxTaskRowSelect].DocNo;
+        else
+        {
+            errMsg = "You currently have no assigned task to import data.";
+            AlertBtn(errMsg, "Notice"); 
+            return;
+        }
         State.dataFile.AddDocNoToRecent();
-        State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
-        State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
+        if (rowSelectedTaskInfo != null)
+        {
+            State.dataFile.DocID = State.doc_ID = rowSelectedTaskInfo.DocNo;
+            State.doc_Title = rowSelectedTaskInfo.DocTitle;
+        }
+        //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
         State.page_No = GetTaskStartPageNo();
         AlertBtn("Click \"Choose File\" and import data.", "Alert");
         State.screenID = 5; // screenID to Open file for import on MainPage.
@@ -618,11 +627,27 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                 AlertBtn(errMsg, "Alert"); return;
             }
         }
-        State.dataFile.DocID = TaskInfoRecords[idxTaskRowSelect].DocNo;
+        //State.dataFile.DocID = TaskInfoRecords[idxTaskRowSelect].DocNo;
+        if (rowSelectedTaskInfo.PagesSubmitted == 0 && rowSelectedTaskInfo.Status == "Assigned")
+        {
+            AlertBtn(String.Format("The data for {0} has never been saved on the server", rowSelectedTaskInfo.DocNo), "Retrieve Doc");
+            return;
+        }
+        if (rowSelectedTaskInfo != null)
+        {
+            State.dataFile.DocID = State.doc_ID = rowSelectedTaskInfo.DocNo;
+            State.doc_Title = rowSelectedTaskInfo.DocTitle;
+        }
         State.dataFile.AddDocNoToRecent();
         State.screenID = 6; // screenID to Retrieve doc from server on MainPage.
-        State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
-        State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
+        //State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
+        //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
+        // the following data will be used in DataFile::LogTaskStartDate()
+        State.UserTaskInfo.Add(email + "-Task", taskList[0].Task);
+        string pages = "0";
+        string[] f = taskList[0].NoPages.Split(' ');
+        if (f.Length == 2) pages = f[1].Replace("(", "").Replace(")", "");
+        State.UserTaskInfo.Add(email + "-NoPages", pages);
         string msg = String.Format("Please confirm to retrieve {0} document from the server", State.doc_ID);
         string warn = "Retrieve Doc";
         ConfirmBtn(msg, warn, ProceedAfterConfirmation);
@@ -676,6 +701,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     public void RowSelectHandler(RowSelectEventArgs<TaskInfo> args)
     {
         if (State.dataFile == null) return;
+        rowSelectedTaskInfo = args.Data;
         TaskInfo taskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;
         //TaskInfo taskInfo = listTaskInfo[taskInfo.SrNo];
@@ -705,7 +731,8 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             {
                 // if not row 0, if the task has not started yet and prev task is 'Completed' or 'Created'
                 // the current task is Ready to work on
-                if (++n >= 1 && t.startDate.Length == 0 && (prevStatus == "Completed" || prevStatus == "Created"))
+                // if (++n >= 1 && t.startDate.Length == 0 && (prevStatus == "Completed" || prevStatus == "Created"))
+                if (++n >= 1 && t.lastDate.Length == 0 && (prevStatus == "Completed" || prevStatus == "Created"))
                 {
                     status = "Ready";
                 }

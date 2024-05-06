@@ -97,5 +97,18 @@ namespace Tipitaka_DB
             }
             return sourcebookInfo;
         }
+        public void ResetSourceBookDocs(string userID)
+        {
+            if (userID == null || userID != "dhammayaungchi2011@gmail.com") { return; }
+            string qualifier = "DocCount gt 0 or DocNos gt ''";
+            QueryTableRec(qualifier).Wait();
+            List<SourceBookInfo> sourcebookInfo = (List<SourceBookInfo>)objResult;
+            foreach(SourceBookInfo sourceBookInfo in sourcebookInfo)
+            {
+                sourceBookInfo.DocCount = 0;
+                sourceBookInfo.DocNos = string.Empty;
+                UpdateSourceBookInfo(sourceBookInfo).Wait();
+            }
+        }
     }
 }

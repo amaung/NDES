@@ -3,45 +3,66 @@ using Tipitaka_DBTables;
 
 namespace Tipitaka_DB
 {
-    public class ClientActivityLog : TipitakaDB_w
+    public class ClientTimesheet : TipitakaDB_w
     {
-        const string _ActivityLog_ = "ActivityLog";
+        const string _Timesheet_ = "Timesheet";
         //*******************************************************************
         //*** ClientActivityLog
         //*******************************************************************
-        public ClientActivityLog() : base(_ActivityLog_) { }
+        public ClientTimesheet() : base(_Timesheet_) { }
         const string _timeFormat_ = "yyyy-MM-ddTHH:mm:ss.ffff";
         //*******************************************************************
-        //*** Add Activity Log
+        //*** Add Timesheet
         //*******************************************************************
-        public void AddActivityLog(string userID, string activity, string desc)
+        public void AddTimesheet(int idx, string userID, DateTime startTime, DateTime endTime, string docNo, 
+            string task, string desc, int startPage, int endPage)
         {
-            string rowKey = DateTime.UtcNow.ToString(_timeFormat_);
+            string rowKey = String.Format("{0}${1}${2}", userID, startTime.ToString("yyyy-MM-dd"), idx);
 
-            ActivityLog activityLog = new ActivityLog()
+            Timesheet timesheet = new Timesheet()
             {
-                PartitionKey = "ActivityLog",
+                
+                PartitionKey = _Timesheet_,
                 RowKey = rowKey,
-                UserID = userID,
-                Activity = activity,
+                StartTime = startTime,
+                EndTime = endTime,
+                DocNo = docNo,
+                Task = task,
                 Description = desc,
+                StartPage = startPage,
+                EndPage = endPage
             };
-            InsertTableRec(activityLog).Wait();
+            InsertTableRec(timesheet).Wait();
         }
         //*******************************************************************
-        //*** GetActivities
+        //*** GetTimesheet
         //*******************************************************************
-        public List<ActivityLog> GetActivities(DateTime date1, DateTime date2)
+        public List<Timesheet> GetTimesheet(string userID, DateTime date1, DateTime date2)
         {
-            List<ActivityLog> activities = new List<ActivityLog>();
+            List<Timesheet> activities = new List<Timesheet>();
             string query = string.Empty;
 
-            string d1 = date1.ToString(_timeFormat_);
-            string d2 = date2.ToString(_timeFormat_);
+            string d1 = String.Format("{0}${1}$", userID, date1.ToString("yyyy-MM-dd"));
+            string d2 = String.Format("{0}${1}$~", userID, date2.ToString("yyyy-MM-dd"));
             query += String.Format("(RowKey ge '{0}') and (RowKey lt '{1}')", d1, d2);
 
             QueryTableRec(query).Wait();
-            activities = (List<ActivityLog>)objResult;
+            activities = (List<Timesheet>)objResult;
+            activities.Reverse();
+            return activities;
+        }
+        public List<Timesheet> GetTimesheetMonth(string userID)
+        {
+            List<Timesheet> activities = new List<Timesheet>();
+            string query = string.Empty;
+            DateTime date1 = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            DateTime date2 = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            string d1 = String.Format("{0}${1}$", userID, date1.ToString("yyyy-MM-dd"));
+            string d2 = String.Format("{0}${1}$~", userID, date2.ToString("yyyy-MM-dd"));
+            query += String.Format("(RowKey ge '{0}') and (RowKey lt '{1}')", d1, d2);
+
+            QueryTableRec(query).Wait();
+            activities = (List<Timesheet>)objResult;
             activities.Reverse();
             return activities;
         }
@@ -49,22 +70,22 @@ namespace Tipitaka_DB
         //*** Delete Activities
         //*******************************************************************
         const string _CleanUp_ = "CleanUp";
-        public void DeleteOldActivities(string userID, string userName)
+        public void DeleteOldTimesheet(string userID, string userName)
         {
-            if (HasOldActivitiesDeleted()) return;
-            const int daysRetained = 7;
-            string todayUTC = DateTime.UtcNow.ToString("yyyy-MM-ddT00:00:00.0000");
-            string pastDay7UTC = DateTime.UtcNow.AddDays(-daysRetained).ToString("yyyy-MM-ddT00:00:00.0000");
-            //string checkUTC = todayUTC;
+            //if (HasOldActivitiesDeleted()) return;
+            //const int daysRetained = 7;
+            //string todayUTC = DateTime.UtcNow.ToString("yyyy-MM-ddT00:00:00.0000");
+            //string pastDay7UTC = DateTime.UtcNow.AddDays(-daysRetained).ToString("yyyy-MM-ddT00:00:00.0000");
+            ////string checkUTC = todayUTC;
 
-            string query = String.Format("RowKey lt '{0}'", pastDay7UTC);
-            QueryTableRec(query).Wait();
-            List<ActivityLog> activities = (List<ActivityLog>)objResult;
-            if (activities.Count > 0)
-            {
-                DeleteTableRecBatch(objResult).Wait();
-                AddActivityLog(userID, _CleanUp_, String.Format("Deleted {0} old activities.", activities.Count));
-            }
+            //string query = String.Format("RowKey lt '{0}'", pastDay7UTC);
+            //QueryTableRec(query).Wait();
+            //List<ActivityLog> activities = (List<ActivityLog>)objResult;
+            //if (activities.Count > 0)
+            //{
+            //    DeleteTableRecBatch(objResult).Wait();
+            //    AddActivityLog(userID, _CleanUp_, String.Format("Deleted {0} old activities.", activities.Count));
+            //}
             return;
         }
         //*******************************************************************

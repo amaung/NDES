@@ -33,7 +33,7 @@
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="UserDisplayProfile"></GridEvents>
+        <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="UserDisplayProfile"></GridEvents>
         <GridColumns>
             <GridColumn Field=@nameof(UserDisplayProfile.userSrNo) HeaderText="No" IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" DefaultValue=@GetSrNo() ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(UserDisplayProfile.email) HeaderText="Email" TextAlign="TextAlign.Left" Width="24%" Type="ColumnType.String"></GridColumn>
@@ -58,7 +58,8 @@
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="UserTaskDisplay"></GridEvents> *@
+        <GridEvents OnToolbarClick="ToolbarClick_Task" TValue="UserTaskDisplay"></GridEvents>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick_Task" TValue="UserTaskDisplay"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(UserTaskDisplay.userSrNo) HeaderText="No" IsPrimaryKey="true" AllowEditing="false" Width="6%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(UserTaskDisplay.name) HeaderText="Name" TextAlign="TextAlign.Left" Width="25%" Type="ColumnType.String"></GridColumn>
@@ -113,6 +114,8 @@
     public List<UserProfile>? UserRecords { get; set; }
     public List<UserDisplayProfile>? UserDisplayRecords { get; set; }
     public List<UserTaskDisplay>? UserTaskDisplayRecords { get; set; }
+    private UserDisplayProfile? selectedRowUserDisplayProfile = null;
+
     // public List<string> ListofClasses { get; set; }
     private SpinnerType spinnerType { get; set; } = SpinnerType.Bootstrap4;
     // private string cellUserClass { get; set; }
@@ -144,12 +147,10 @@
 
     protected override void OnInitialized()
     {
-        // ListofClasses = new List<string>() { "U", "A" };
+        if (State.dataFile != null) State.dataFile.ClearLoadedUserProfiles();
+        UserDisplayRecords = new List<UserDisplayProfile>();
         LoadUsers();
-        //if (State.dataFile != null) State.dataFile.FillTestData();
-        //State.dataFile.RemoveUserTask("user1@gmail.com", "MN-014");
         LoadUserTasks();
-        // ResetTables();
     }
     int GetSrNo()
     {
@@ -287,14 +288,49 @@
         }
         return dict;
     }
-
+    //********************************
+    //******** RowSelectHandler()
+    //********************************
+    public void RowSelectHandler(RowSelectEventArgs<UserDisplayProfile> args)
+    {
+        selectedRowUserDisplayProfile = args.Data;
+    }
     // private 
-    public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    private async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
         if (userClass != "A" && userClass != "S")
         {
             args.Cancel = true;
             AlertBtn("Only project manager can add/modify user profiles.", "Unauthorized Access");
+        }
+        if (args.Item.Id == "Grid_delete")
+        {
+            if (selectedRowUserDisplayProfile != null)
+            {
+                string user = selectedRowUserDisplayProfile.email.ToLower();
+                if (State.dataFile.HasUserEnteredData(user))
+                {
+                    AlertBtn(String.Format("Deletion not allowed as user \"{0}\" has already entered data.", user), "Deletion Denied");
+                    args.Cancel = true;
+                }
+            }
+        }
+        if (args.Item.Id == "Grid_excelexport")
+        {
+            ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+            ExcelProperties.FileName = "UserProfiles.xlsx";
+            ExcelProperties.DataSource = UserDisplayRecords;
+            await this.sfgrid.ExcelExport(ExcelProperties);
+        }
+    }
+    private async Task ToolbarClick_Task(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args.Item.Id == "Grid_excelexport")
+        {
+            ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+            ExcelProperties.FileName = "UserTasks.xlsx";
+            ExcelProperties.DataSource = UserTaskDisplayRecords;
+            await this.sfgrid2.ExcelExport(ExcelProperties);
         }
     }
     public async Task ActionBeginUser(ActionEventArgs<UserDisplayProfile> args)
@@ -308,7 +344,18 @@
         }
         if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete")
         {
-            sfgUserState = SfgState._sfgDel;
+            if (args.RowData != null && args.RowData.email != null)
+            {
+                sfgUserState = SfgState._sfgDel;
+                UserDisplayProfile rowData = args.Data;
+                string user_email = rowData.email.ToLower();
+                if (State.dataFile.HasUserEnteredData(user_email))
+                {
+                    args.Cancel = true;
+                    AlertBtn(String.Format("Deletion not allowed as user \"{0}\" has already entered data.", user_email), "Deletion Denied");
+                    return;
+                }
+            }
 
         }
         if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add) && args.Action == null)
@@ -382,7 +429,7 @@
             {
                 s1 = UserDisplayRecords[key-1].name;
                 s2 = UserRecords[key - 1].Name_E;
-                modified = (s1 != s2);
+                modified = (s1 != s2) || (UserDisplayRecords[key-1].userClass != UserRecords[key - 1].UserClass);
             }
             string newName = s1;
             string lastDate = "";
@@ -435,22 +482,22 @@
     //********************************************************************************/
     //*** Database reset. ***/
     //********************************************************************************/
-    private async Task ConfirmBtn(string msg, string warn)
-    {
-        var result = await DialogService.ConfirmAsync(msg, warn, new DialogOptions()
-            {
-                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" },
-                CancelButtonOptions = new DialogButtonOptions() { Content = "Cancel" }
-            });
-        bool res = (bool)result;
-        DoDelete(res);
-    }
-    void ResetTables()
-    {
-        ConfirmBtn("Are you really resetting the data tables?", "****DESTROYING Data****");
-    }
-    void DoDelete(bool flag)
-    {
-        if (flag) return;
-    }
+    // private async Task ConfirmBtn(string msg, string warn)
+    // {
+    //     var result = await DialogService.ConfirmAsync(msg, warn, new DialogOptions()
+    //         {
+    //             PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" },
+    //             CancelButtonOptions = new DialogButtonOptions() { Content = "Cancel" }
+    //         });
+    //     bool res = (bool)result;
+    //     DoDelete(res);
+    // }
+    // void ResetTables()
+    // {
+    //     ConfirmBtn("Are you really resetting the data tables?", "****DESTROYING Data****");
+    // }
+    // void DoDelete1(bool flag)
+    // {
+    //     if (flag) return;
+    // }
 }

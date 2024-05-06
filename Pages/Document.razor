@@ -34,10 +34,7 @@
     protected override void OnInitialized()
     {
         State.dataFile.GetSourceBookInfo();
-        //LoadPDFFiles();
         LoadRequiredData();
-        //State.dataFile.FillTestData(35);
-        // List<SuttaInfo> existingNewSuttaList = State.dataFile.GetSuttaList(searchTypes[0].ID, "", userClass);
     }
 }
 
@@ -78,14 +75,14 @@
 @****************************** Document DataGrid ******************************@
 @*******************************************************************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000">
+    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="380" Width="1000">
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal" Dialog="DialogParams">
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        <GridEvents RowSelected="RowSelectHandler" TValue="DocInfo" OnToolbarClick="ToolbarClick"></GridEvents>
+        <GridEvents RowSelected="RowSelectHandler" TValue="DocInfo" OnToolbarClick="ToolbarClick" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser"></GridEvents>
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(DocInfo.srNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
@@ -172,10 +169,10 @@
                 </div>
                 <div class="form-row">
                     <div class="column-dialog left-col2-dialog">
-                        <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@startPage" Placeholder="Start page" Format="###"></SfNumericTextBox>
+                        <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@startPage" @onkeypress="@(() => @ErrMsgNewDocInfo = "")" Placeholder="Start page" Format="###"></SfNumericTextBox>
                     </div>
                     <div class="column-dialog right-col2-dialog">
-                        <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@endPage" Placeholder="End page" Format="###"></SfNumericTextBox>
+                        <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@endPage" @onkeypress="@(() => @ErrMsgNewDocInfo = "")" Placeholder="End page" Format="###"></SfNumericTextBox>
                     </div>
                 </div>
 
@@ -192,7 +189,7 @@
     </SfDialog>
 </div>
 
-<SfButton OnClick="@FileUploadBrowser"> Upload Docs </SfButton>
+<SfButton OnClick="@FileUploadBrowser"> Upload New Doc Info From File </SfButton>
 <br />
 @* https://help.syncfusion.com/cr/blazor/Syncfusion.Blazor.Inputs.SfUploader.html *@
 <div hidden="@hideFileUpload">
@@ -283,7 +280,7 @@
     string pages = "", docNo = "", docTitle = "", docSubTitle = "", status = "", teamMembers = "";
     string doc_Type = "", doc_SubType = "", doc_No = "", doc_Title = "", doc_SubTitle = "";
     string doc_TypeID = "", doc_SubTypeID = "", selected_PdfID = "", sourceBookPDF = "";
-    string selected_docNo = "";
+    //string selected_docNo = "";
     string ErrMsgNewDocInfo = "";
     int nextCount = 10;
     int nPages = 0, sPages = 0, totalCount = 0;
@@ -291,6 +288,7 @@
     string showNextButton = "none";
     bool IsVisible_NewDocInfo = false;
     DocInfo DocInfoRec = new DocInfo();
+    DocInfo? selectedRowDocInfo = null;
     SuttaInfo SuttaInfoRec = new SuttaInfo();
     SourceBookInfo? selectedSourceBookInfo = null;
     SfGrid<DocInfo>? sfgrid;
@@ -308,7 +306,7 @@
     public SfDropDownList<string, DataItem> docTypeDropdown;
     public SfDropDownList<string, DataItem> srcPDFDropdown;
     public SfComboBox<string, DataItem> docSubTypeCombo;
-    enum DocUserAction { View, Add, Edit };
+    enum DocUserAction { View, Add, Edit, Delete };
     DocUserAction curDocUserAction  = DocUserAction.View;
 
     string PDF_DropDownValue = "";
@@ -316,12 +314,14 @@
     string docSubType_DropDownValue = "";
 
     string formattedDocNo = "";
+    string oldformattedDocNo = "";
     string selectedPDF = "";
     string loadedDocType = "";
     int selectedBookPages = 0;
     int? startPage = 0, endPage = 0;
 
     private DialogSettings DialogParams = new DialogSettings { Width = "600px", Height = "500px" };
+
     public class DocInfo()
     {
         public int srNo { get; set; }
@@ -377,7 +377,7 @@
         {
             listDocTypes.Add(new DataItem()
                 {
-                    ID = (id++).ToString(),
+                    ID = item, //(id++).ToString(),
                     Text = item,
                 });
         }
@@ -386,7 +386,7 @@
         {
             listDocSubTypes.Add(new DataItem()
                 {
-                    ID = (id++).ToString(),
+                    ID = item, //(id++).ToString(),
                     Text = item,
                 });
         }
@@ -420,9 +420,36 @@
             ErrMsgNewDocInfo = String.Format("Doc type cannot be empty.");
             return;
         }
+        // if (doc_SubType.Length > 0)
+        // {
+        //     bool errFound = false;
+        //     string dType = "";
+        //     foreach(var dt in listDocTypes)
+        //     {
+        //         if (docSubType_DropDownValue.Contains(dt.ID))
+        //         {
+        //             errFound = true; dType = dt.Text; break;
+        //         }
+        //     }
+        //     if (errFound)
+        //     {
+        //         ErrMsgNewDocInfo = String.Format("Doc subtype cannot include {0}. It is already a defined doc type.", dType);
+        //         return;
+        //     }
+        // }
         if (doc_No.Length == 0)
         {
             ErrMsgNewDocInfo = String.Format("Number code cannot be empty.");
+            return;
+        }
+        if (doc_No.Contains(doc_Type))
+        {
+            ErrMsgNewDocInfo = String.Format("Number code cannot include doc type {0} again. Example number codes: \"001\", \"14.01\" ", doc_Type);
+            return;
+        }        
+        if (doc_No.Contains("-"))
+        {
+            ErrMsgNewDocInfo = "Number code cannot include '-'.";
             return;
         }
         if (doc_Title.Length == 0)
@@ -456,9 +483,14 @@
                 State.dataFile.AddDocSubType(doc_SubType);
             }
         }
-        if (curDocUserAction == DocUserAction.Add && State.dataFile.DocAlreadyExists(formattedDocNo))
+        //
+        // check if the new DocNo is already created on the server
+        //
+        if ((curDocUserAction == DocUserAction.Add || 
+            (curDocUserAction == DocUserAction.Edit && oldformattedDocNo != formattedDocNo)) && 
+            State.dataFile.DocAlreadyExists(formattedDocNo))
         {
-            ErrMsgNewDocInfo = String.Format("{0} document already exists.", formattedDocNo);
+            ErrMsgNewDocInfo = String.Format("{0} document already exists on the server.", formattedDocNo);
             return;
         }
         // check if State.dataFile is good
@@ -466,138 +498,235 @@
 
         string docTitle_SubTitle = (doc_SubTitle.Length == 0) ? doc_Title : String.Format("{0}/{1}", doc_Title, doc_SubTitle);
 
-        if (State.dataFile == null) return;
+        IsVisible_NewDocInfo = false;
 
-        // add new doc into the grid
-        if (curDocUserAction == DocUserAction.Add)
+        switch(curDocUserAction)
         {
-            int? nPage = endPage - startPage + 1;
-            string pageRange = String.Format("{0}-{1}", startPage, endPage);
-            DocDisplayRecords.Clear();
-            List<DocInfo> listDocInfoTmp = new List<DocInfo>();
-            DocInfo docInfo = new DocInfo()
+            case DocUserAction.Edit:
+                if (oldformattedDocNo != formattedDocNo)
                 {
-                    srNo = listDocInfoTmp.Count + 1,
-                    docNo = formattedDocNo,
-                    docTitle = docTitle_SubTitle,
-                    sourceFileCode = PDF_DropDownValue,
-                    pages = String.Format("{0} ({1})", pageRange, nPage),
-                    pageCount = (int)nPage,
-                    pagesSubmitted = 0,
-                    lastUpdate = "",
-                    status = "Created",
-                    team = "",
-                };
-            //AddNewDocToGrid(docInfo, DocDisplayRecords.Count);
-            listDocInfoTmp.Add(docInfo);            
-
-            searchTypeValue = "New"; //searchTypes[0].ID;
-            // **************************************************
-            // Retrieve existing new docs and add to the display
-            // **************************************************
-            // List<SuttaInfo> existingNewSuttaList = State.dataFile.GetSuttaList(searchTypes[0].ID, "", userClass);
-            // if (existingNewSuttaList != null && existingNewSuttaList.Count > 0)
-            // {
-            //     foreach (SuttaInfo item in existingNewSuttaList)
-            //     {
-            //         SourceBookInfo? sourceBookInfo = State.dataFile.GetSourceBookInfo(item.BookID);
-
-            //         docInfo = new DocInfo()
-            //             {
-            //                 srNo = listDocInfoTmp.Count + 1,
-            //                 docNo = item.RowKey,
-            //                 docTitle = item.Title,
-            //                 sourceFileCode = (sourceBookInfo != null) ? sourceBookInfo.BookFilename : "",
-            //                 pages = String.Format("{0}-{1} ({2})", item.StartPage, item.EndPage, item.EndPage - item.StartPage + 1),
-            //                 pageCount = (int)item.NoPages,
-            //                 pagesSubmitted = item.PagesSubmitted,
-            //                 lastUpdate = "",
-            //                 status = item.Status,
-            //                 team = item.Team,
-            //             };
-            //         listDocInfoTmp.Add(docInfo);
-            //         //AddNewDocToGrid(docInfo1, DocDisplayRecords.Count);
-            //     }
-            // }
-            DocDisplayRecords = listDocInfoTmp;
-            // **************************************************
-            // Add SuttaInfo
-            // **************************************************
-            SuttaInfo suttaInfo = new SuttaInfo()
-                {
-                    RowKey = formattedDocNo,
-                    Title = docTitle_SubTitle,
-                    BookID = PDF_DropDownValue,
-                    StartPage = (int)startPage,
-                    EndPage = (int)endPage,
-                    NoPages = (int)nPage,
-                    PagesSubmitted = 0,
-                    Status = "Created",
-                    Team = "",
-                };
-            State.dataFile.AddNewSuttaInfo(new List<SuttaInfo>() { suttaInfo });
-            if (State.dataFile.ErrMsg.Length > 0)
-            {
-                AlertBtn(State.dataFile.ErrMsg, "Error");
-            }
-            // **************************************************
-            // Add TaskAssignment
-            // **************************************************
-            string today = DateTime.Now.ToString("d'/'M'/'yyyy");
-            List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>()
-            {
-                new UserTaskProgressInfo()
-                {
-                    userID = email,
-                    task = "NewDoc",
-                    startDate = today,
-                    lastDate = "",
-                    submitted = 0,
-                    corrections = 0,
-                    status = "Created",
+                    Doc_Delete(oldformattedDocNo);
+                    Doc_Insert();
                 }
-            };
-            TaskAssignmentInfo taskAssignmentInfo = new TaskAssignmentInfo()
-                {
-                    RowKey = formattedDocNo,
-                    DocTitle = docTitle_SubTitle,
-                    PageNos = String.Format("{0} ({1})", pageRange, (int)nPage),
-                    PagesSubmitted = 0,
-                    // State.dataFile.UserTaskAssignment(string taskAssignments, string userID, string task, string startDate, string lastDate, int submitted);
-                    //AssigneeProgress = String.Format("UserID={0};Task=Create;StartDate={1};LastDate=;Submitted=0;Status=0%", email, today),
-                    AssigneeProgress = JsonConvert.SerializeObject(dictUserTaskProgressInfo),
-                    StartDate = today,
-                    LastDate = "",
-                    CorrectionCount = 0,
-                    Status = "Created",
-                };
-            State.dataFile.AddTaskAssignmentInfo(taskAssignmentInfo);
-            if (State.dataFile.ErrMsg.Length > 0)
-            {
-                AlertBtn(State.dataFile.ErrMsg, "Error");
-            }
-            // **************************************************
-            // Update SoucrceBookDocInfo
-            // **************************************************
-            Dictionary<string, List<string>> dictBookDocList = new Dictionary<string, List<string>>()
-            {
-                { PDF_DropDownValue, new List<string>(){ String.Format("{0}:{1}", formattedDocNo, (int)nPage) } }
-            };
-            State.dataFile.UpdateSourceBookDocInfo(dictBookDocList);
-            if (State.dataFile.ErrMsg.Length > 0)
-            {
-                AlertBtn(State.dataFile.ErrMsg, "Error");
-            }
-            State.dataFile.AddActivityLog(email, "NewDoc", formattedDocNo + " added.");
-            // AddTaskActivityLog(string docNo, string userID, string activity, int pages, int totalSubmittedPages,
-            // int submittedPages, string desc = "")
-            State.dataFile.userClass = userClass;
-            string desc = String.Format("New doc ({0}-{1}) added.", startPage, endPage);
-            State.dataFile.AddTaskActivityLog(formattedDocNo, email, "Created", (int)(endPage - startPage + 1), 0, 0, desc);
-            IsVisible_NewDocInfo = false;
+                else
+                    Doc_Edit();
+                break;
+            case DocUserAction.Add:
+                Doc_Insert();
+                break;
+            case DocUserAction.Delete:
+                // deletion actually done at Action
+                break;
         }
         curDocUserAction = DocUserAction.View;
     }
+    //********************************* Doc_Insert() *************************************/
+    private void Doc_Insert()
+    {
+        //if (curDocUserAction != DocUserAction.Add || State.dataFile == null) return;
+       
+        // **************************************************
+        // Add new doc to the display
+        // **************************************************
+        string docTitle_SubTitle = (doc_SubTitle.Length == 0) ? doc_Title : String.Format("{0}/{1}", doc_Title, doc_SubTitle);
+        int? nPage = endPage - startPage + 1;
+        string pageRange = String.Format("{0}-{1}", startPage, endPage);
+        DocDisplayRecords.Clear();
+        List<DocInfo> listDocInfoTmp = new List<DocInfo>();
+        DocInfo docInfo = new DocInfo()
+            {
+                srNo = listDocInfoTmp.Count + 1,
+                docNo = formattedDocNo,
+                docTitle = docTitle_SubTitle,
+                sourceFileCode = PDF_DropDownValue,
+                pages = String.Format("{0} ({1})", pageRange, nPage),
+                pageCount = (int)nPage,
+                pagesSubmitted = 0,
+                lastUpdate = "",
+                status = "Created",
+                team = "",
+            };
+        listDocInfoTmp.Add(docInfo);            
+
+        searchTypeValue = "New"; 
+        searchTypeValue = searchTypes[0].Text;
+        // **************************************************
+        // Retrieve existing new docs and add to the display
+        // **************************************************
+        List<SuttaInfo> existingNewSuttaList = State.dataFile.GetSuttaList(searchTypes[0].ID, "", userClass);
+        if (existingNewSuttaList != null && existingNewSuttaList.Count > 0)
+        {
+            foreach (SuttaInfo item in existingNewSuttaList)
+            {
+                SourceBookInfo? sourceBookInfo = State.dataFile.GetSourceBookInfo(item.BookID);
+
+                docInfo = new DocInfo()
+                    {
+                        srNo = listDocInfoTmp.Count + 1,
+                        docNo = item.RowKey,
+                        docTitle = item.Title,
+                        sourceFileCode = (sourceBookInfo != null) ? sourceBookInfo.BookFilename : "",
+                        pages = String.Format("{0}-{1} ({2})", item.StartPage, item.EndPage, item.EndPage - item.StartPage + 1),
+                        pageCount = (int)item.NoPages,
+                        pagesSubmitted = item.PagesSubmitted,
+                        lastUpdate = "",
+                        status = item.Status,
+                        team = item.Team,
+                    };
+                listDocInfoTmp.Add(docInfo);
+            }
+        }
+        DocDisplayRecords = listDocInfoTmp; // assign new data to grid source DocDisplayRecords
+        // **************************************************
+        // Add doc info to SuttaInfo
+        // **************************************************
+        SuttaInfo suttaInfo = new SuttaInfo()
+            {
+                RowKey = formattedDocNo,
+                Title = docTitle_SubTitle,
+                BookID = PDF_DropDownValue,
+                StartPage = (int)startPage,
+                EndPage = (int)endPage,
+                NoPages = (int)nPage,
+                PagesSubmitted = 0,
+                Status = "Created",
+                Team = "",
+            };
+        State.dataFile.AddNewSuttaInfo(new List<SuttaInfo>() { suttaInfo });
+        if (State.dataFile.ErrMsg.Length > 0)
+        {
+            AlertBtn(State.dataFile.ErrMsg, "Error");
+            return;
+        }
+        // **************************************************
+        // Add doc info TaskAssignment
+        // **************************************************
+        string today = DateTime.Now.ToString("d'/'M'/'yyyy");
+        // task progress info for the creator
+        List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>()
+        {
+            new UserTaskProgressInfo()
+            {
+                userID = email,
+                task = "NewDoc",
+                startDate = today,
+                lastDate = "",
+                submitted = 0,
+                corrections = 0,
+                status = "Created",
+            }
+        };
+        // define task assignment info
+        TaskAssignmentInfo taskAssignmentInfo = new TaskAssignmentInfo()
+            {
+                RowKey = formattedDocNo,
+                DocTitle = docTitle_SubTitle,
+                PageNos = String.Format("{0} ({1})", pageRange, (int)nPage),
+                PagesSubmitted = 0,
+                AssigneeProgress = JsonConvert.SerializeObject(dictUserTaskProgressInfo),
+                StartDate = today,
+                LastDate = "",
+                CorrectionCount = 0,
+                Status = "Created",
+            };
+        State.dataFile.AddTaskAssignmentInfo(taskAssignmentInfo);
+        if (State.dataFile.ErrMsg.Length > 0)
+        {
+            AlertBtn(State.dataFile.ErrMsg, "Error");
+            return;
+        }
+        // **************************************************
+        // Update SoucrceBookDocInfo
+        // **************************************************
+        Dictionary<string, List<string>> dictBookDocList = new Dictionary<string, List<string>>()
+        {
+            { PDF_DropDownValue, new List<string>(){ formattedDocNo } }
+        };
+        State.dataFile.UpdateSourceBookDocInfo(dictBookDocList);
+        if (State.dataFile.ErrMsg.Length > 0)
+        {
+            AlertBtn(State.dataFile.ErrMsg, "Error"); 
+            return;
+        }
+        State.dataFile.AddActivityLog(email, "NewDoc", formattedDocNo + " added.");
+        State.dataFile.userClass = userClass;
+        string desc = String.Format("New doc ({0}-{1}) added.", startPage, endPage);
+        State.dataFile.AddTaskActivityLog(formattedDocNo, email, "Created", (int)(endPage - startPage + 1), 0, 0, desc);
+    }
+    //*********************************End of Doc_Insert ***************************************/
+
+    //************************************** Doc_Edit() ****************************************/
+    private void Doc_Edit()
+    {
+        if (State.dataFile == null) return;
+        doc_No = (docNo.Contains("-")) ? docNo.Split("-")[1] : docNo;
+        doc_Title = docTitle;
+        doc_SubTitle = docSubTitle;
+        PDF_DropDownValue = selected_PdfID;
+        //listPDFItems
+        string title = doc_Title;
+        if (doc_SubTitle.Length > 0) title += "/" + doc_SubTitle;
+        // PDF_DropDownValue
+        string status = "";
+        if (selectedRowDocInfo != null) status = selectedRowDocInfo.status;
+        if (status.Length == 0)
+        {
+            status = (selectedRowDocInfo.team.Length > 0) ? "Assigned" : "Created";
+        }
+        SuttaInfo suttaInfo = new SuttaInfo()
+        {
+            RowKey = formattedDocNo,
+            Title = title,
+            StartPage = (int)startPage,
+            EndPage = (int)endPage,
+            NoPages = (int)(endPage - startPage + 1),
+            PagesSubmitted = 0,
+            Status = status,
+            Team = (selectedRowDocInfo != null) ? selectedRowDocInfo.team : "",
+            BookID = selected_PdfID
+        };
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+        if (clientSuttaInfo != null)
+        {
+            clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+        }
+        // update TaskAssignmentInfo
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+        if (clientTaskAssignmentInfo != null)
+        {
+            TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(formattedDocNo);
+            if (taskAssignmentInfo != null)
+            {
+                taskAssignmentInfo.DocTitle = title;
+                taskAssignmentInfo.PageNos = String.Format("{0}-{1} ({2})", startPage, endPage, endPage - startPage + 1);
+                clientTaskAssignmentInfo.UpdateTaskAssignmentInfo(taskAssignmentInfo);
+            }
+        }
+        ShowDocs();
+    }
+
+    //*********************************** End of Doc_Edit() ************************************/
+
+    //************************************* Doc_Delete() ***************************************/
+    private void Doc_Delete(string docNo_ToDelete)
+    {
+        if (State.dataFile == null) return;
+
+        SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(docNo_ToDelete);
+        if (State.dataFile.ErrMsg.Length > 0)
+        {
+            AlertBtn(State.dataFile.ErrMsg, "Error");
+            return;
+        }
+        // check if the DocNo is still in created status; if not cannot delete anymore
+        State.dataFile.RemoveSourceBookDocNo(selected_PdfID, docNo_ToDelete);
+        State.dataFile.RemoveSuttaInfo(docNo);
+        State.dataFile.RemoveTaskAssignmentInfo(docNo_ToDelete);
+        var itemToRemove = DocDisplayRecords.Single(r => r.docNo == docNo_ToDelete);
+        DocDisplayRecords.Remove(itemToRemove);
+    }
+    //********************************* end of Doc_Delete() ***********************************/
+
     private async Task AlertBtn(string msg, string warn)
     {
         await DialogService.AlertAsync(msg, warn, new DialogOptions()
@@ -609,9 +738,14 @@
     {
         await sfgrid.AddRecordAsync(docInfo, rowIndex);
     }
-    private void onCancelNewDoc()
+    private async Task onCancelNewDoc()
     {
         ErrMsgNewDocInfo = String.Empty;
+        // List<DocInfo> Rows = await sfgrid.GetCurrentViewRecords(); // returns the current view data 
+        // if (Rows[selectedRowDocInfo.srNo - 1].srNo == selectedRowDocInfo.srNo) 
+        // { 
+        //     await sfgrid.SelectRow(selectedRowDocInfo.srNo); 
+        // } 
         IsVisible_NewDocInfo = false;
     }
     private void docTypeValueChangeHandler(ChangeEventArgs<string, DataItem> args)
@@ -657,6 +791,9 @@
     private void formatDocNo()
     {
         formattedDocNo = "";
+        doc_Type = doc_Type.Trim();
+        doc_SubType = doc_SubType.Trim();
+        doc_No = doc_No.Trim();
         if (doc_Type != null && doc_Type.Length > 0) formattedDocNo = doc_Type;
         if (doc_SubType != null && doc_SubType.Length > 0) formattedDocNo += "." + doc_SubType;
         if (doc_No != null && doc_No.Length > 0) formattedDocNo += "-" + doc_No;
@@ -689,18 +826,21 @@
                 string fileContent = buffer.ToString();
                 fileContent = System.Text.Encoding.UTF8.GetString(filestream.ToArray());
                 filestream.Close();
-                string[] recs = fileContent.Split("\r\n");
+                string[] recs = fileContent.Split("\n");
                 int sPage = 0, ePage = 0, pCount = 0;
                 int n = 0;
                 string docPages = "";
                 if (State.dataFile != null)
                 {
                     string bookID = "";
+                    string docNoTrimmed = "";
+                    totalCount = 0;
                     foreach (string rec in recs)
                     {
-                        string[] f = rec.Split(',');
+                        string[] f = rec.Trim().Split(',');
                         if (f.Length == 5)
                         {
+                            docNoTrimmed = f[0].Trim();
                             sPage = Int32.Parse(f[2]);
                             ePage = Int32.Parse(f[3]);
                             bookID = f[4].Trim();
@@ -709,7 +849,7 @@
                             listDocInfo.Add(new DocInfo()
                                 {
                                     srNo = ++n,
-                                    docNo = f[0],
+                                    docNo = docNoTrimmed,
                                     docTitle = f[1],
                                     sourceFileCode = bookID,
                                     startPage = sPage,
@@ -718,35 +858,37 @@
                                     pageCount = pCount,
                                     pagesSubmitted = 0,
                                     lastUpdate = "",
-                                    status = "",
+                                    status = "Created",
                                     team = ""
                                 });
                             // **** create List<SuttaInfo> to update to the server
                             listSuttaInfo.Add(new SuttaInfo()
                                 {
-                                    RowKey = f[0],
+                                    RowKey = docNoTrimmed,
                                     Title = f[1],
                                     StartPage = sPage,
                                     EndPage = ePage,
                                     NoPages = pCount,
                                     PagesSubmitted = 0,
-                                    Status = "",
+                                    Status = "Created",
                                     Team = "",
                                     BookID = bookID,
                                 });
                             //*** docID:{pages} added to the Book info */
-                            docPages = String.Format("{0}:{1}", f[0], pCount);
+                            //docPages = String.Format("{0}:{1}", f[0], pCount);
+                            //docPages = f[0];
                             if (dictBookDocList.ContainsKey(bookID))
-                                dictBookDocList[bookID].Add(docPages);
+                                dictBookDocList[bookID].Add(docNoTrimmed);
                             else
-                                dictBookDocList.Add(bookID, new List<string>() { docPages });
+                                dictBookDocList.Add(bookID, new List<string>() { docNoTrimmed });
                         }
                     }
+                    totalCount += recs.Length;
                 }
                 //**************************************************/
                 //**** get the existing new docs from the server
                 //**************************************************/
-                searchTypeValue = State.dataFile.listDocSearchTypes[0];
+                searchTypeValue = State.dataFile.listDocSearchTypes[1];
                 List<SuttaInfo> listSuttaInfoExisting = State.dataFile.GetSuttaList(searchTypeValue, pattern);
                 foreach (SuttaInfo suttaInfo in listSuttaInfoExisting)
                 {
@@ -762,21 +904,27 @@
                             pageCount = suttaInfo.EndPage - suttaInfo.StartPage + 1,
                             pagesSubmitted = 0,
                             lastUpdate = "",
-                            status = "",
+                            status = suttaInfo.Status,
                             team = ""
                         });
                 }
+                totalCount += listSuttaInfoExisting.Count;
                 State.dataFile.AddNewSuttaInfo(listSuttaInfo);
                 if (State.dataFile.ErrMsg.Length > 0)
                 {
                     AlertBtn(State.dataFile.ErrMsg, "Error");
                 }
+                State.dataFile.AddActivityLog(email, "NewDoc", String.Format("{0} new docs added.", listSuttaInfo.Count));
+                // string desc = String.Format("New doc ({0}-{1}) added.", startPage, endPage);
+                // State.dataFile.AddTaskActivityLog(formattedDocNo, email, "Created", (int)(endPage - startPage + 1), 0, 0, desc);
+                
                 State.dataFile.UpdateSourceBookDocInfo(dictBookDocList);
                 if (State.dataFile.ErrMsg.Length > 0)
                 {
                     AlertBtn(State.dataFile.ErrMsg, "Error");
                 }
                 DocDisplayRecords = listDocInfo;
+                AlertBtn(String.Format("{0} new docs imported.", recs.Length), "Success");
             }
         }
         catch (Exception ex)
@@ -784,10 +932,6 @@
             Console.WriteLine(ex.Message);
         }
     }
-    // public void UpdateSourceBookInfo(Dictionary<string, DocInfo> dictDocInfo)
-    // {
-
-    // }
     //************************************************************************************/
     //******** Search value change events
     /************************************************************************************/
@@ -803,8 +947,8 @@
     private void ShowDocs()
     {
         // retrieve
-        if (searchTypeValue == null && State.dataFile != null) searchTypeValue = State.dataFile.listDocSearchTypes[0];
         if (State.dataFile == null) return;
+        if (searchTypeValue == null) searchTypeValue = searchTypes[0].ID;
         List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass);
         totalCount = State.dataFile.GetSearchResultCount();
         DocDisplayRecords = new List<DocInfo>();
@@ -860,15 +1004,9 @@
         {
             if (args.Item.Text.Equals("Add"))
             {
-                selected_docNo = ""; // to show this is not modifying the row but adding a new one.
+                //selected_docNo = ""; // to show this is not modifying the row but adding a new one.
                 curDocUserAction = DocUserAction.Add;
-                IsVisible_NewDocInfo = true;
-                args.Cancel = true;
-            }
-            if (args.Item.Text.Equals("Edit"))
-            {
-                curDocUserAction = DocUserAction.Edit;
-                doc_No = docNo;
+                doc_No = (docNo.Contains("-")) ? docNo.Split("-")[1] : docNo;
                 doc_Type = doc_TypeID;
                 docType_DropDownValue = doc_TypeID;
                 doc_SubType = doc_SubTypeID;
@@ -876,10 +1014,11 @@
                 doc_Title = docTitle;
                 doc_SubTitle = docSubTitle;
                 PDF_DropDownValue = selected_PdfID;
+                oldformattedDocNo = formattedDocNo;
                 IsVisible_NewDocInfo = true;
                 args.Cancel = true;
             }
-            if (args.Item.Text.Equals("Delete"))
+            if (args.Item.Text.Equals("Edit"))
             {
                 if (State.dataFile != null)
                 {
@@ -887,31 +1026,67 @@
                     if (suttaInfo != null)
                     {
                         // check if the doc has already started
-                        if (suttaInfo.PagesSubmitted > 0 || suttaInfo.Status.Length > 0)
-                            AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
-                        else
+                        if (suttaInfo.PagesSubmitted > 0)
                         {
-                            State.dataFile.RemoveDocInfo(selected_PdfID, formattedDocNo);
+                            AlertBtn("Selected document has already been started. It cannot be edited anymore.", "Warning");
+                            args.Cancel = true;
+                            return;
                         }
                     }
                 }
-                IsVisible_NewDocInfo = false;
-                // args.Cancel = true;
+                curDocUserAction = DocUserAction.Edit;
+                doc_No = (docNo.Contains("-")) ? docNo.Split("-")[1] : docNo;
+                doc_Type = doc_TypeID;
+                docType_DropDownValue = doc_TypeID;
+                doc_SubType = doc_SubTypeID;
+                docSubType_DropDownValue = doc_SubTypeID;
+                doc_Title = docTitle;
+                doc_SubTitle = docSubTitle;
+                PDF_DropDownValue = selected_PdfID;
+                oldformattedDocNo = formattedDocNo;
+                IsVisible_NewDocInfo = true;
+                // args.Cancel = false;
+            }
+            if (args.Item.Text.Equals("Delete"))
+            {
+                if (State.dataFile != null)
+                {
+                    curDocUserAction = DocUserAction.Delete;
+                    SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(formattedDocNo); // exact match
+                    if (suttaInfo != null)
+                    {
+                        // check if the doc has already started
+                        if (suttaInfo.PagesSubmitted > 0)// || suttaInfo.Status != "Created")
+                        {
+                            AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
+                            args.Cancel = true;
+                        }
+                    }
+                }
+            }
+            if (args.Item.Id == "Grid_excelexport")
+            {
+                ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+                ExcelProperties.FileName = "Document.xlsx";
+                ExcelProperties.DataSource = DocDisplayRecords;
+                await this.sfgrid.ExcelExport(ExcelProperties);
             }
         }
     }
     public void RowSelectHandler(RowSelectEventArgs<DocInfo> args)
     {
         DocInfo docInfo = args.Data;
+        selectedRowDocInfo = args.Data;
         int idx = 0;
         if (docInfo.srNo != null) idx = Convert.ToInt16(docInfo.srNo) - 1;
-        selected_docNo = docInfo.docNo;
+        //selected_docNo = docInfo.docNo;
         string dNo = docInfo.docNo;
-        doc_No = docNo = dNo;
+        docNo = dNo;
         string[] f = dNo.Split('-');
         string[] ff = f[0].Split('.');
         string dType = ff[0];
         string dSubType = (ff.Length == 2) ? ff[1] : "";
+        doc_No = (f.Length == 2) ? f[1] : "";
         // get docType and docSubType ids
         var t1 = (from item in listDocTypes where item.Text == dType select item).ToList();
         doc_TypeID = (t1.Count > 0) ? t1[0].ID : "";
@@ -948,9 +1123,68 @@
         status = String.Format("{0} ({1}%)", docInfo.status, pct);
         teamMembers = docInfo.team;
     }
+    private void ActionBeginUser(ActionEventArgs<DocInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            if (State.dataFile != null)
+            {
+                SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(formattedDocNo); // exact match
+                if (suttaInfo != null)
+                {
+                    // check if the doc has already started
+                    if (suttaInfo.PagesSubmitted > 0)
+                        AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
+                    else
+                    {
+                        //State.dataFile.RemoveDocInfo(selected_PdfID, formattedDocNo);
+                        State.dataFile.RemoveSourceBookDocNo(selected_PdfID, formattedDocNo);
+                        State.dataFile.RemoveSuttaInfo(docNo);
+                        State.dataFile.RemoveTaskAssignmentInfo(formattedDocNo);
+                        var itemToRemove = DocDisplayRecords.Single(r => r.docNo == formattedDocNo);
+                        DocDisplayRecords.Remove(itemToRemove);
+                    }
+                }
+            }
+        }
+    }    
+    private void ActionCompleteUser(ActionEventArgs<DocInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            totalCount = DocDisplayRecords.Count;
+        }
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Edit"))
+        {
+            
+            doc_No = (docNo.Contains("-")) ? docNo.Split("-")[1] : docNo;
+            doc_Type = doc_TypeID;
+            docType_DropDownValue = doc_TypeID;
+            doc_SubType = doc_SubTypeID;
+            docSubType_DropDownValue = doc_SubTypeID;
+            doc_Title = docTitle;
+            doc_SubTitle = docSubTitle;
+            PDF_DropDownValue = selected_PdfID;
+            string title = doc_Title;
+            if (doc_SubTitle.Length > 0) title += "/" + doc_SubTitle;
+            // PDF_DropDownValue
+            SuttaInfo suttaInfo = new SuttaInfo()
+            {
+                RowKey = formattedDocNo,
+                Title = title,
+                StartPage = (int)startPage,
+                EndPage = (int)endPage,
+                NoPages = (int)(endPage - startPage + 1),
+                PagesSubmitted = 0,
+                Status = "",
+                Team = "",
+                BookID = ""
+            };
+            IsVisible_NewDocInfo = false;
+        }
+    }
     private void FillTestData()
     {
-        //status = "Completed"; teamMembers = "Aung Chan Min, Poe Ei San, Tun Lin, Kaung Si Thar";
         DocInfo docInfo = new DocInfo();
         docInfo.srNo = 1;
         docInfo.docNo = "DN-1.1";
@@ -962,10 +1196,5 @@
         docInfo.status = "DataEntry";
         docInfo.team = "Aung Chan Min, Poe Ei San, Tun Lin, Kaung Si Thar";
         DocDisplayRecords.Add(docInfo);
-
-        // docNo = "DN-1.1";
-        // pages = "1-200";
-        // nPages = 200;
-        // sPages = 85;
     }
 }

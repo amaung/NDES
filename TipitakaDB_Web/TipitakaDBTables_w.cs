@@ -38,7 +38,7 @@ namespace Tipitaka_DBTables
         public string Activity { get; set; } = default!;
         public int Pages {  get; set; } = default!;
         public int TotalSubmitted {  get; set; } = default!;
-        public int SubmittedPages { get; init; } = default;
+        public int SubmittedPages { get; set; } = default;
         public string Description { get; set; } = default!;
         public ETag ETag { get; set; } = default!;
         public DateTimeOffset? Timestamp { get; set; } = default!;
@@ -110,7 +110,6 @@ namespace Tipitaka_DBTables
         public ETag ETag { get; set; } = default!;
         public DateTimeOffset? Timestamp { get; set; } = default!;
     }
-
     public record UserPageActivity : ITableEntity
     {
         public string PartitionKey { get; set; } = "UserPageActivity"!;
@@ -143,6 +142,21 @@ namespace Tipitaka_DBTables
         public ETag ETag { get; set; } = default!;
         public DateTimeOffset? Timestamp { get; set; } = default!;
     }
+    public record Timesheet : ITableEntity
+    {
+        public string PartitionKey { get; set; } = "Timesheet";
+        public string RowKey { get; set; } = default!;  // userID $ date $ tickcount
+        public DateTime StartTime { get; set; } = default!;
+        public DateTime EndTime { get; set; } = default!;
+        public string DocNo { get; set; } = default!;
+        public string Task { get; set; } = default!;
+        public string Description { get; set; } = default!;
+        public int StartPage { get; set; } = default!;
+        public int EndPage { get; set; } = default!;
+        public string status { get; set; } = default!;
+        public ETag ETag { get; set; } = default!;
+        public DateTimeOffset? Timestamp { get; set; } = default!;
+    }
     public class UserTaskProgressInfo
     {
         public string userID = "";
@@ -167,6 +181,7 @@ namespace Tipitaka_DBTables
         public const string _Assigned_ = "Assigned";
         public const string _OnGoing_ = "OnGoing";
         public const string _Completed_ = "Data Completed";
+        public const string _Completion_Report_ = "Completion Report";
         public const string _Uploaded_ = "Uploaded";
         public const string _HTMLCompleted_ = "HTML Completed";
         public const string _HTMLToDo_ = "HTML ToDo";
@@ -180,5 +195,17 @@ namespace Tipitaka_DBTables
         public const string _Edit_ = "Edit";
         public const string _EditUpload_ = "Edit-Upload";
         public const string _HTML_ = "HTML";
+        public const string _ProgectManagement_ = "Progect Management";
+        public const string _Others_ = "Others";
+    }
+    public class DocReportInfo
+    {
+        public int srNo { get; set; }
+        public string date { get; set; } = "";
+        public string docNo { get; set; } = "";
+        public string docTitle { get; set; } = "";
+        public string pages { get; set; } = "";
+        public string sourceFileCode { get; set; } = "";
+        public string sourceFile { get; set; } = "";
     }
 }

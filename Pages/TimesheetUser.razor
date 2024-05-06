@@ -1,0 +1,496 @@
+﻿@page "/timesheetuser/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Calendars
+@using Newtonsoft.Json;
+@using Newtonsoft.Json.Linq;
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+
+    public class DataItem
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+    List<SuttaInfo> userSuttaListRecent = new List<SuttaInfo>();
+    List<DataItem> DocNoList = new List<DataItem>();
+    List<string> TaskItems = new List<string>() { 
+        TaskCategories._DataEntry_,
+        TaskCategories._Review_,
+        TaskCategories._Edit_,
+        TaskCategories._EditUpload_,
+        TaskCategories._HTML_,
+        TaskCategories._ProgectManagement_,
+        TaskCategories._Others_
+    };
+    List<DataItem> TaskList = new List<DataItem>();
+    //***********************************************************************
+    //***************************** Initialize ******************************
+    //***********************************************************************
+    protected override async Task OnInitializedAsync()
+    {
+        if (State.dataFile != null) 
+        {
+            userSuttaListRecent = State.dataFile.GetRecentSuttaList(TaskCategories._Recent_, userClass);
+            string separator = "";
+            foreach(SuttaInfo suttaInfo in userSuttaListRecent)
+            {
+                // if (separator == "" && recentDocNos.Length > 0) separator = ", ";
+                // recentDocNos += separator + suttaInfo.RowKey;
+                DocNoList.Add(new DataItem()
+                {
+                    Id = suttaInfo.RowKey,
+                    Text = suttaInfo.RowKey
+                });
+            }
+            foreach(string item in TaskItems) 
+                TaskList.Add(new DataItem()
+                {
+                    Id = item,
+                    Text = item
+                });
+        }
+    }
+}
+
+<div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
+    <div class="menu-control">
+        <SfMenu Items="@MenuData">
+            <MenuEvents TValue="MenuItem" ItemSelected="menuitemSelected"></MenuEvents>
+        </SfMenu>
+    </div>
+</div>
+@* Menu style
+https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-for-sub-items
+*@
+
+<br/>
+<label style="font-size:20px"><strong>Timesheet</strong></label>
+<label style="width:870px;text-align:right;">User: @userName</label>
+<br/><br/>
+<div class="control-wrapper">
+        <SfCalendar TValue="DateTime?" @ref="sfcalendar" Min='@MinDate' Value='@DateValue' Max='@MaxDate'>
+            <CalendarEvents TValue="DateTime?" OnRenderDayCell="CustomDates" ValueChange="CalendarValuechangeHandler"></CalendarEvents>
+            @* <CalendarEvents TValue="DateTime?" ValueChange="CalendarValuechangeHandler"></CalendarEvents> *@
+        </SfCalendar>
+</div>
+<br/><br/>
+<h5>@selectedDate</h5>
+<div style="padding-top:15px; padding-bottom:12px">
+<label style="width:250px;">Status : @timesheetStatus</label>
+<label>Hours : @hoursWorked</label>
+</div>
+@***************************************************************************************@
+@*********************************** Timesheet DataGrid ********************************@
+@***************************************************************************************@
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@TimesheetInfoRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete" })" AllowTextWrap="false" Height="180" Width="1000">
+            @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
+        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="@EditMode.Normal" Dialog="DialogParams">
+        </GridEditSettings>
+        <GridPageSettings PageSize="5"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        @* <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler"></GridEvents>*@
+        <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBegin" OnActionComplete="ActionComplete" OnToolbarClick="ToolbarClick" TValue="TimesheetInfo"></GridEvents>
+        <GridColumns>
+            <GridColumn Field=@nameof(TimesheetInfo.dayOfMonth) HeaderText="Day" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="6%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(TimesheetInfo.hours) HeaderText="Hours" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        IsPrimaryKey="true" AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+            <GridColumn Field=@nameof(TimesheetInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        AllowEditing="false" Width="15%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+            <GridColumn Field=@nameof(TimesheetInfo.task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Width="15%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TimesheetInfo.description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Left" AllowEditing="false" Width="45%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TimesheetInfo.pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                        TextAlign="TextAlign.Center" AllowEditing="false" Width="7%" Type="ColumnType.Integer"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+<br>
+<div style="margin-left:475px">
+    <SfButton IsPrimary="true" @onclick="onOKTimesheet">Submit</SfButton>
+</div>
+@* *************************************************************************** *@
+@* ************************* New doc info SfDialog *************************** *@
+@* *************************************************************************** *@
+<div>
+    <SfDialog Width="500px" MinHeight="495px" ShowCloseIcon="false" AllowDragging="true" IsModal="true" @bind-Visible="@IsVisible_TimesheetDialog">
+        <DialogTemplates>
+            <Header> Enter new timesheet </Header>
+            <Content>
+                <div>
+                    <div class="form-group col-md-6 column">
+                        <label class="col-form-label">Select Start Time :</label>
+                        <SfTimePicker TValue="DateTime?" @bind-Value="@StartTimeValue" Min='@MinVal' Step=30 Format="h:mm tt"></SfTimePicker>
+                    </div>
+                    <div class="form-group col-md-6 column">
+                        <label class="col-form-label">Select End Time :</label>
+                        <SfTimePicker TValue="DateTime?" @bind-Value="@EndTimeValue" Min='@MinVal' Step=30 Format="h:mm tt"></SfTimePicker>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 column">
+                            <label class="col-form-label">Select DocNo :</label>
+                            <SfDropDownList TItem="DataItem" DataSource="@DocNoList" @ref=docDropdown @bind-Value="@DocNoValue" TValue="string" PopupHeight="400px" Placeholder="Select document no.">
+                                <DropDownListEvents TItem="DataItem" TValue="string" OnValueSelect="@OnValueSelecthandler" ></DropDownListEvents>
+                                <DropDownListFieldSettings Text="Text" Value="Id"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 column">
+                            <label class="col-form-label">Select Task :</label>
+                            <SfDropDownList TItem="DataItem" TValue="string" DataSource="@TaskList" @bind-Value="@TaskValue" PopupHeight="400px" Placeholder="Select task.">
+                                <DropDownListFieldSettings Text="Text" Value="Id"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                        </div>
+                    </div>
+                    <div class="form-row multiline col-md-12" style="padding:9px;">
+                        <label class="col-form-label">Description :</label>
+                        <SfTextBox Multiline=true @bind-Value="@Description" CssClass="e-custom-height e-outline"></SfTextBox>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6 column">
+                            <label class="col-form-label">Start Page :</label>
+                            <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@StartPage"></SfNumericTextBox>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6 column">
+                            <label class="col-form-label">End Page :</label>
+                            <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@EndPage"></SfNumericTextBox>
+                        </div>
+                    </div>                    
+
+                </div>
+                <br />
+                <div>
+                    <p style="padding: 10px;color:brown">@timeSheetEntryErrMsg</p>
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton style="width:75px" Content="Cancel" OnClick="@onCancelTimesheet" />
+            <DialogButton style="width:75px" Content="Ok" IsPrimary="true" OnClick="@onOKTimesheet" />
+        </DialogButtons>
+    </SfDialog>
+</div>
+
+@* https://blazor.syncfusion.com/documentation/timepicker/getting-started *@
+@* https://www.syncfusion.com/forums/171648/timepicker-only-in-gridcolumn *@
+<style>
+    .menu-control, .e-menu-container, .e-menu-container.e-menu-popup,
+    .e-menu-container ul .e-menu-item, .e-menu-container .e-ul .e-menu-item {
+        background-color: #ded8ca;
+        font-size: 18px;
+    }
+</style>
+
+<style>
+    #display-date {
+        max-width: 300px;
+        margin: 0 auto;
+        padding: 15px 0;
+        font-size: 13px;
+    }
+    .control-wrapper {
+        width: 300px;
+        /* margin: 0 auto; */
+        padding-top: 20px;
+    }
+    .e-calendar .e-content .e-cell.personal-appointment span.e-day,
+    .e-calendar .e-content td:hover.e-cell.timesheet-data span.e-day,
+    .e-calendar .e-content td.e-selected.e-focused-date.e-cell.timesheet-data span.e-day {
+        color: #28a745;
+        color: blue;
+        color: brown;
+        /* color: yellow; */
+        /* background-color: grey; */
+        background: yellow;
+        background: AliceBlue;
+        font-weight: 800;
+    }
+    .e-calendar .e-content .e-cell.timesheet-data span.e-day,
+    .e-calendar .e-content td:hover.e-cell.timesheet-data span.e-day,
+    .e-calendar .e-content td.e-selected.e-focused-date.e-cell.timesheet-data span.e-day {
+        color: darkblue;
+        background: yellow;
+        font-weight: 900;
+    }
+    .e-calendar .e-content .e-cell.official-appointment span.e-day,
+    .e-calendar .e-content td:hover.e-cell.official-appointment span.e-day,
+    .e-calendar .e-content td.e-selected.e-focused-date.e-cell.official-appointment span.e-day {
+        color: #dc3545;
+        font-weight: 800;
+    }
+    .e-calendar .e-content td.e-selected.e-focused-date.e-cell.personal-appointment span.e-day,
+    .e-calendar .e-content td.e-selected.e-focused-date.e-cell.official-appointment span.e-day {
+        background-color: #b511485e;
+    }
+    .e-custom-height {
+        height: 80px;
+    }
+    .column {
+        float: left;
+        padding: 9px;
+        width: 50%;
+        /* height: 530px; /* should be removed. only for demonstration */
+    }</style>
+@code{
+    //https://blazor.syncfusion.com/documentation/datagrid/templates#templates
+    #pragma warning disable
+    private List<MenuItem> MenuData = new List<MenuItem>
+    {
+        new MenuItem
+        {
+            Text = "DataPage"
+        },
+        new MenuItem
+        {
+            Text = "Logout",
+        }
+    };
+    private async Task menuitemSelected(MenuEventArgs<MenuItem> args)
+    {
+        switch(args.Item.Text)
+        {
+            case "Logout": NavManager.NavigateTo("/"); 
+                break;
+            case "DataPage":
+                State.screenID = 5;
+                NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass)); 
+            break;
+        }
+    }
+}
+@code{
+    public class TimesheetInfo()
+    {
+        public int? dayOfMonth { get; set; }
+        public string hours { get; set; }
+        public DateTime? startTime { get; set; }
+        public DateTime? endTime { get; set; }
+        public string docNo { get; set; }
+        public string task { get; set; }
+        public string description { get; set; }
+        public int? startPage { get; set; }
+        public int? endPage { get; set; }
+        public int pages { get; set; }
+        public string pageNos { get; set; }
+        public string status { get; set; }
+    }
+    // Calendar code
+    public DateTime MinVal { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 06, 00, 00);
+    public DateTime MinDate {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month-1, 1);
+    public DateTime MaxDate {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 31); //DateTime.Now.Day);
+    public DateTime? DateValue {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+    public DateTime? StartTimeValue { get; set; } = null;
+    public DateTime? EndTimeValue { get; set; } = null;
+    public TimesheetInfo timesheetInfo = new TimesheetInfo();
+    public SfDropDownList<string, DataItem> docDropdown;
+
+    SfGrid<TimesheetInfo> sfgrid;
+    SfCalendar<DateTime?> sfcalendar;
+    List<TimesheetInfo> TimesheetInfoRecords = new List<TimesheetInfo>();
+    string selectedDate = DateTime.Now.ToString("MMM d, yyyy");
+    public DateTime? CurrentDate { get; set; } = DateTime.Now;
+    bool IsVisible_TimesheetDialog = false;
+ 
+    string timesheetStatus = "New";
+    float hoursWorked = 0F;
+    public string? DocNoValue { get; set; } = "";
+    public string? TaskValue { get; set; } = "";
+    public string? Description { get; set; } = "";
+    public int? StartPage, EndPage;
+    public string? timeSheetEntryErrMsg { get; set; } = "";
+    public HashSet<int> timesheetDays = new HashSet<int>() { 1, 2 };
+
+    DateTime? prevDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+
+    private DialogSettings DialogParams = new DialogSettings { Width = "500px" };
+
+    public void CalendarValuechangeHandler(ChangedEventArgs<DateTime?> args)
+    {
+        // Here, you can customize your code.
+        DateTime val = (DateTime)args.Value;
+        if (val != prevDate && val != DateTime.Now)
+        {
+            selectedDate = val.ToString("MMM d, yyyy");
+            DateValue = args.Value;
+            prevDate = args.Value;
+        }
+    }
+    //https://www.syncfusion.com/forums/184535/is-there-a-way-to-set-datetime-to-now-when-clicked-on-today-button-in-datetimepicker
+    public void CustomDates(RenderDayCellEventArgs args)
+    {
+        var CurrentMonth = CurrentDate.Value.Month;
+        if (args.Date.Month == CurrentMonth && timesheetDays.Contains(args.Date.Day)) {
+            args.CellData.ClassList += " personal-appointment";
+        }
+        // if (args.Date.Month == CurrentMonth && (args.Date.Day == 7 || args.Date.Day == 14 || args.Date.Day == 24 || args.Date.Day == 29)) {
+        //     args.CellData.ClassList += " personal-appointment";
+        // }
+        // if (args.Date.Month == CurrentMonth && (args.Date.Day == 3 || args.Date.Day == 11 || args.Date.Day == 17 || args.Date.Day == 22))
+        // {
+        //     args.CellData.ClassList += " official-appointment";
+        // }
+    }
+    private void OnValueSelecthandler(SelectEventArgs<DataItem> args)
+    {
+        // Here, you can customize your code.
+        timeSheetEntryErrMsg = String.Empty;
+        var dt = (DataItem)args.ItemData;
+        var docList = (from item in userSuttaListRecent 
+                  where item.RowKey == dt.Text 
+                  select item).ToList();
+        if (docList.Count == 0) return;
+        Description = docList[0].Title;
+    }
+    public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args != null)
+        {
+            if (args.Item.Text.Equals("Add"))
+            {
+                StartTimeValue = EndTimeValue = null;
+                DocNoValue = TaskValue = Description = null;
+                StartPage = EndPage = null;
+                IsVisible_TimesheetDialog = true;
+                args.Cancel = true;
+            }    
+        }
+    }
+    private void onCancelTimesheet()
+    {
+        timeSheetEntryErrMsg = String.Empty;
+        IsVisible_TimesheetDialog = false;
+    }
+    private void onOKTimesheet()
+    {
+        timeSheetEntryErrMsg = String.Empty;
+
+        if (EndTimeValue == null || StartTimeValue == null)
+        {
+            timeSheetEntryErrMsg = "Error: Start or end time not selected.";
+            return;
+        }
+        if (EndTimeValue <= StartTimeValue)
+        {
+            timeSheetEntryErrMsg = "Error: End time must be greater than start time.";
+            return;
+        }
+        if (DocNoValue == null || TaskValue == null)
+        {
+            timeSheetEntryErrMsg = "Error: DocNo or Task not selected.";
+            return;
+        }
+        if (StartPage == null || EndPage == null)
+        {
+            timeSheetEntryErrMsg = "Error: Start or end page not entered.";
+            return;
+        }
+        if (EndPage <= StartPage)
+        {
+            timeSheetEntryErrMsg = "Error: End page must be greater than start page.";
+            return;
+        }
+        TimeSpan dt = (TimeSpan)(EndTimeValue! - StartTimeValue!);
+        float deltaTime = (float)dt.Hours + (float)dt.Minutes/60F;
+        string hrs = String.Format("{0}-{1} ({2})", StartTimeValue?.ToString("HH:mm"),
+                EndTimeValue?.ToString("HH:mm"), deltaTime);
+
+        int currentDay = ((DateTime)DateValue).Day;
+        List<TimesheetInfo> list = new List<TimesheetInfo>(TimesheetInfoRecords);
+        list.Add(new TimesheetInfo()
+        {
+            dayOfMonth = currentDay,
+            hours = hrs,
+            docNo = DocNoValue,
+            task = TaskValue,
+            description = Description,
+            pages = (int)(EndPage! - StartPage!)
+        });
+        TimesheetInfoRecords = list;
+        hoursWorked = 0F;
+        foreach(TimesheetInfo timesheetInfo in TimesheetInfoRecords)
+        {
+            string[] f = timesheetInfo.hours.Split(' ');
+            if (f.Length == 2)
+            {
+                f[1] = f[1].Replace("(", "").Replace(")", "");
+                hoursWorked += float.Parse(f[1]);
+            }
+        }
+        IsVisible_TimesheetDialog = false;
+
+        timesheetDays = new HashSet<int>{ 20, 30 };
+        if (!timesheetDays.Contains(currentDay)) timesheetDays.Add(currentDay);
+        // sfcalendar.Render();
+    }
+    private void ActionBegin(ActionEventArgs<TimesheetInfo> args)
+    {
+        TimesheetInfo timesheetInfo = args.Data;
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Add"))
+        {
+            if (timesheetInfo.endTime == null || timesheetInfo.startTime == null)
+            {
+                timeSheetEntryErrMsg = "Error: Start or end time not selected.";
+                args.Cancel = true;
+                return;
+             }
+            if (timesheetInfo.endTime <= timesheetInfo.startTime)
+            {
+                timeSheetEntryErrMsg = "Error: End time must be greater than start time.";
+                args.Cancel = true;
+                return;
+            }
+            TimeSpan dt = (TimeSpan)(timesheetInfo.endTime! - timesheetInfo.startTime!);
+            float deltaTime = (float)dt.Hours + dt.Minutes/60;
+            timesheetInfo.hours = String.Format("{0}-{1} ({2})", timesheetInfo.startTime?.ToString("hh:mm"),
+                    timesheetInfo.endTime?.ToString("hh:mm"), deltaTime);
+        }
+    }
+    private void ActionComplete(ActionEventArgs<TimesheetInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add) && args.Action == "Add"))
+        {
+        }
+    }
+    //********************************
+    //******** RowSelectHandler()
+    //********************************
+    public void RowSelectHandler(RowSelectEventArgs<TimesheetInfo> args)
+    {
+        if (State.dataFile == null || args == null) return;
+        TimesheetInfo timesheetInfo = args.Data;
+    }
+    private string GetLastTick6()
+    {
+        string t = DateTime.Now.Ticks.ToString();
+        return t.Substring(t.Length - 6);
+    }
+}

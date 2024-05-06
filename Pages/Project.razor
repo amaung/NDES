@@ -22,19 +22,19 @@
     <adminMenuItem>Project</adminMenuItem>
 </Administration>
 
-<br/>
 @* <label style="font-size:16px; text-align:left">No. of Books = @noBooks</label> *@
 @* <label style="font-size:16px; margin-left:580px; width:250px; text-align:right">Total Pages: @totalPages</label> *@
 <br />
 @**************************** NissayaSource DataGrid ****************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@NissayaBookRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="false" AllowTextWrap="true" Height="600" Width="1000">
+    <SfGrid ID="Grid" DataSource="@NissayaBookRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="true" AllowSelection="true"
+            AllowSorting="false" AllowTextWrap="true" Toolbar="@(new List<string>() { "ExcelExport" })" Height="600" Width="1000">
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="100"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridEvents OnToolbarClick="ToolbarClick" TValue="BookDocStatus"></GridEvents>
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(BookDocStatus.BookID) HeaderText="Book ID" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="8%" Type="ColumnType.Integer" ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
@@ -60,6 +60,23 @@
 <label>:&nbsp&nbsp @totalCompleted (@totalCompletedStatus)</label><br/>
 <label style="width:200px;">No. of HTML Completed</label>
 <label>:&nbsp&nbsp @totalHTML (@totalHTMLStatus)</label><br/>
+
+<br /><br />
+<div>
+    <SfButton CssClass="e-custom2" OnClick="@SystemUtils"> DANGER! Reset Tables (for System Admin ONLY) </SfButton>
+</div>
+
+@*************************** System Admin button styles ***************************@
+<style>
+   .e-custom2 {
+        display: @SystemAdminButtonHide;
+        /* border-radius: 25px; */
+        height: 32px;
+        color: white;
+        background: maroon;
+        /* width: 120px; */
+   }
+</style>
 @********************************** Grid styles **********************************@
 <style>
     .e-grid {
@@ -117,11 +134,19 @@
     bool hide_file_browser = true;
     string totalCompletedStatus = "";
     string totalHTMLStatus = "";
+    string SystemAdminButtonHide = "none";
     List<BookDocStatus> NissayaBookRecords = new List<BookDocStatus>();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         PopulateGrid();
+        SystemAdminButtonHide = "none";
+        if (userClass == "S")
+        {
+            SystemAdminButtonHide = (userClass == "S") ? "block" : "none";
+            SystemAdminButtonHide = "none";
+        }
+        return;
     }
 
     private void UploadMoreBooks()
@@ -179,5 +204,27 @@
                 else totalHTMLStatus = String.Format("{0}%", (int)pct);
             }
         }
+    }
+    public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args != null)
+        {
+            if (args.Item.Id == "Grid_excelexport")
+            {
+                ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+                ExcelProperties.FileName = "Project.xlsx";
+                ExcelProperties.DataSource = NissayaBookRecords;
+                await this.sfgrid.ExcelExport(ExcelProperties);
+            }
+        }
+    }
+    private void SystemUtils()
+    {
+        DoDataDelete();
+    }
+    private async Task DoDataDelete()
+    {
+        bool isConfirm = await DialogService.ConfirmAsync("Are you sure you want to reset all data tables?", "Reset Data");
+        if (isConfirm && State.dataFile != null) State.dataFile.ResetDataTables();
     }
 }

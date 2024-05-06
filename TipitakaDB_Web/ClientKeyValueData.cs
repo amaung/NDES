@@ -28,15 +28,18 @@ namespace NissayaEditor_Web.Data
             keyValueData.PartitionKey = "KeyValueData";
             return keyValueData;
         }
-        public List<KeyValueData> QueryKeyValueData(string qualifier)
+        public void QueryKeyValueData(string qualifier)
         {
             List<KeyValueData> result = new List<KeyValueData>();
-            QueryTableRec(qualifier).ConfigureAwait(false);
+            //QueryTableRec(qualifier).ConfigureAwait(false);
+            QueryTableRec(qualifier).Wait();
+            /*await*/
+            //QueryTableRec(qualifier);
             if (StatusCode == 0)
             {
                 result = (List<KeyValueData>)objResult;
             }
-            return result;
+            return;
         }
         public List<KeyValueData> QuerySuttaDataInfo(string suttaNo)
         {
@@ -168,6 +171,11 @@ namespace NissayaEditor_Web.Data
             }
             return;
         }
+        public void RemoveUserTask(string[] userID, string docNo)
+        {
+            foreach(string user in userID)
+                RemoveUserTask(user, docNo);
+        }
         private Dictionary<string, string> GetUserTaskList(string userTaskList)
         {
             Dictionary<string, string> dict = new Dictionary<string, string>();
@@ -208,19 +216,22 @@ namespace NissayaEditor_Web.Data
             {
                 KeyValueData keyValueData = (KeyValueData)objResult;
                 if (keyValueData.Value.Contains(docNo)) { return; }
-                //keyValueData.Value += "|" + docNo;
-                //if (taskCategory == "Recent")
-                //{
-                    // keep 10 tasks only, remove old ones
-                    List<string> list = keyValueData.Value.Split('|').ToList();
+                // add new doc
+                List<string> list;
+                if (keyValueData.Value.Trim().Length > 0) list = keyValueData.Value.Split('|').ToList();
+                else list = new List<string>();
+                list.Add(docNo);
+                // _Recent_ holds 10 items only
+                if (taskCategory == TaskCategories._Recent_)
+                {
                     if (list.Count > 10) 
                     {
                         int n = list.Count - 10;
                         list.RemoveRange(0, n);
-                        keyValueData.Value = String.Join("|", list);
                     }
-                //}
-                UpdateTableRec(keyValueData).ConfigureAwait(false);
+                }
+                keyValueData.Value = String.Join("|", list);
+                UpdateTableRec(keyValueData).Wait();
                 return;
             }
             if (StatusCode == 404) // record not found
@@ -251,10 +262,29 @@ namespace NissayaEditor_Web.Data
                 List<string> listDocs = keyValueData.Value.Split('|').ToList();
                 if (listDocs == null || listDocs.Count == 0) {  return; }
                 listDocs.Remove(docNo);
-                keyValueData.Value = String.Join("|", listDocs);
-                UpdateTableRec(keyValueData).ConfigureAwait(false);
+                if (listDocs.Count == 0) { keyValueData.Value = ""; }
+                else keyValueData.Value = String.Join("|", listDocs);
+                UpdateTableRec(keyValueData).Wait();
             }
             return;
+        }
+        public void RemoveUserDocByCategory(string[] userIDs, string taskCategory, string docNo)
+        {
+            foreach (string userID in userIDs)
+                RemoveUserDocByCategory(userID, taskCategory, docNo);
+        }
+
+        public async Task DeleteUserTasks(string userID)
+        {
+            string qualifier = "RowKey ne 'DocSubTypes' and RowKey ne 'DocTypes'";
+            await QueryTableRec(qualifier).ConfigureAwait(false);
+            List<KeyValueData> listData = (List<KeyValueData>)objResult;
+            //List<KeyValueData> listData = QueryKeyValueData(qualifier).Wait();
+            if (listData.Count > 0)
+            {
+                List<object> list = listData.ToList<object>();
+                DeleteTableRecBatch(list).Wait();
+            }
         }
     }
 }

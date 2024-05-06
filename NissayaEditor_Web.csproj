@@ -27,6 +27,7 @@
     <Content Remove="Pages\Error.cshtml" />
     <Content Remove="Pages\FetchData.razor" />
     <Content Remove="Pages\FileUploadFeatures.razor" />
+    <Content Remove="Pages\Index_Administration.razor" />
     <Content Remove="Pages\ListBoxFeatures.razor" />
     <Content Remove="Pages\MenuBarFeatures.razor" />
     <Content Remove="Pages\MessageFeatures.razor" />

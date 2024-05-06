@@ -24,6 +24,22 @@ namespace Tipitaka_DB
             }
             return taskAssignmentInfo;
         }
+        public TaskAssignmentInfo? RemoveTaskAssignmentInfo(string rowKey)
+        {
+            TaskAssignmentInfo? taskAssignmentInfo = null;
+            RetrieveTableRec(rowKey).Wait();
+            if (StatusCode == 200)
+            {
+                taskAssignmentInfo = (TaskAssignmentInfo)objResult;
+                DeleteTableRec(taskAssignmentInfo).Wait();
+            }
+            return taskAssignmentInfo;
+        }
+        public void RemoveTaskAssignmentInfo(TaskAssignmentInfo taskAssignmentInfo)
+        {
+            DeleteTableRec(taskAssignmentInfo).Wait();
+            return;
+        }
         public List<TaskAssignmentInfo> QueryTaskAssignmentInfo(string query)
         {
             List<TaskAssignmentInfo> list = new List<TaskAssignmentInfo>();
@@ -37,6 +53,8 @@ namespace Tipitaka_DB
             TaskAssignmentInfo? taskAssignmentInfo1 = GetTaskAssignmentInfo(taskAssignmentInfo.RowKey);
             if (taskAssignmentInfo1 != null) 
             {
+                taskAssignmentInfo1.DocTitle = taskAssignmentInfo.DocTitle;
+                taskAssignmentInfo1.PageNos = taskAssignmentInfo.PageNos;
                 taskAssignmentInfo1.PagesSubmitted = taskAssignmentInfo.PagesSubmitted;
                 taskAssignmentInfo1.AssigneeProgress = taskAssignmentInfo.AssigneeProgress;
                 taskAssignmentInfo1.StartDate = taskAssignmentInfo.StartDate;
@@ -45,6 +63,17 @@ namespace Tipitaka_DB
                 taskAssignmentInfo1.Status = taskAssignmentInfo1.Status;
                 UpdateTableRec(taskAssignmentInfo1).Wait();
                 return; 
+            }
+        }
+        public void DeleteAll(string userID)
+        {
+            if (userID == null || userID != "dhammayaungchi2011@gmail.com") return;
+            string query = "";
+            List<TaskAssignmentInfo> list = QueryTaskAssignmentInfo(query);
+            if (list.Count > 0)
+            {
+                List<object> list1 = list.ToList<object>();
+                DeleteTableRecBatch(list1).Wait();
             }
         }
     }

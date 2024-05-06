@@ -36,7 +36,6 @@
         if (State.clientTipitakaDB != null )
         {
             ClientActivityLog clientActivityLog = State.clientTipitakaDB.GetClientActivityLog();
-            //clientActivityLog.AddTestData();
             _ = Task.Run(() => clientActivityLog.DeleteOldActivities(email, userName));
         }
         //https://stackoverflow.com/questions/53183370/how-to-start-an-async-method-without-await-its-completion
@@ -131,6 +130,8 @@
     </div>
     <div class="column control-section">
         <label>Select Month :</label>
+        @*https://blazor.syncfusion.com/documentation/calendar/calendar-views*@
+        @* <SfCalendar TValue="DateTime?" Value='@DateValue' Start="CalendarView.Year"></SfCalendar> *@
         <SfDropDownList TValue="string" TItem="DataItem" @ref=monDropdown MultiSelectMode="None" Width="200px" PopupHeight="500px"
                         Placeholder="Select month" @bind-Value="@monDropDownValue" DataSource="@listMons">
             <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@MonthValueChangeHandler"></DropDownListEvents>
@@ -144,14 +145,15 @@
 <br/><br/>
 <label style="margin-left:780px;width:200px;text-align: right;"><strong>Total: </strong>@TaskActivityRecords.Count</label>
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@TaskActivityRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
+    <SfGrid ID="Grid" DataSource="@TaskActivityRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
             AllowSorting="false" AllowTextWrap="false" Toolbar="@(new List<string>() { "ExcelExport" })" Height="450" Width="1000">
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
+        <GridEvents OnToolbarClick="ToolbarClick_Task" TValue="TaskActivityItem"></GridEvents>
+        @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="TaskActivityItem"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(TaskActivityItem.SrNo) HeaderText="Sr No" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(TaskActivityItem.Date) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="10%" Type="ColumnType.String"></GridColumn>
@@ -324,7 +326,6 @@
             string[] MMyy = listMons[idx].Text.Split(' ');
             int yy = Int32.Parse(MMyy[1]);
             int mm = DateTimeFormatInfo.CurrentInfo.MonthNames.ToList().IndexOf(MMyy[0]) + 1;
-            // int days =  DateTime.DaysInMonth(yy, mm);
             startDate = new DateTime(yy, mm, 1, 0, 0, 0);
             if (mm < 12) ++mm;
             else
@@ -376,6 +377,22 @@
             listTaskRecord.Add(taskItem);
         }
         TaskActivityRecords = listTaskRecord;
+    }
+    /************************************************************************************/
+    //******** Grid events
+    /************************************************************************************/
+    public async Task ToolbarClick_Task(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args != null)
+        {
+            if (args.Item.Id == "Grid_excelexport")
+            {
+                ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+                ExcelProperties.FileName = "TaskActivity.xlsx";
+                ExcelProperties.DataSource = TaskActivityRecords;
+                await this.sfgrid1.ExcelExport(ExcelProperties);
+            }
+        }
     }
     DateTime ConvertDateTimeFromString(string s)
     {

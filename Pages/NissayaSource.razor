@@ -28,13 +28,14 @@
 @**************************** NissayaSource DataGrid ****************************@
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@NissayaBookRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="false" AllowTextWrap="true" Height="600" Width="800">
+            AllowSorting="false" AllowTextWrap="true" Height="300" Width="800">
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="100"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
+        <GridEvents RowSelected="RowSelectHandler" TValue="SourceBookInfo"></GridEvents>
         <GridColumns>
             <GridColumn Field=@nameof(SourceBookInfo.RowKey) HeaderText="Book ID" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="10%" Type="ColumnType.Integer" DefaultValue=@GetSrNo() ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(SourceBookInfo.BookFilename) HeaderText="Book PDF File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="70%" Type="ColumnType.String"></GridColumn>
@@ -43,12 +44,37 @@
         </GridColumns>
     </SfGrid>
 </div>
+<br/>
 @************************* End of NissayaSource DataGrid *************************@
+
+@***************************** Doc in Each PDF Grid ******************************@
+@* <h6>@pdfFileName</h6> *@
+<label style="font-size:16px; width:600px; text-align:left">@pdfFileName</label>
+<label style="font-size:16px; margin-left:10px; width:170px; text-align:right">Total Docs: @DocInfoRecords.Count</label>
+<br />
+<div id="ControlRegion">
+    <SfGrid ID="Grid" DataSource="@DocInfoRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
+            AllowSorting="false" AllowTextWrap="true" Height="250" Width="800">
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
+                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        </GridEditSettings>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridColumns>
+            <GridColumn Field=@nameof(DocInfo.srNo) HeaderText="Sr No" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="8%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(DocInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="18%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+            <GridColumn Field=@nameof(DocInfo.docTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="40%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(DocInfo.PageNos) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="12%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(DocInfo.status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+@************************* End of Doc in Each PDF Grid ***************************@
 
 @*********************** Button: Upload more source books ************************@
 <div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
     @* hidden="@(!hide_file_browser)"*@
-    <SfButton OnClick="@UploadMoreBooks"> Upload More Books </SfButton>
+    <SfButton OnClick="@UploadMoreBooks"> Upload Additional Book Info From File  </SfButton>
 </div>
 @********************* End Button: Upload more source books **********************@
 
@@ -95,18 +121,35 @@
     [Parameter]
     public string userClass { get; set; } = "";
 
-    SfGrid<SourceBookInfo>? sfgrid;
+    public class DocInfo()
+    {
+        public int srNo { get; set; }
+        public string docNo { get; set; }
+        public string docTitle { get; set; }
+        public string sourceFileCode { get; set; }
+        public int startPage { get; set; }
+        public int endPage { get; set; }
+        public int pages { get; set; }
+        public string PageNos { get; set;}
+        public string status { get; set; }
+    }
 
-    string noBooks = "";
-    string totalPages = "";
+    SfGrid<SourceBookInfo>? sfgrid;
+    SfGrid<DocInfo>? sfgrid1;
+
+    int noBooks = 0;
+    int totalPages = 0;
     bool hide_file_browser = true;
+    string pdfFileName = "PDF File Name :";
 
     List<SourceBookInfo> NissayaBookRecords = new List<SourceBookInfo>();
+    List<DocInfo> DocInfoRecords = new List<DocInfo>();
 
     protected override void OnInitialized()
     {
         PopulateGrid();
     }
+
     int srno = 0;
     private int GetSrNo() { return ++srno; }
     private void UploadMoreBooks()
@@ -125,25 +168,31 @@
                 NissayaBookRecords.Add(sourceBookInfo);
                 pages += sourceBookInfo.Pages;
             }
-            noBooks = NissayaBookRecords.Count.ToString();
-            totalPages = pages.ToString();
+            noBooks = NissayaBookRecords.Count;
+            totalPages = pages;
         }
     }
-    private async Task PopulateGridAtImport()
+    private async Task PopulateGridAtImport(List<SourceBookInfo> listPDF)
     {
         int pages = 0;
         int rowIndex = 0;
-        if (NissayaBookRecords.Count == 0)
+        Dictionary<string, SourceBookInfo> sortedDict = new Dictionary<string, SourceBookInfo>();
+        foreach(SourceBookInfo sourceBookInfo in NissayaBookRecords)
         {
-            SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
-            foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
-            {
-                await sfgrid.AddRecordAsync(sourceBookInfo, rowIndex++);
-                // NissayaBookRecords.Add(sourceBookInfo);
-                pages += sourceBookInfo.Pages;
-            }
-            noBooks = NissayaBookRecords.Count.ToString();
-            totalPages = pages.ToString();
+            sortedDict.Add(sourceBookInfo.RowKey, sourceBookInfo);
+        }
+        foreach(SourceBookInfo sourceBookInfo in listPDF)
+        {
+            sortedDict.Add(sourceBookInfo.RowKey, sourceBookInfo);
+        }
+        noBooks = 0;
+        totalPages = 0;
+        NissayaBookRecords = new List<SourceBookInfo>();
+        foreach(string key in sortedDict.Keys)
+        {
+            ++noBooks;
+            totalPages += sortedDict[key].Pages;
+            NissayaBookRecords.Add(sortedDict[key]);
         }
     }
     private async Task OnFileUpload(UploadChangeEventArgs args)
@@ -159,11 +208,21 @@
                 string fileContent = buffer.ToString();
                 fileContent = System.Text.Encoding.UTF8.GetString(filestream.ToArray());
                 filestream.Close();
-                string[] recs = fileContent.Split("\r\n");
+                string[] recs = fileContent.Split("\n");
+                // string[] recs = fileContent.Split("\r\n");
                 if (State.dataFile != null) 
                 {
-                    State.dataFile.AddSourceBookInfo(recs);
-                    //PopulateGridAtImport();
+                    List<SourceBookInfo> listPDF = State.dataFile.AddSourceBookInfo(recs);
+                    if (listPDF.Count > 0)
+                    {
+                        PopulateGridAtImport(listPDF);
+                        ClientActivityLog? clientActivityLog = State.dataFile.GetClientActivityLog();
+                        string msg = String.Format("Info of {0} new source books imported.", listPDF.Count);
+                        if (clientActivityLog != null)
+                            clientActivityLog.AddActivityLog(email, "SourcePDF", msg);
+                        AlertBtn(msg, "Success");
+                    }
+                    else AlertBtn("Nothing to import.", "Alert");
                 }
             }
             hide_file_browser = true;
@@ -176,5 +235,41 @@
     private void OnCancelHandler(CancelEventArgs args)
     {
         hide_file_browser = true;
+    }
+    //***********************************************************************
+    //******** RowSelectHandler()
+    //***********************************************************************
+    public void RowSelectHandler(RowSelectEventArgs<SourceBookInfo> args)
+    {
+        if (State.dataFile == null) return;
+        SourceBookInfo sourceBookInfo = args.Data;
+        pdfFileName = sourceBookInfo.BookFilename;
+        List<SuttaInfo> list = State.dataFile.GetPDFSuttaList(sourceBookInfo.RowKey);
+        DocInfoRecords = new List<DocInfo>();
+        int n = 0;
+        foreach(SuttaInfo suttaInfo in list)
+        {
+            DocInfoRecords.Add(new DocInfo()
+            {
+                srNo = ++n,
+                docNo = suttaInfo.RowKey,
+                docTitle = suttaInfo.Title,
+                startPage = suttaInfo.StartPage,
+                endPage = suttaInfo.EndPage,
+                pages = suttaInfo.NoPages,
+                PageNos = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.NoPages),
+                status = suttaInfo.Status
+            });
+        }
+    }
+    //***********************************************************************
+    //******** AlertBtn(string msg, string caption)
+    //***********************************************************************
+    private async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
     }
 }

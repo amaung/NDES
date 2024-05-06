@@ -52,7 +52,7 @@
     protected override void OnInitialized()
     {
         if (State.dataFile == null) return;
-        docTitle_Text = KinziCorrectionForNotoFont(docTitle);
+        docTitle_Text = KinziCorrectionForNotoFont(docTitle).Replace("$", "/");
         if (pageNo == "0")
         {
             btnVisible = true;
