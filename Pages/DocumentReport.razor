@@ -124,26 +124,27 @@
 @*******************************************************************************@
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowSelection="true"
-            AllowSorting="true" AllowTextWrap="false" Height="380" Width="1000">
+            Toolbar="@(new List<string>() { "ExcelExport" })" AllowExcelExport="true" AllowSorting="true" AllowTextWrap="false" Height="380" Width="1000">
             @* AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
-        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridEvents TValue="DocReportInfo" OnToolbarClick="ToolbarClick"></GridEvents>
         @* <GridEvents RowSelected="RowSelectHandler" TValue="DocInfo" OnToolbarClick="ToolbarClick" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser"></GridEvents> *@
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
-            <GridColumn Field=@nameof(DocReportInfo.srNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+            <GridColumn Field=@nameof(DocReportInfo.srNo) HeaderText="No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
                 IsPrimaryKey="true" AllowEditing="false" Width="6%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(DocReportInfo.date) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
                 AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
             <GridColumn Field=@nameof(DocReportInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
                 AllowEditing="false" Width="13%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
             <GridColumn Field=@nameof(DocReportInfo.docTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
-                TextAlign="TextAlign.Left" AllowEditing="false" Width="30%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Left" AllowEditing="false" Width="26%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(DocReportInfo.pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
-                TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(DocReportInfo.sourceFile) HeaderText="Source File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
                 TextAlign="TextAlign.Left" AllowEditing="false" Type="ColumnType.String"></GridColumn>
         </GridColumns>
@@ -189,7 +190,30 @@
         width: 50%;
     }
 </style>
+@********************************** Grid styles **********************************@
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
 
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+
+    .e-grid .e-altrow {
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+</style>
 @code {
     string searchTypeValue = "";
     string searchType = "", pattern = "";
@@ -244,11 +268,24 @@
                 date = (f?.Length >= 1) ? f[0] : "",
                 docNo = suttaInfo.RowKey,
                 docTitle = suttaInfo.Title,
-                pages = String.Format("{0}-{1}", suttaInfo.StartPage, suttaInfo.EndPage),
+                pages = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.EndPage - suttaInfo.StartPage + 1),
                 sourceFileCode = suttaInfo.BookID,
                 sourceFile = State.dataFile.GetSourceBookInfo(suttaInfo.BookID).BookFilename
             };
             DocDisplayRecords.Add(docReportInfo);
+        }
+    }
+    /************************************************************************************/
+    //******** Grid events
+    /************************************************************************************/
+    public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args.Item.Id == "Grid_excelexport")
+        {
+            ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+            ExcelProperties.FileName = "DocumentReport.xlsx";
+            ExcelProperties.DataSource = DocDisplayRecords;
+            await this.sfgrid.ExcelExport(ExcelProperties);
         }
     }
 }

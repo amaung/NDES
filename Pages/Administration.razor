@@ -74,8 +74,9 @@
     const string _Documents = "Documents";
     const string _Activities = "Activities";
     const string _Reports = "Reports";
-    const string _UserTask = "User-Task Report";
-    const string _DocReport = "Document Report";
+    const string _UserTask = "User-Task";
+    const string _DocReport = "Document";
+    const string _Timesheet = "Timesheet";
     const string _NissayaSource = "SourceBooks";
     const string _Project = "Project";
     const string _DataPage = "DataPage";
@@ -85,11 +86,12 @@
     protected override void OnInitialized()
     {
         MenuData[0].Disabled = (componentName == "UseProfile");
-        MenuData[1].Disabled = (componentName == "Document");
+        MenuData[1].Disabled = (componentName == _Documents);
         MenuData[2].Disabled = (componentName == "TaskAssignment");
         MenuData[3].Disabled = (componentName == "Activity");
         MenuData[4].Items[0].Disabled = (componentName == _UserTask);
         MenuData[4].Items[1].Disabled = (componentName == _DocReport);
+        MenuData[4].Items[2].Disabled = (componentName == _Timesheet);
         MenuData[5].Disabled = (componentName == "NissayaSource");
         MenuData[6].Disabled = (componentName == "Project");
         State.screenID = 3;
@@ -110,6 +112,7 @@
             {
                 new MenuItem { Text = _UserTask },
                 new MenuItem { Text = _DocReport },
+                new MenuItem { Text = _Timesheet },
             }
         },
         new MenuItem { Text = _NissayaSource },
@@ -141,6 +144,9 @@
                 break;
             case _DocReport:
                 NavManager.NavigateTo(String.Format("/document_report/{0}/{1}/{2}", email, userName, userClass));
+                break;
+            case _Timesheet:
+                NavManager.NavigateTo(String.Format("/timesheetadmin/{0}/{1}/{2}", email, userName, userClass));
                 break;
             case _TaskAssignments:
                 NavManager.NavigateTo(String.Format("/task_assignment/{0}/{1}/{2}", email, userName, userClass));

@@ -98,7 +98,6 @@
     .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
         border-block-color: black;
         border-block-start-color: black;
-        /* border-bottom-color: black; */
     }
 </style>
 @****************************** End of Grid styles ******************************@
@@ -124,7 +123,7 @@
         public string HTMLStatus { get; set; } = default!;
     };
 
-   SfGrid<BookDocStatus>? sfgrid;
+    SfGrid<BookDocStatus>? sfgrid;
 
     int noBooks = 0;
     int totalPages = 0;
@@ -140,13 +139,7 @@
     protected override async Task OnInitializedAsync()
     {
         PopulateGrid();
-        SystemAdminButtonHide = "none";
-        if (userClass == "S")
-        {
-            SystemAdminButtonHide = (userClass == "S") ? "block" : "none";
-            SystemAdminButtonHide = "none";
-        }
-        return;
+        SystemAdminButtonHide = (userClass == "S") ? "block" : "none";
     }
 
     private void UploadMoreBooks()

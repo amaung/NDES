@@ -74,7 +74,7 @@
 @*********************** Button: Upload more source books ************************@
 <div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
     @* hidden="@(!hide_file_browser)"*@
-    <SfButton OnClick="@UploadMoreBooks"> Upload Additional Book Info From File  </SfButton>
+    <SfButton CssClass="e-custom2" OnClick="@UploadMoreBooks"> Upload Additional Book Info From File  </SfButton>
 </div>
 @********************* End Button: Upload more source books **********************@
 
@@ -86,7 +86,17 @@
     </SfUploader>
 </div>
 @************************ End of Upload more source books ************************@
-
+@*************************** System Admin button styles ***************************@
+<style>
+   .e-custom2 {
+        display: @ProjectAdminButtonHide;
+        /* border-radius: 25px; */
+        height: 32px;
+        color: white;
+        background: grey;
+        /* width: 120px; */
+   }
+</style>
 @********************************** Grid styles **********************************@
 <style>
     .e-grid {
@@ -141,6 +151,7 @@
     int totalPages = 0;
     bool hide_file_browser = true;
     string pdfFileName = "PDF File Name :";
+    string ProjectAdminButtonHide = "none";
 
     List<SourceBookInfo> NissayaBookRecords = new List<SourceBookInfo>();
     List<DocInfo> DocInfoRecords = new List<DocInfo>();
@@ -148,6 +159,7 @@
     protected override void OnInitialized()
     {
         PopulateGrid();
+        ProjectAdminButtonHide = (userClass == "S" || State.dataFile.PayrollAdmin()) ? "block" : "none";
     }
 
     int srno = 0;

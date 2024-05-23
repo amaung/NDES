@@ -214,6 +214,21 @@ namespace Tipitaka_DB
                             }
                         }
                         break;
+                    case "Timesheet":
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.GetEntityAsync<Timesheet>(
+                                rowKey: rowKey,
+                                partitionKey: PartitionKey
+                            ).ConfigureAwait(false);
+
+                            StatusCode = result.GetRawResponse().Status;
+                            if (StatusCode == 200)
+                            {
+                                obj = objResult = (object)result.Value;
+                            }
+                        }
+                        break;
                 }
             }
             catch(Exception e)
@@ -409,7 +424,7 @@ namespace Tipitaka_DB
                         List<Timesheet> listTimesheet = new List<Timesheet>();
                         if (tableClient != null)
                         {
-                            string filter = string.Format("(PartitionKey eq '{0}')", SubPartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<Timesheet>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -505,7 +520,6 @@ namespace Tipitaka_DB
                 {
                     ProcessCatchErrorMessage(e.Message.Split('\n'));
                 }
-
             }
             return;
         }
@@ -779,6 +793,15 @@ namespace Tipitaka_DB
                             DBErrMsg = string.Empty;
                         }
                         break;
+                    case "Timesheet":
+                        Timesheet timesheet = (Timesheet)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.UpdateEntityAsync(timesheet, timesheet.ETag).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
                 }
             }
             catch (Exception e)
@@ -820,6 +843,15 @@ namespace Tipitaka_DB
                         if (tableClient != null)
                         {
                             var result = await tableClient.DeleteEntityAsync(taskAssignmentInfo.PartitionKey, taskAssignmentInfo.RowKey).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
+                    case "Timesheet":
+                        Timesheet timesheet = (Timesheet)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.DeleteEntityAsync(timesheet.PartitionKey, timesheet.RowKey).ConfigureAwait(false);
                             StatusCode = result.Status;
                             DBErrMsg = string.Empty;
                         }

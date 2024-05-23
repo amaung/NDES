@@ -215,11 +215,13 @@ namespace NissayaEditor_Web.Data
             if (StatusCode == 200 || StatusCode == 204)
             {
                 KeyValueData keyValueData = (KeyValueData)objResult;
-                if (keyValueData.Value.Contains(docNo)) { return; }
-                // add new doc
+                // if docNo is in the list do nothing
                 List<string> list;
-                if (keyValueData.Value.Trim().Length > 0) list = keyValueData.Value.Split('|').ToList();
-                else list = new List<string>();
+                list = keyValueData.Value.Trim().Split('|').ToList();
+                if (list.Contains(docNo)) { return; }
+                // add new doc
+                //if (keyValueData.Value.Trim().Length > 0) list = keyValueData.Value.Split('|').ToList();
+                //else list = new List<string>();
                 list.Add(docNo);
                 // _Recent_ holds 10 items only
                 if (taskCategory == TaskCategories._Recent_)

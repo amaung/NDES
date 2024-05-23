@@ -1,4 +1,5 @@
 ﻿using Syncfusion.Blazor.Data;
+using Syncfusion.Blazor.DropDowns;
 using Tipitaka_DBTables;
 
 namespace Tipitaka_DB
@@ -14,57 +15,96 @@ namespace Tipitaka_DB
         //*******************************************************************
         //*** Add Timesheet
         //*******************************************************************
-        public void AddTimesheet(int idx, string userID, DateTime startTime, DateTime endTime, string docNo, 
-            string task, string desc, int startPage, int endPage)
+        public Timesheet AddTimesheet(string rowKey, DateTime selectedDate, DateTime startTime, DateTime endTime, string docNo, 
+            string task, string desc, int startPage, int endPage, string status)
         {
-            string rowKey = String.Format("{0}${1}${2}", userID, startTime.ToString("yyyy-MM-dd"), idx);
-
             Timesheet timesheet = new Timesheet()
             {
                 
                 PartitionKey = _Timesheet_,
                 RowKey = rowKey,
-                StartTime = startTime,
-                EndTime = endTime,
+                StartTime = startTime.ToUniversalTime(),
+                EndTime = endTime.ToUniversalTime(),
                 DocNo = docNo,
                 Task = task,
                 Description = desc,
                 StartPage = startPage,
-                EndPage = endPage
+                EndPage = endPage,
+                Status = status 
             };
+            InsertTableRec(timesheet).Wait();
+            return timesheet;
+        }
+        public Timesheet AddTimesheet(DateTime selectedDate, string userID, DateTime startTime, DateTime endTime, string docNo,
+            string task, string desc, int startPage, int endPage, string status)
+        {
+            Timesheet timesheet = new Timesheet()
+            {
+
+                PartitionKey = _Timesheet_,
+                RowKey = DateTime.Now.Ticks.ToString(),
+                Date = selectedDate.ToString("yyyy-MM-dd"),
+                UserID = userID,
+                StartTime = startTime.ToUniversalTime(),
+                EndTime = endTime.ToUniversalTime(),
+                DocNo = docNo,
+                Task = task,
+                Description = desc,
+                StartPage = startPage,
+                EndPage = endPage,
+                Status = status
+            };
+            InsertTableRec(timesheet).Wait();
+            return timesheet;
+        }
+        public void AddTimesheet(Timesheet timesheet)
+        {
             InsertTableRec(timesheet).Wait();
         }
         //*******************************************************************
         //*** GetTimesheet
         //*******************************************************************
-        public List<Timesheet> GetTimesheet(string userID, DateTime date1, DateTime date2)
+        public List<Timesheet> GetMonthTimesheet(string userID, int year, int mon)
         {
-            List<Timesheet> activities = new List<Timesheet>();
+            List<Timesheet> timesheets = new List<Timesheet>();
             string query = string.Empty;
-
-            string d1 = String.Format("{0}${1}$", userID, date1.ToString("yyyy-MM-dd"));
-            string d2 = String.Format("{0}${1}$~", userID, date2.ToString("yyyy-MM-dd"));
-            query += String.Format("(RowKey ge '{0}') and (RowKey lt '{1}')", d1, d2);
+            string d1 = String.Format("{0}-{1}-01", year.ToString("d4"), mon.ToString("d2"));
+            string d2 = String.Format("{0}-{1}-32", year.ToString("d4"), mon.ToString("d2"));
+            if (userID != null && userID.Length == 0) query += String.Format("(Date gt '{0}' and Date lt '{1}')", d1, d2);
+            else query += String.Format("(UserID eq '{0}' and Date ge '{1}' and Date lt '{2}')", userID, d1, d2);
 
             QueryTableRec(query).Wait();
-            activities = (List<Timesheet>)objResult;
-            activities.Reverse();
-            return activities;
+            timesheets = (List<Timesheet>)objResult;
+            foreach(Timesheet timesheet in timesheets)
+            {
+                timesheet.StartTime = timesheet.StartTime.ToLocalTime();
+                timesheet.EndTime = timesheet.EndTime.ToLocalTime();
+            }
+            return timesheets;
         }
-        public List<Timesheet> GetTimesheetMonth(string userID)
+        public List<Timesheet> GetTimesheetRange(DateTime date1, DateTime date2)
         {
-            List<Timesheet> activities = new List<Timesheet>();
-            string query = string.Empty;
-            DateTime date1 = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            DateTime date2 = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            string d1 = String.Format("{0}${1}$", userID, date1.ToString("yyyy-MM-dd"));
-            string d2 = String.Format("{0}${1}$~", userID, date2.ToString("yyyy-MM-dd"));
-            query += String.Format("(RowKey ge '{0}') and (RowKey lt '{1}')", d1, d2);
+            List<Timesheet> timesheets = new List<Timesheet>();
+            string query = String.Format("(Date ge '{0}') and (Date le '{1}')", date1.ToString("yyyy-MM-dd"), date2.ToString("yyyy-MM-dd"));
 
             QueryTableRec(query).Wait();
-            activities = (List<Timesheet>)objResult;
-            activities.Reverse();
-            return activities;
+            timesheets = (List<Timesheet>)objResult;
+            return timesheets;
+        }
+        public void UpdateTimesheet(Timesheet timesheet)
+        {
+            timesheet.StartTime = timesheet.StartTime.ToUniversalTime();
+            timesheet.EndTime = timesheet.EndTime.ToUniversalTime();
+            UpdateTableRec(timesheet).Wait();
+        }
+        public void UpdateTimesheetStatus(Timesheet timesheet)
+        {
+            UpdateTableRec(timesheet).Wait();
+            //if (timesheet != null)
+            //{
+            //    timesheet.Status = status;
+            //    UpdateTableRec (timesheet).Wait();
+            //}
         }
         //*******************************************************************
         //*** Delete Activities

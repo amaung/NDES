@@ -10,6 +10,7 @@
 @using Syncfusion.Blazor.Navigations
 @using Syncfusion.Blazor.Calendars
 @using System.Globalization
+@using System.Diagnostics
 
 @inject SfDialogService DialogService
 @inject NavigationManager NavManager
@@ -62,9 +63,28 @@
                 });
             }
         }
+        // string[] f = { "doc_1.2", "doc_1.8+"};
+        // if (f.Contains("doc_1.8"))
+        //     Console.WriteLine("");
+        //ElapsedTimeTest();
+    }
+    private async Task<string> ElapsedTimeTest()
+    {
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+            await Task.Delay(1200);
+            stopWatch.Stop();
+            TimeSpan ts = stopWatch.Elapsed;
+            long milliseconds = stopWatch.ElapsedMilliseconds;
+            int elapsedTime = (int)(stopWatch.ElapsedMilliseconds/1000);
+            string uploadServerTime = String.Format("{0}mins. {1} secs.", (int)(elapsedTime/60), elapsedTime%60);
+            string elapsedTime2 = String.Format("{0:00}:{1:00}:{2:00}.{3:0000}",
+                ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds);
+            string elapsedTime3 = String.Format("{0:00}:{1:00}.{2:0000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
+            AlertBtn(elapsedTime3, "Elapsed Time");
+            return elapsedTime2;
     }
 }
-
 @* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
 @*****************************************************************************@
 @****************************** Base Document  *******************************@
@@ -146,7 +166,7 @@
 <label style="margin-left:780px;width:200px;text-align: right;"><strong>Total: </strong>@TaskActivityRecords.Count</label>
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@TaskActivityRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
-            AllowSorting="false" AllowTextWrap="false" Toolbar="@(new List<string>() { "ExcelExport" })" Height="450" Width="1000">
+            AllowSorting="false" AllowTextWrap="true" Toolbar="@(new List<string>() { "ExcelExport" })" Height="450" Width="1000">
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>

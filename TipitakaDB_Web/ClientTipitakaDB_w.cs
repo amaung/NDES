@@ -16,6 +16,7 @@ namespace Tipitaka_DB
         ClientUserPageActivity clientUserPageActivity;
         ClientCorrectionLog clientCorrectionLog;
         ClientKeyValueData clientKeyValueData;
+        ClientTimesheet clientTimesheet;
         //public UserProfile? loggedinUser = null;
 
         //public ClientTipitakaDBLogin GetClientTipitakaDBLogin() { return clientTipitakaDBLogin; }
@@ -31,6 +32,7 @@ namespace Tipitaka_DB
         public ClientKeyValueData GetClientKeyValueData() { return clientKeyValueData; }
         public ClientSourceBookInfo GetClientSourceBookInfo() { return clientSourceBookInfo; }
         public ClientCorrectionLog GetClientCorrectionLog() { return clientCorrectionLog; }
+        public ClientTimesheet GetClientTimesheet() { return clientTimesheet; }
         public ClientTipitakaDB_w() : base("TipitakaDB")
         {
             //clientTipitakaDBLogin = new ClientTipitakaDBLogin();
@@ -45,6 +47,7 @@ namespace Tipitaka_DB
             clientKeyValueData = new ClientKeyValueData(this);
             clientSourceBookInfo = new ClientSourceBookInfo(this);
             clientCorrectionLog = new ClientCorrectionLog();
+            clientTimesheet = new ClientTimesheet();
         }
         public void Login(string userID, string password, string userClass)
         {

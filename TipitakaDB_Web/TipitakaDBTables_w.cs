@@ -146,6 +146,8 @@ namespace Tipitaka_DBTables
     {
         public string PartitionKey { get; set; } = "Timesheet";
         public string RowKey { get; set; } = default!;  // userID $ date $ tickcount
+        public string Date { get; set; } = default!;
+        public string UserID { get; set; } = default!;
         public DateTime StartTime { get; set; } = default!;
         public DateTime EndTime { get; set; } = default!;
         public string DocNo { get; set; } = default!;
@@ -153,7 +155,7 @@ namespace Tipitaka_DBTables
         public string Description { get; set; } = default!;
         public int StartPage { get; set; } = default!;
         public int EndPage { get; set; } = default!;
-        public string status { get; set; } = default!;
+        public string Status { get; set; } = default!;
         public ETag ETag { get; set; } = default!;
         public DateTimeOffset? Timestamp { get; set; } = default!;
     }
@@ -195,6 +197,7 @@ namespace Tipitaka_DBTables
         public const string _Edit_ = "Edit";
         public const string _EditUpload_ = "Edit-Upload";
         public const string _HTML_ = "HTML";
+        public const string _DocTask_ = "Doc-Task Related";
         public const string _ProgectManagement_ = "Progect Management";
         public const string _Others_ = "Others";
     }

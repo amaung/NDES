@@ -80,6 +80,7 @@ namespace NissayaEditor_Web.Data
         ClientSourceBookInfo? clientSourceBookInfo = null;
         ClientTaskAssignmentInfo? clientTaskAssignmentInfo = null;
         ClientCorrectionLog? clientCorrectionLog = null;
+        ClientTimesheet? clientTimesheet = null;
         //TipitakaFileStorage? tipitakaFileStorage = new TipitakaFileStorage();
         //Dictionary<string, SuttaInfo> dictSuttaInfo = new Dictionary<string, SuttaInfo>();
 
@@ -89,6 +90,7 @@ namespace NissayaEditor_Web.Data
         public ClientTaskActivityLog? GetClientTaskActivityLog() { return clientTaskActivityLog; }
         public ClientActivityLog? GetClientActivityLog() { return clientActivityLog; }
         public ClientSuttaInfo? GetClientSuttaInfo() { return clientSuttaInfo; }
+        public ClientTimesheet? GetClientTimesheet() { return clientTimesheet; }
         public DataFile(ClientTipitakaDB_w? clientUserTipitakaDB)
         {
             if (clientUserTipitakaDB != null)
@@ -119,6 +121,7 @@ namespace NissayaEditor_Web.Data
                 this.clientSourceBookInfo = clientUserTipitakaDB.GetClientSourceBookInfo();
                 this.clientTaskAssignmentInfo = clientUserTipitakaDB.GetClientTaskAssignmentInfo();
                 this.clientCorrectionLog = clientUserTipitakaDB.GetClientCorrectionLog();
+                this.clientTimesheet = clientUserTipitakaDB.GetClientTimesheet();
             }
         }
         public void ClearPageData() { Pages = new Dictionary<string, List<NIS>>(); }
@@ -653,7 +656,7 @@ namespace NissayaEditor_Web.Data
                     clientKeyValueData.AddUserDocByCategory(email, TaskCategories._Recent_, DocID);
                     clientKeyValueData.AddUserDocByCategory(email, TaskCategories._Completed_, DocID);
                 }
-                desc = String.Format("{0} uploaded. @s = {1}, ?s = {2}", DocID, AtCount, QCount);
+                desc = String.Format("{0} uploaded. @'s = {1}, ?'s = {2} ({3})", DocID, AtCount, QCount, dictUserTask["ServerUploadTime"]);
             }
             else { userStatus = String.Format("{0}%", (int) (newSubmittedPages * 100.0 / pages )); }
             AddTaskActivityLog(DocID, email, dictUserTask["Task"], pages, totalSubmitted, pagesToSubmit, desc);
@@ -1132,6 +1135,10 @@ namespace NissayaEditor_Web.Data
         public List<SuttaInfo> GetSuttaList(string searchType, string matchPattern = "", string userClass = "U")
         {
             string query = "";
+            if (searchType == "All" && clientSuttaInfo != null)
+            {
+                return clientSuttaInfo.QuerySuttaInfo(query);
+            }
             nextStartingIndex = 0;
             List<SuttaInfo> suttaList = new List<SuttaInfo>();
             if (searchType == TaskCategories._Recent_ || (userClass == "U" && 
@@ -1604,29 +1611,18 @@ namespace NissayaEditor_Web.Data
                               where user.RowKey == email select user.Name_E).ToList();
             return userName.Count == 0 ? "" : userName[0];
         }
-        public string GetFileName()
+        public string GetUserID(string userName)
         {
-            //OpenFileDialog dlg = new OpenFileDialog(); 
-            // dlg.Title = 'Open text file' ; 
-            // dlg.InitialDirectory = @'c:\' ; 
-            // dlg.Filter = 'txt files (*.txt)|*.txt|All files (*.*)|*.*' ; 
-
-            // if(dlg.ShowDialog() == DialogResult.OK) 
-            // { 
-            // 	StreamReader sr = File.OpenText(dlg.FileName);
-
-            // 	string s = sr.ReadLine();
-            // 	StringBuilder sb = new StringBuilder();
-            // 	while (s != null)
-            // 	{
-            // 		sb.Append(s);
-            // 		s = sr.ReadLine();
-            // 	}
-            // 	sr.Close();
-            // 	textBox1.Text = sb.ToString();
-            // }
-            // this.UploadObj.DirectoryUpload = true;
-            // await this.UploadObj.UploadAsync();
+            if (userName == "System Admin") return "dhammayaungchi2011@gmail.com";
+            List<UserProfile> AllUserProfiles = new List<UserProfile>();
+            if (AllUserProfiles.Count == 0) AllUserProfiles = GetAllUserProfiles();
+            var userID = (from user in AllUserProfiles
+                            where user.Name_E == userName
+                            select user.RowKey).ToList();
+            if (userID.Count > 0)
+            {
+                return "";
+            }
             return "";
         }
         //***************************************************************************************
@@ -1767,7 +1763,7 @@ namespace NissayaEditor_Web.Data
                         listSrcDocs = sourceBookInfo.DocNos.Trim().Split(',').ToList();
                     foreach (string doc in listDoc)
                     {
-                        if (!sourceBookInfo.DocNos.Contains(doc))
+                        if (!listSrcDocs.Contains(doc))
                         {
                             //separator = (sourceBookInfo.DocNos.Length == 0) ? "" : ",";
                             //totalPages += TotalPagesInDocs(listDoc);
@@ -1887,6 +1883,15 @@ namespace NissayaEditor_Web.Data
             {
                 clientKeyValueData.AddUserDocByCategory(email, TaskCategories._Recent_, DocID);
             }
+        }
+        public bool PayrollAdmin()
+        {
+            if (clientKeyValueData != null)
+            {
+                KeyValueData p = clientKeyValueData.GetKeyValueData("Payroll-Department");
+                return p != null && p.Value != null && p.Value.Contains(email);
+            }
+            return false;
         }
         //***************************************************************************************
         //*** JSON functions

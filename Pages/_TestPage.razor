@@ -1,0 +1,149 @@
+﻿@page "/test-page"
+@using System.Timers
+@using Syncfusion.Blazor.Calendars
+
+@implements IDisposable
+@inject ILogger<_TestPage> Logger 
+@inject NavigationManager uriHelper 
+
+<h1>After Render Example</h1>
+
+<p>
+    <button @onclick="HandleClick">Log information (and trigger a render)</button>
+</p>
+
+<p>Study logged messages in the console.</p>
+<br/>
+<p>Current count: @currentCount</p>
+<br/>
+<div class="control-wrapper">
+        <SfCalendar TValue="DateTime?" @ref="sfcalendar" Min='@MinDate' @bind-Value='@DateValue' Max='@MaxDate' FirstDayOfWeek=1>
+            <CalendarEvents TValue="DateTime?" OnRenderDayCell="CustomDates"></CalendarEvents>
+        </SfCalendar>
+</div>
+<style>
+    .e-calendar .e-content .e-cell.personal-appointment span.e-day,
+    .e-calendar .e-content td:hover.e-cell.timesheet-data span.e-day,
+    .e-calendar .e-content td.e-selected.e-focused-date.e-cell.timesheet-data span.e-day {
+        color: #28a745;
+        color: white;
+        color: blue;
+        color: brown;
+        /* color: yellow; */
+        /* background-color: grey; */
+        background: yellow;
+        background: blue;
+        background: AliceBlue;
+        font-weight: 800;
+    }
+</style>
+@code {
+
+    SfCalendar<DateTime?> sfcalendar;
+    public DateTime MinVal { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 06, 00, 00);
+    public DateTime MinDate {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month-1, 1);
+    public DateTime MaxDate {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+    public DateTime? DateValue {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+    HashSet<string> timesheetMonDay = new HashSet<string>();
+    int n = 1;
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        Logger.LogInformation("OnAfterRender: firstRender = {FirstRender}", firstRender);
+    }
+
+    private void HandleClick()
+    {
+        Logger.LogInformation("HandleClick called");
+    }
+
+    private int currentCount = 0;
+    private Timer timer = new(1000);
+
+    protected override void OnInitialized()
+    {
+        timesheetMonDay.Add("05-02");
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+
+    private void OnTimerCallback()
+    {
+        timesheetMonDay.Add(String.Format("05-{0}", (++n).ToString("d2")));
+        // if (dictCellData.ContainsKey(n))
+        // {
+        //     RenderDayCellEventArgs args = dictCellData[n];
+        //     CustomDates(args);
+        // }
+        RenderDayCellEventArgs args = dictCellData["05-02"]; //new RenderDayCellEventArgs();
+        if (!args.CellData.ClassList.Contains("personal-appointment")) 
+        {
+            args.CellData.ClassList += " personal-appointment";
+        }
+        // foreach(int key in dictCellData.Keys)
+        // {
+        //     if (dictCellData[key].Date.Month == 5 && dictCellData[key].Date.Day == 2)
+        //     {
+        //         args = dictCellData[key];
+
+        //     }
+        // }
+        if (args.CellData == null)
+            Console.WriteLine();
+        DateValue = new DateTime(((DateTime)DateValue).Year, ((DateTime)DateValue).Month, n);
+        // ChangeEventArgs<DateTime, int> args = new Change 
+        _ = InvokeAsync(() =>
+        {
+            currentCount++;
+            // Dispose();
+            //args = dictCellData[2];
+            LogOutput("In Timer Before", args);
+            if (!args.CellData.ClassList.Contains("personal-appointment")) 
+            {
+                args.CellData.ClassList += " personal-appointment";
+                Logger.LogInformation(args.CellData.CellID);
+                Logger.LogInformation(args.CellData.ClassList);
+
+            }
+            LogOutput("In Timer After", args);
+            if (n > 10) Dispose();
+
+            StateHasChanged();
+            // uriHelper.NavigateTo("/test-page");
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+
+    Dictionary<string, RenderDayCellEventArgs> dictCellData = new Dictionary<string, RenderDayCellEventArgs>();
+
+    public void CustomDates(RenderDayCellEventArgs args)
+    {
+        string md = String.Format("{0}-{1}", args.Date.Month.ToString("d2"), args.Date.Day.ToString("d2"));
+        if (md == "05-02")
+        {
+            dictCellData[md] = args;
+            // LogOutput("CustomDates1", args);
+            // if (timesheetMonDay.Contains(md)) {
+            //     if (!args.CellData.ClassList.Contains("personal-appointment")) 
+            //         args.CellData.ClassList += " personal-appointment";
+            // LogOutput("CustomDates2", args);
+            // }
+        }
+    }
+    private void LogOutput(string title, RenderDayCellEventArgs args)
+    {
+        Logger.LogInformation(title);
+        Logger.LogInformation("---------------------------------------------------------------");
+        Logger.LogInformation(String.Format("args.CellData.CellID = {0}", args.CellData.CellID));
+        Logger.LogInformation("args.CellData.ClassList = " + args.CellData.ClassList);
+        Logger.LogInformation("args.CellData.CurrentDate = " + args.CellData.CurrentDate.ToString("yyyy-MM-dd"));
+        Logger.LogInformation("args.CellData.Element = {0}", args.CellData.Element);
+        // Logger.LogInformation("args.CellData.lement.Id = " + args.CellData.Element.Id);
+        Logger.LogInformation("args.Name = " + args.Name);
+        Logger.LogInformation("args.Date = " + args.Date.ToString("yyyy-MM-dd"));
+    }
+}

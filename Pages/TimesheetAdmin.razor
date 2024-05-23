@@ -1,4 +1,4 @@
-﻿@page "/timesheetuser/{email}/{userName}/{userClass}"
+﻿@page "/timesheetadmin/{email}/{userName}/{userClass}"
 
 @using Syncfusion.Blazor.Inputs
 @using Syncfusion.Blazor.Buttons
@@ -40,7 +40,7 @@
         TaskCategories._Edit_,
         TaskCategories._EditUpload_,
         TaskCategories._HTML_,
-        TaskCategories._DocTask_,
+        TaskCategories._ProgectManagement_,
         TaskCategories._Others_
     };
     List<DataItem> TaskList = new List<DataItem>();
@@ -49,51 +49,33 @@
     //***********************************************************************
     protected override async Task OnInitializedAsync()
     {
-        if (State.dataFile != null) 
-        {
-            userSuttaListRecent = State.dataFile.GetRecentSuttaList(TaskCategories._Recent_, userClass);
-            string separator = "";
-            foreach(SuttaInfo suttaInfo in userSuttaListRecent)
-            {
-                // if (separator == "" && recentDocNos.Length > 0) separator = ", ";
-                // recentDocNos += separator + suttaInfo.RowKey;
-                DocNoList.Add(new DataItem()
-                {
-                    Id = suttaInfo.RowKey,
-                    Text = suttaInfo.RowKey
-                });
-            }
-            DocNoList.Add(new DataItem()
-                {
-                    Id = "Others",
-                    Text = "Others"
-                });
-
-            foreach(string item in TaskItems) 
-                TaskList.Add(new DataItem()
-                {
-                    Id = item,
-                    Text = item
-                });
-        }
         ClientTimesheet? clientTimesheet = State.dataFile.GetClientTimesheet();
         if (clientTimesheet != null)
         {
-            listMonthTimesheet = clientTimesheet.GetMonthTimesheet(email, DateTime.Now.Year, DateTime.Now.Month);
+            listMonthTimesheet = clientTimesheet.GetMonthTimesheet("", DateTime.Now.Year, DateTime.Now.Month);
             
             if (DateTime.Now.Month > 1)
-                listLastMonthTimesheet = clientTimesheet.GetMonthTimesheet(email, DateTime.Now.Year, DateTime.Now.Month-1);
+                listLastMonthTimesheet = clientTimesheet.GetMonthTimesheet("", DateTime.Now.Year, DateTime.Now.Month-1);
             else
-                listLastMonthTimesheet = clientTimesheet.GetMonthTimesheet(email, DateTime.Now.Year-1, 12);
+                listLastMonthTimesheet = clientTimesheet.GetMonthTimesheet("", DateTime.Now.Year-1, 12);
 
             listMonthTimesheet.AddRange(listLastMonthTimesheet);
 
             LoadSelectedViewTimesheet(); //(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
         }
+        UserList = new List<DataItem>() { new DataItem() { Id = "select", Text = "select" }};
+        HashSet<string> userIDs = new HashSet<string>();
         foreach(Timesheet timesheet in listMonthTimesheet)
         {
-            if (timesheet.Date == "2024-05-01")
-                Console.WriteLine("");
+            if (!userIDs.Contains(timesheet.UserID))
+            {
+                userIDs.Add(timesheet.UserID);
+                UserList.Add(new DataItem()
+                {
+                    Id = timesheet.UserID,
+                    Text = State.dataFile.GetUserName(timesheet.UserID)
+                });
+            }
             string md = timesheet.Date.Substring(5);
             if (!timesheetMonDay.Contains(md)) timesheetMonDay.Add(md);
         }
@@ -110,22 +92,28 @@
             });
     }
 }
+@* *************************************************************************** *@
+@* ***************************** Base Component ****************************** *@
+@* *************************************************************************** *@
+<Administration componentName="Timesheet" email=@email userName=@userName userClass=@userClass flex_width="850px">
+    <adminMenuItem>Timesheet</adminMenuItem>
+</Administration>
 
-<div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
+@* <div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
     <div class="menu-control">
         <SfMenu Items="@MenuData">
             <MenuEvents TValue="MenuItem" ItemSelected="menuitemSelected"></MenuEvents>
         </SfMenu>
     </div>
-</div>
+</div> *@
 @* Menu style
 https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-for-sub-items
 *@
 
-<br/>
+@* <br/>
 <label style="font-size:20px"><strong>Timesheet</strong></label>
 <label style="width:870px;text-align:right;">User: @userName</label>
-<br/>
+<br/> *@
 <div class="control-wrapper">
         <SfCalendar TValue="DateTime?" @ref="sfcalendar" Min='@MinDate' Value='@DateValue' Max='@MaxDate' FirstDayOfWeek=1>
             <CalendarEvents TValue="DateTime?" OnRenderDayCell="CustomDates" ValueChange="CalendarValuechangeHandler"></CalendarEvents>
@@ -133,26 +121,52 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         </SfCalendar>
 </div>
 <br/><br/>
-<label style="font-size:18px;">View : </Label>
-<select name="viewtype" id="script-select" @onchange="@ViewChanged" style="height:26px; width:120px">
-    <option value="Day" selected>Day</option>
-    <option value="Week">Week</option>
-    <option value="Month">Month</option>
-</select>
-<br/><br/>
+<div style="width:1000px;">
+    <div style="display:inline-block; width:25%;">
+        <label style="font-size:18px;">View : </Label>
+        <select name="viewtype" id="script-select" @onchange="@ViewChanged" style="height:30px; width:120px">
+            <option value="Day" selected>Day</option>
+            <option value="Week">Week</option>
+            <option value="Month">Month</option>
+        </select>
+    </div>
+    <div style="display:inline-block; width:50%;">
+        <label style="font-size:18px;">User :</label>
+        <Select id="user_select" style="height:30px;width:200px;" @onchange="OnUserChanged">
+        @* <Select  id="user_select" style="height:30px;width:200px;" @bind-Value="selectedUserName"> *@
+            @* ValueChanged="@((string value) => OnUserChanged(value ))"> *@
+            @* @onchange="OnUserChanged"> *@
+            @* onchange="@((string value) => OnUserChanged(value ))"> *@
+            @* ValueChanged="@((string value) => OnUserChanged(value ))"> *@
+            @* "@OnUserChanged"> *@
+            @foreach (var user in UserList)
+            {
+                <option value="@user.Id">@user.Text</option>
+            }
+        </Select >
+        <SfButton style="width:75px; height:30px; padding-top:1px; margin-left:40px;" IsPrimary="true" OnClick="@LoadSelectedViewTimesheet">Show</SfButton>
+        @* <button style="width:75px; height:30px;">Show</button> *@
+        @* <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="selectedUserName" Placeholder="Select user"
+                        MultiSelectMode="None" PopupHeight="200px" DataSource="@UserList">
+            <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@UserChangeHandler"></DropDownListEvents>
+            <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
+        </SfDropDownList> *@
+    </div>
+</div>
+<br/>
 <h5>@selectedDate</h5>
 <div style="padding-top:15px; padding-bottom:12px">
-<label style="width:420px; margin-left:10px; text-align:left;">Hours : @hoursWorked</label>
-<label style="width:150px;">Status : @timesheetStatus</label>
-<label style="width:400px; text-align:right;">Pages : @pagesWorked</label>
+    <label style="width:420px; margin-left:10px; text-align:left;">Hours : @hoursWorked</label>
+    <label style="width:150px;">Status : Submitted @timesheetStatus</label>
+    <label style="width:383px; text-align:right;">Pages : @pagesWorked</label>
 </div>
 @***************************************************************************************@
 @*********************************** Timesheet DataGrid ********************************@
 @***************************************************************************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@TimesheetInfoRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete" })" AllowTextWrap="false" Height="250" Width="1000">
-            @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
+    <SfGrid ID="Grid" DataSource="@TimesheetInfoRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowSelection="true"
+            Toolbar="@(new List<string>() { "ExcelExport" })" AllowExcelExport="true" AllowSorting="true" AllowTextWrap="false" Height="450" Width="1000">
+            @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete" })" AllowTextWrap="false" Height="380" Width="1000"> *@
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="@EditMode.Normal" Dialog="DialogParams">
         </GridEditSettings>
@@ -177,9 +191,9 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     </SfGrid>
 </div>
 <br>
-<div style="margin-left:465px">
+@* <div style="margin-left:475px">
     <SfButton IsPrimary="true" @onclick="onSubmitTimesheet">Submit</SfButton>
-</div>
+</div> *@
 @* *************************************************************************** *@
 @* ************************* New doc info SfDialog *************************** *@
 @* *************************************************************************** *@
@@ -369,8 +383,8 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         public string docNo { get; set; }
         public string task { get; set; }
         public string description { get; set; }
-        public int? startPage { get; set; } = 0;
-        public int? endPage { get; set; } = 0;
+        public int? startPage { get; set; }
+        public int? endPage { get; set; }
         public int pages { get; set; }
         public string pageNos { get; set; }
         public string status { get; set; }
@@ -428,6 +442,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     }
     enum GridAction { NA, Add, Edit, Delete };
     GridAction userGridAction = GridAction.NA;
+    Dictionary<string, List<TimesheetInfo>> dictUserTimesheetInfo = new Dictionary<string, List<TimesheetInfo>>();
     // Calendar code
     public DateTime MinVal { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 06, 00, 00);
     public DateTime MinDate {get;set;} = new DateTime(DateTime.Now.Year, DateTime.Now.Month-1, 1);
@@ -442,26 +457,28 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     SfCalendar<DateTime?> sfcalendar;
     List<TimesheetInfo> TimesheetInfoRecords = new List<TimesheetInfo>();
     List<TimesheetInfo> DeletedTimesheetInfo = new List<TimesheetInfo>();
-
+    List<DataItem> UserList = new List<DataItem>();
+    
     List<Timesheet> listMonthTimesheet = new List<Timesheet>();
     List<Timesheet> listLastMonthTimesheet = new List<Timesheet>();
 
     public DateTime selectedDateTime = DateTime.Now;
     string selectedDate = DateTime.Now.ToString("MMM d, yyyy");
-    // string selectedDateForTimesheet = DateTime.Now.ToString("yyyy-MM-dd");
     public DateTime? CurrentDate { get; set; } = DateTime.Now;
     string selectedViewType = "Day";
+    DataItem selectedUserItem = new DataItem();
+    string selectedUserName = "";
     bool IsVisible_TimesheetDialog = false;
  
     TimesheetInfo selectedTimesheetInfo = new TimesheetInfo();
     TimesheetInfo origSelectedTimesheetInfo = new TimesheetInfo();
-    string timesheetStatus = "New";
+    string timesheetStatus = "";
     float hoursWorked = 0F;
     int pagesWorked = 0;
     public string? DocNoValue { get; set; } = "";
     public string? TaskValue { get; set; } = "";
     public string? Description { get; set; } = "";
-    public int? StartPage = 0, EndPage = 0;
+    public int? StartPage, EndPage;
     public string? timeSheetEntryErrMsg { get; set; } = "";
     public HashSet<int> timesheetDays = new HashSet<int>() { 1, 2 };
     public HashSet<string> timesheetMonDay = new HashSet<string>();
@@ -478,42 +495,36 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         {
             selectedDateTime = val;
             selectedDate = val.ToString("MMM d, yyyy");
-            // selectedDateForTimesheet = val.ToString("yyyy-MM-dd");
             DateValue = args.Value;
             prevDate = args.Value;
-            LoadSelectedViewTimesheet();
+            //LoadSelectedViewTimesheet();
             // LoadSelectedDayTimesheet(selectedDateTime, selectedDateTime);
         }
     }
     public void ViewChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
     {
         selectedViewType = (string)e.Value;
-        LoadSelectedViewTimesheet();
+        //LoadSelectedViewTimesheet();
     }
+    Dictionary<string, RenderDayCellEventArgs> dictCellData = new  Dictionary<string, RenderDayCellEventArgs>();
     //https://www.syncfusion.com/forums/184535/is-there-a-way-to-set-datetime-to-now-when-clicked-on-today-button-in-datetimepicker
     public void CustomDates(RenderDayCellEventArgs args)
     {
-        //var CurrentMonth = CurrentDate.Value.Month;
+        var CurrentMonth = CurrentDate.Value.Month;
         string md = String.Format("{0}-{1}", args.Date.Month.ToString("d2"), args.Date.Day.ToString("d2"));
+        dictCellData[md] = args;
         // if (args.Date.Month == CurrentMonth && timesheetDays.Contains(args.Date.Day)) {
         //     args.CellData.ClassList += " personal-appointment";
         // }
         if (timesheetMonDay.Contains(md)) {
-            args.CellData.ClassList += " personal-appointment";
+            if (!args.CellData.ClassList.Contains("personal-appointment"))
+                args.CellData.ClassList += " personal-appointment";
         }
-        
-        // if (args.Date.Month == CurrentMonth && (args.Date.Day == 7 || args.Date.Day == 14 || args.Date.Day == 24 || args.Date.Day == 29)) {
-        //     args.CellData.ClassList += " personal-appointment";
-        // }
-        // if (args.Date.Month == CurrentMonth && (args.Date.Day == 3 || args.Date.Day == 11 || args.Date.Day == 17 || args.Date.Day == 22))
-        // {
-        //     args.CellData.ClassList += " official-appointment";
-        // }
     }
     private void OnValueSelecthandler(SelectEventArgs<DataItem> args)
     {
         // Here, you can customize your code.
-        timeSheetEntryErrMsg = Description = String.Empty;
+        timeSheetEntryErrMsg = String.Empty;
         var dt = (DataItem)args.ItemData;
         var docList = (from item in userSuttaListRecent 
                   where item.RowKey == dt.Text 
@@ -524,6 +535,11 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     private void LoadSelectedViewTimesheet()
     {
         int idxDay = (int)selectedDateTime.DayOfWeek;
+        if (dictCellData.ContainsKey("05-01"))
+        {
+            timesheetMonDay.Add("05-01");
+            CustomDates(dictCellData["05-01"]); //.CellData.ClassList += " personal-appointment";
+        }
         switch(selectedViewType)
         {
             case "Day":
@@ -552,53 +568,116 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     }
     private void LoadSelectedDayTimesheet(DateTime dt1, DateTime dt2)
     {
-        string firstDay = String.Format("{0:D4}-{1:D2}-{2:D2}", dt1.Year, dt1.Month, dt1.Day);
-        string lastDay =  String.Format("{0:D4}-{1:D2}-{2:D2}", dt2.Year, dt2.Month, dt2.Day);
-        timesheetStatus = "New";
-        hoursWorked = 0F;
-        pagesWorked = 0;
-        TimesheetInfoRecords = new List<TimesheetInfo>();
-        if (listMonthTimesheet.Count > 0)
+        timesheetStatus = "";
+        List<TimesheetInfo> timesheetInfoList = GetUserTimesheetInfo();
+        if (timesheetInfoList.Count > 0)
         {
-            var timesheetList = (from item in listMonthTimesheet 
-                where String.Compare(item.Date, firstDay) >= 0 &&
-                      String.Compare(lastDay, item.Date) >= 0 
+            RenderDayCellEventArgs args = new RenderDayCellEventArgs();
+            string lastDay =  String.Format("{0:D4}-{1:D2}-{2:D2}", dt2.Year, dt2.Month, dt2.Day);
+            string firstDay = String.Format("{0:D4}-{1:D2}-{2:D2}", dt1.Year, dt1.Month, dt1.Day);
+            var list = (from item in timesheetInfoList 
+                where String.Compare(item.date, firstDay) >= 0 &&
+                      String.Compare(lastDay, item.date) >= 0 
                         select item).ToList();
-            if (timesheetList.Count > 0) 
+
+            hoursWorked = 0F;
+            pagesWorked = 0;
+            foreach(TimesheetInfo timesheet in list)
             {
-                foreach(Timesheet timesheet in timesheetList)
-                {
-                    DateTime sTime = timesheet.StartTime;
-                    DateTime eTime = timesheet.EndTime;
-                    TimeSpan dt = eTime - sTime;
-                    float deltaTime = (float)dt.Hours + dt.Minutes/60;
-                    int day = Int32.Parse(timesheet.Date.Substring(8));
-                    hoursWorked += deltaTime;
-                    pagesWorked += timesheet.EndPage - timesheet.StartPage + 1;
-                    string hrs = String.Format("{0}-{1} ({2})", sTime.ToString("HH:mm"), eTime.ToString("HH:mm"), deltaTime);
-                    TimesheetInfoRecords.Add(new TimesheetInfo()
-                    {
-                        rowKey = timesheet.RowKey,
-                        date = timesheet.Date,
-                        userID = timesheet.UserID,
-                        dayOfMonth = day,
-                        hours = hrs,
-                        startTime = sTime,
-                        endTime = eTime,
-                        docNo = timesheet.DocNo,
-                        task = timesheet.Task,
-                        description = timesheet.Description,
-                        startPage = timesheet.StartPage,
-                        endPage = timesheet.EndPage,
-                        pages = timesheet.EndPage - timesheet.StartPage + 1,
-                        pageNos = String.Format("{0}-{1} ({2})", timesheet.StartPage, timesheet.EndPage, 
-                                    timesheet.EndPage - timesheet.StartPage + 1),
-                        status = timesheet.Status,
-                    });
-                    timesheetStatus = timesheet.Status;
-                }
+                DateTime sTime = (DateTime)timesheet.startTime;
+                DateTime eTime = (DateTime)timesheet.endTime;
+                TimeSpan dt = eTime - sTime;
+                float deltaTime = (float)dt.Hours + dt.Minutes/60;
+                hoursWorked += deltaTime;
+                pagesWorked += (int)(timesheet.endPage - timesheet.startPage + 1);
             }
+            TimesheetInfoRecords = list;
+            // if (timesheetList.Count > 0) 
+            // {
+            //     foreach(Timesheet timesheet in timesheetList)
+            //     {
+            //         DateTime sTime = timesheet.StartTime;
+            //         DateTime eTime = timesheet.EndTime;
+            //         TimeSpan dt = eTime - sTime;
+            //         float deltaTime = (float)dt.Hours + dt.Minutes/60;
+            //         int day = Int32.Parse(timesheet.Date.Substring(8));
+            //         hoursWorked += deltaTime;
+            //         pagesWorked += timesheet.EndPage - timesheet.StartPage + 1;
+            //         string hrs = String.Format("{0}-{1} ({2})", sTime.ToString("HH:mm"), eTime.ToString("HH:mm"), deltaTime);
+            //         TimesheetInfoRecords.Add(new TimesheetInfo()
+            //         {
+            //             rowKey = timesheet.RowKey,
+            //             date = timesheet.Date,
+            //             userID = timesheet.UserID,
+            //             dayOfMonth = day,
+            //             hours = hrs,
+            //             startTime = sTime,
+            //             endTime = eTime,
+            //             docNo = timesheet.DocNo,
+            //             task = timesheet.Task,
+            //             description = timesheet.Description,
+            //             startPage = timesheet.StartPage,
+            //             endPage = timesheet.EndPage,
+            //             pages = timesheet.EndPage - timesheet.StartPage + 1,
+            //             pageNos = String.Format("{0}-{1} ({2})", timesheet.StartPage, timesheet.EndPage, 
+            //                         timesheet.EndPage - timesheet.StartPage + 1),
+            //             status = timesheet.Status,
+            //         });
+            //         timesheetStatus = timesheet.Status;
+            //     }
+            // }
         }
+    }
+    private List<TimesheetInfo> GetUserTimesheetInfo()
+    {
+        List<TimesheetInfo> timesheetInfoList = new List<TimesheetInfo>();
+        if (selectedUserItem.Text.Length == 0) return timesheetInfoList;
+        string userID = selectedUserItem.Id;
+        if (dictUserTimesheetInfo.ContainsKey(userID))
+        {
+            // data has been already processed; just return the data
+            return dictUserTimesheetInfo[userID];
+        }
+        // process data 
+        var timesheetList = (from item in listMonthTimesheet 
+                  where item.UserID == userID
+                  select item).ToList();
+        if (timesheetList.Count > 0) 
+        {
+            foreach(Timesheet timesheet in timesheetList)
+            {
+                DateTime sTime = timesheet.StartTime;
+                DateTime eTime = timesheet.EndTime;
+                TimeSpan dt = eTime - sTime;
+                float deltaTime = (float)dt.Hours + dt.Minutes/60;
+                int day = Int32.Parse(timesheet.Date.Substring(8));
+                hoursWorked += deltaTime;
+                pagesWorked += timesheet.EndPage - timesheet.StartPage + 1;
+                string hrs = String.Format("{0}-{1} ({2})", sTime.ToString("HH:mm"), eTime.ToString("HH:mm"), deltaTime);
+                timesheetInfoList.Add(new TimesheetInfo()
+                {
+                    rowKey = timesheet.RowKey,
+                    date = timesheet.Date,
+                    userID = timesheet.UserID,
+                    dayOfMonth = day,
+                    hours = hrs,
+                    startTime = sTime,
+                    endTime = eTime,
+                    docNo = timesheet.DocNo,
+                    task = timesheet.Task,
+                    description = timesheet.Description,
+                    startPage = timesheet.StartPage,
+                    endPage = timesheet.EndPage,
+                    pages = timesheet.EndPage - timesheet.StartPage + 1,
+                    pageNos = String.Format("{0}-{1} ({2})", timesheet.StartPage, timesheet.EndPage, 
+                                timesheet.EndPage - timesheet.StartPage + 1),
+                    status = timesheet.Status,
+                });
+            }
+            dictUserTimesheetInfo[userID] = timesheetInfoList;
+        }
+
+        return timesheetInfoList;
     }
     public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
@@ -630,9 +709,6 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             {
                 userGridAction = GridAction.Edit;
                 origSelectedTimesheetInfo = new TimesheetInfo(selectedTimesheetInfo);
-                // StartTimeValue = EndTimeValue = null;
-                // DocNoValue = TaskValue = Description = null;
-                // StartPage = EndPage = null;
                 IsVisible_TimesheetDialog = true;
                 args.Cancel = true;
             }
@@ -640,11 +716,13 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             {
                 userGridAction = GridAction.Delete;
                 origSelectedTimesheetInfo = new TimesheetInfo(selectedTimesheetInfo);
-                // StartTimeValue = EndTimeValue = null;
-                // DocNoValue = TaskValue = Description = null;
-                // StartPage = EndPage = null;
-                // IsVisible_TimesheetDialog = true;
-                // args.Cancel = true;
+            }
+            if (args.Item.Id == "Grid_excelexport")
+            {
+                ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+                ExcelProperties.FileName = "TimesheetReport.xlsx";
+                ExcelProperties.DataSource = TimesheetInfoRecords;
+                await this.sfgrid.ExcelExport(ExcelProperties);
             }
        }
     }
@@ -674,16 +752,12 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         if (StartPage == null || EndPage == null)
         {
-            if (TaskValue == "Others") StartPage = EndPage = 0;
-            else 
-            {
-                timeSheetEntryErrMsg = "Error: Start or end page not entered.";
-                return;
-            }
+            timeSheetEntryErrMsg = "Error: Start or end page not entered.";
+            return;
         }
-        if (EndPage < StartPage)
+        if (EndPage <= StartPage)
         {
-            timeSheetEntryErrMsg = "Error: End page must be greater than or equal to start page.";
+            timeSheetEntryErrMsg = "Error: End page must be greater than start page.";
             return;
         }
 
@@ -711,8 +785,6 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         list.Add(new TimesheetInfo()
         {
             rowKey = "",
-            date = selectedDateTime.ToString("yyyy-MM-dd"),
-            userID = email,
             dayOfMonth = currentDay,
             hours = hrs,
             startTime = StartTimeValue,
@@ -722,7 +794,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             description = Description,
             startPage = (int)StartPage,
             endPage = (int)EndPage,
-            pages = (StartPage == 0 && EndPage == 0) ? 0 : (int)(EndPage - StartPage + 1),
+            pages = (int)(EndPage! - StartPage! + 1),
             pageNos = String.Format("{0}-{1}", (int)StartPage, (int)EndPage),
             status = "Added"
         });
@@ -762,7 +834,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         selectedTimesheetInfo.description = Description;
         selectedTimesheetInfo.startPage = StartPage;
         selectedTimesheetInfo.endPage = EndPage;
-        selectedTimesheetInfo.pages = (StartPage == 0 && EndPage == 0) ? 0 : (int)(EndPage - StartPage + 1);
+        selectedTimesheetInfo.pages = (int)(EndPage - StartPage + 1);
         selectedTimesheetInfo.pageNos = String.Format("{0}-{1}", (int)StartPage, (int)EndPage);
         // if the row is edited before it has been submitted yet, don't change the status
         // if it is changed to "updated" it will assume that there is an existing data on the server
@@ -852,6 +924,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         Description = timesheetInfo.description;
         StartPage = timesheetInfo.startPage;
         EndPage = timesheetInfo.endPage;
+        timesheetStatus = timesheetInfo.status;
     }
     //************************************************************************************************
     //******** onSubmitTimesheet()
@@ -868,15 +941,15 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             ClientTimesheet? clientTimesheet = State.dataFile.GetClientTimesheet();
             if (clientTimesheet != null)
             {
-                // string rowKey = "";
+                string rowKey = "";
                 int addCount = 0, updateCount = 0, deleteCount = 0;
                 Timesheet timesheet;
                 foreach(TimesheetInfo timesheetInfo in TimesheetInfoRecords)
                 {
-                    // if (timesheetInfo.rowKey.Length == 0)
-                    // {
-                        // rowKey = DateTime.Now.Ticks.ToString();
-                    // }
+                    if (timesheetInfo.rowKey.Length == 0)
+                    {
+                        rowKey = String.Format("{0}${1}${2}", email, selectedDateTime.ToString("yyyy-MM-dd"), GetLastTick6());
+                    }
                     switch(timesheetInfo.status)
                     {
                         case "Added":
@@ -891,7 +964,6 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                                 addCount++;
                             }
                             else AlertBtn(clientTimesheet.DBErrMsg, "Error");
-                            RefreshComponent();
                             break;
                         case "Updated":
                             var timesheetList = (from item in listMonthTimesheet 
@@ -941,8 +1013,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                     if (addCount > 0) operation = "add";
                     if (updateCount > 0) operation += ((operation.Length == 0) ? "" : ", ") + "update" ;
                     if (deleteCount > 0) operation += ((operation.Length == 0) ? "" : ", ") + "delete";
-                    operation += " operation";
-                    if (addCount + updateCount + deleteCount > 1) operation += "s."; else operation += ".";
+                    if (addCount + updateCount + deleteCount > 1) operation += "operations."; else operation += "operation.";
                     AlertBtn(msg + operation, "Success");
                 }
                 else AlertBtn(clientTimesheet.DBErrMsg, "Error");
@@ -950,63 +1021,36 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         else AlertBtn("Nothing to submit in the timesheet.", "Alert");
     }
-    private void RefreshComponent()
-    {
-        _ = InvokeAsync(() =>
-        {
-
-            StateHasChanged();
-        });
-    }
     private void AddMonDayToHash(int mon, int day)
     {
         string md = String.Format("{0}-{1}", mon, day);
         if (!timesheetMonDay.Contains(md)) timesheetMonDay.Add(md);
     }
-    // private string GetLastTick6()
-    // {
-    //     string t = DateTime.Now.Ticks.ToString();
-    //     return t.Substring(t.Length - 6);
-    // }
-    // private void AddTestData()
-    // {
-    //     string rowKey;
-    //     DateTime dt0, dt1, dt2;
-    //     string docNo = "MN-001", task = "DataEntry", desc = "Title 1";
-    //     int pg1 = 5, pg2 = 10;
-    //     ClientTimesheet? clientTimesheet = State.dataFile.GetClientTimesheet();
-    //     if (clientTimesheet != null)
-    //     {
-    //         // int[] days = new int[] { 15, 17, 19, 20 };
-    //         int[] days = new int[] { 23, 24, 25, 28 };
-    //         foreach(int day in days)
-    //         {
-    //             rowKey = String.Format("{0}${1}${2}", email, String.Format("2024-04-{0}", day), GetLastTick6());
-    //             dt0 = new DateTime(2024, 4, day);
-    //             dt1 = new DateTime(2024, 4, day, 7, 0, 0);
-    //             dt2 = new DateTime(2024, 4, day, 9, 0, 0);
-    //             clientTimesheet.AddTimesheet(rowKey, dt0, dt1, dt2, docNo, task, desc, pg1, pg2, "Approved");
-    //         }
-    //     }
-    // }
-    // private void UpdateTestData()
-    // {
-    //     ClientTimesheet? clientTimesheet = State.dataFile.GetClientTimesheet();
-    //     if (clientTimesheet != null)
-    //     {
-    //         List<Timesheet> timesheetList =  clientTimesheet.GetTimesheetMonth("");
-    //         if (timesheetList.Count > 0)
-    //         {
-    //             foreach(Timesheet timesheet in timesheetList)
-    //             {
-    //                 if (timesheet.Date == null && timesheet.UserID == null)
-    //                 {
-    //                     timesheet.Date = "";
-    //                     timesheet.UserID = "";
-    //                     clientTimesheet.UpdateTimesheet(timesheet);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    private string GetLastTick6()
+    {
+        string t = DateTime.Now.Ticks.ToString();
+        return t.Substring(t.Length - 6);
+    }
+    //************************************************************************************/
+    //******** Search value change events
+    /************************************************************************************/
+    private void UserChangeHandler(ChangeEventArgs<string, DataItem> args)
+    {
+        if (args != null && args.ItemData != null)
+            selectedUserName = args.ItemData.Text;
+        else selectedUserName = String.Empty;
+    }
+    private void OnUserChanged(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        // Assign the selected value to the Model 
+        string id = (string)args.Value;
+        if (id == "select") return;
+        selectedUserItem.Id = id;
+        selectedUserItem.Text = State.dataFile.GetUserName(id);
+        return;
+    } 
+    private void ShowTimesheets()
+    {
+        LoadSelectedViewTimesheet();
+    }
 }

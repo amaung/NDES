@@ -38,7 +38,9 @@
     //***********************************************************************
     protected override async Task OnInitializedAsync()
     {
-
+        payrollAdmin = userClass == "S" || State.dataFile.PayrollAdmin();
+        if (payrollAdmin) payrollDisplay = "block";
+        else payrollDisplay = "none";
     }
 }
 
@@ -67,11 +69,18 @@
         <div style="width:200px" class="form-group col-md-2 column2">
         @* <label class="col-form-label">Select User:</label> *@
         <label>Select User:</label>
-        <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="selectUserID"
-                        MultiSelectMode="None" PopupHeight="300px" DataSource="@userIDs">
-            <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@SelectUserIDValueChangeHandler"></DropDownListEvents>
-            <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
-        </SfDropDownList>
+        @* <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="selectUserID"
+                        MultiSelectMode="None" PopupHeight="300px" DataSource="@userIDs"> *@
+            @* <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@SelectUserIDValueChangeHandler"></DropDownListEvents> *@
+            @* <dropdownlistfieldsettings text="text" value="id"></dropdownlistfieldsettings> *@
+        @* </SfDropDownList> *@
+        @* <select id="user-select" @onchange="@GroupChanged" style="height:26px; width:250px"> *@
+        <select id="user-select" @bind="@selectUserID" style="height:32px; width:200px">
+            @foreach (var uid in userIDs)
+            {
+                <option value="@uid.ID">@uid.Text</option>
+            }
+        </select>
     </div>
     <div style="width:150px;height:32px; padding-top:23px; margin-left:50px" class="form-group col-md-2 column2">
         <SfButton IsPrimary="true" CssClass="btn" OnClick="@ShowTaskActivities"> Show </SfButton>
@@ -92,7 +101,6 @@
         <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick"></GridEvents> 
 
         @* <GridEvents RowSelected="RowSelectHandler" DataBound="TaskDataBound OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
-
         <GridColumns>
             <GridColumn Field=@nameof(TaskInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
                         IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
@@ -124,57 +132,184 @@
 @************************** Task Assignment Detailed DataGrid **************************@
 @***************************************************************************************@
 <br />
-@* <hr style="width:1000px" /> *@
-<label style="font-size:21px"><strong>Task Details</strong></label>
-<label style="margin-left:160px;width:700px;text-align: right;"><strong>@SourceBookLabel</strong>@sourcePDF</label>
+<button id="btn-taskdetails" type="button" class="collapsible" style="width:1000px" onclick="TaskDetailsButton()"><strong>Close Task Details</strong></button>
+<div class="content" style="display:none">
 
-<br /><br/>
-<div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@TaskDetailedInfoRecords" @ref="sfgrid1" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
-        <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" ShowDeleteConfirmDialog='true'
-                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
-        </GridEditSettings>
-        <GridPageSettings PageSize="5"></GridPageSettings>
-        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+    @* <button onclick="@ToggleTaskDetails">@toggleTaskDetails</button> *@
+    @* <br/><br/> *@
+    @* <hr style="width:1000px" /> *@
+    <label style="font-size:20px; width:250px"><strong>@DocNoTitle</strong></label>
+    <label style="width:740px;text-align: right;"><strong>@SourceBookLabel</strong>@sourcePDF</label>
 
-        @* <GridEvents TValue="TaskDetailedInfo" RowSelected="RowSelectHandlerTaskAssignment" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick"></GridEvents> *@
-        @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
-        
-        <GridColumns>
-            <GridColumn Field=@nameof(TaskDetailedInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+    <br /><br/>
+    <div id="ControlRegion">
+        <SfGrid ID="Grid" DataSource="@TaskDetailedInfoRecords" @ref="sfgrid1" @attributes="@TaskDetailsGridAttributes" AllowPaging="true" 
+                AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
+                AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
+            <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+                              NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+            </GridEditSettings>
+            <GridPageSettings PageSize="5"></GridPageSettings>
+            <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+            <GridColumns>
+                <GridColumn Field=@nameof(TaskDetailedInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskDetailedInfo.UserName) HeaderText="User Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        AllowEditing="false" Width="18%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                <GridColumn Field=@nameof(TaskDetailedInfo.UserName) HeaderText="User Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            AllowEditing="false" Width="18%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskDetailedInfo.NoPages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TaskDetailedInfo.NoPages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskDetailedInfo.PagesSubmitted) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.Integer"></GridColumn>
+                <GridColumn Field=@nameof(TaskDetailedInfo.PagesSubmitted) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.Integer"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskDetailedInfo.CorrectionCount) HeaderText="Corrections" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        IsPrimaryKey="true" AllowEditing="false" Width="11%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+                <GridColumn Field=@nameof(TaskDetailedInfo.CorrectionCount) HeaderText="Corrections" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            IsPrimaryKey="true" AllowEditing="false" Width="11%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskDetailedInfo.Task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        AllowEditing="false" Width="11%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+                <GridColumn Field=@nameof(TaskDetailedInfo.Task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            AllowEditing="false" Width="11%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.StartDate) HeaderText="StartDate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TaskInfo.StartDate) HeaderText="StartDate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.LastUpdate) HeaderText="LastUpdate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TaskInfo.LastUpdate) HeaderText="LastUpdate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskDetailedInfo.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TaskDetailedInfo.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+<div class="payroll-display">
+    <br/>
+    <label style="font-size:21px"><strong>Timesheet - @selectUserName</strong></label>
+    <br/>
 
-        </GridColumns>
-    </SfGrid>
+    <div style="padding-top:15px; padding-bottom:12px">
+        <label style="width:300px; margin-left:10px; text-align:left;">Hours : @hoursWorked</label>
+        <select id="selectStatus" @bind="@selectedStatus" style="height:26px; width:100px">
+            <option value="" selected></option>
+            <option value="Approve">Approve</option>
+            <option value="Recheck">Recheck</option>
+        </select>
+        @* https://www.geeksforgeeks.org/how-to-add-icons-in-the-button-in-html/ *@
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">
+        @* <SfTooltip ID="Tooltip" Target="#btn" Content="Save"> *@
+                <SfButton class="fas fa-save" ID="btn" @onclick="OnSaveTimesheet" style="padding:0px; font-size:18px; height:26px; width:26px;"></SfButton>
+            @* <button id="btn">
+                <i class="fas fa-save" style="height:18px;" @onclick="OnSaveTimesheet"></i>
+            </button> *@
+        @* </SfTooltip> *@
+        <label style="margin-left:15px;">Status : </label>
+        <label style="width:100px;">@timesheetStatus</label>
+        <label style="width:320px; text-align:right;">Pages : @pagesWorked</label>
+    </div>
+    @*https://blazor.syncfusion.com/documentation/appearance/icons*@
+    @* Bootstrap 4; Name="save"; PUA="e74d" *@
+    @***************************************************************************************@
+    @*********************************** Timesheet DataGrid ********************************@
+    @***************************************************************************************@
+    <div id="ControlRegion">
+        <SfGrid ID="Grid" DataSource="@TimesheetInfoRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" 
+                Toolbar="@(new List<string>() { "ExcelExport" })" AllowExcelExport="true" AllowSelection="true" AllowSorting="true" AllowTextWrap="false" Height="250" Width="1000">
+                @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
+            <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='false'
+                             Mode="@EditMode.Normal">
+            </GridEditSettings>
+            <GridPageSettings PageSize="10"></GridPageSettings>
+            <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+            <GridEvents RowSelected="RowSelectHandler_Timesheet" OnToolbarClick="ToolbarClick_Timesheet" TValue="TimesheetInfo"></GridEvents>
+            @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBegin" OnActionComplete="ActionComplete" OnToolbarClick="ToolbarClick" TValue="TimesheetInfo"></GridEvents> *@
+            <GridColumns>
+                <GridColumn Field=@nameof(TimesheetInfo.date) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+                <GridColumn Field=@nameof(TimesheetInfo.hours) HeaderText="Hours" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            IsPrimaryKey="true" AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                <GridColumn Field=@nameof(TimesheetInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                <GridColumn Field=@nameof(TimesheetInfo.task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Left" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TimesheetInfo.description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Left" AllowEditing="false" Width="36%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TimesheetInfo.pageNos) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
+                <GridColumn Field=@nameof(TimesheetInfo.status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+                            TextAlign="TextAlign.Center" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
 </div>
 <div>
     <SfSpinner Type="SpinnerType.Bootstrap4" @bind-Visible="@VisibleSpinner"></SfSpinner>
 </div>
+<script>
+    var coll = document.getElementsByClassName("collapsible");
+    var btn = document.getElementById("btn-taskdetails");
+    if (btn.innerText == "Open Task Details") btn.innerText = "Close Task Details";
+    else btn.innerText = "Open Task Details";
+    //document.getElementById("btn-taskdetails").innerText  = "Close Task Details";
+    // btn.textContent = "Open Task Details";
+    /* document.querySelector('#button-caption').innerText = 'Open Task Details';*/
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+      coll[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    }
+
+    function TaskDetailsButton()
+    {
+        var btn = document.getElementById("btn-taskdetails");
+        if (btn.innerText == "Open Task Details") btn.innerText = "Close Task Details";
+        else btn.innerText = "Open Task Details";
+    }
+</script>
+<style>
+.collapsible {
+  background-color: #ded8ca;
+  color: black;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 20px;
+}
+
+.active, .collapsible:hover {
+  background-color: Gainsboro;
+.collapsible:after {
+	content: '\02795';
+	/* Unicode character for "plus" sign (+) */
+	font-size: 10px;
+	color: grey;
+	padding: 8px;
+	float: right;
+	margin-left: 5px;
+}
+
+.active:after {
+	content: "\2796";
+	/* Unicode character for "minus" sign (-) */
+}
+		
+.content {
+  padding: 0 18px;
+  display: none;
+  overflow: hidden;
+  background-color: #f1f1f1;
+}
+</style>
 <style>
     .btn {
         width: 140px; 
@@ -216,6 +351,9 @@
         border-block-start-color: black;
         /* border-bottom-color: black; */
     }
+    .payroll-display {
+        display: @payrollDisplay;
+    }
 </style>
 
 @code {
@@ -254,26 +392,79 @@
         public int? CorrectionCount { get; set; }
         public string Status { get; set; }
     };
+    public class TimesheetInfo()
+    {
+        public string rowKey { get; set; }
+        public string date { get; set; }
+        public string userID { get; set; }
+        public string userName { get; set; }
+        public int? dayOfMonth { get; set; }
+        public string hours { get; set; }
+        public DateTime? startTime { get; set; }
+        public DateTime? endTime { get; set; }
+        public string docNo { get; set; }
+        public string task { get; set; }
+        public string description { get; set; }
+        public int? startPage { get; set; }
+        public int? endPage { get; set; }
+        public int pages { get; set; }
+        public string pageNos { get; set; }
+        public string status { get; set; }
+
+        public TimesheetInfo(TimesheetInfo timesheetInfo) : this()
+        {
+            this.rowKey = timesheetInfo.rowKey;
+            this.date = timesheetInfo.date;
+            this.userID = timesheetInfo.userID;
+            this.userName = timesheetInfo.userName;
+            this.dayOfMonth = timesheetInfo.dayOfMonth;
+            this.hours = timesheetInfo.hours;
+            this.startTime = timesheetInfo.startTime;
+            this.endTime = timesheetInfo.endTime;
+            this.docNo = timesheetInfo.docNo;
+            this.task = timesheetInfo.task;
+            this.description = timesheetInfo.description;
+            this.startPage = timesheetInfo.startPage;
+            this.endPage = timesheetInfo.endPage;
+            this.pages = timesheetInfo.pages;
+            this.pageNos = timesheetInfo.pageNos;
+            this.status = timesheetInfo.status;
+        }
+    }
     SortedDictionary<string, List<TaskInfo>> dictUserTasks = new SortedDictionary<string, List<TaskInfo>>();
     Dictionary<string, string> dictUserNameID = new Dictionary<string, string>();
     List<TaskInfo> TaskInfoRecords = new List<TaskInfo>();
     List<TaskInfo> SelectedTaskInfoRecords = new List<TaskInfo>();
     List<TaskDetailedInfo> TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
+    List<TimesheetInfo> TimesheetInfoRecords = new List<TimesheetInfo>();
+    List<Timesheet> listTimesheet = new List<Timesheet>();
     private List<DataItem> userIDs = new List<DataItem>();
 
     string selectUserID = "", prevSelectUserID = "";
     string selectUserName = "", prevSelectUserName = "";
+    string selectedStatus = "", DocNoTitle = "Task in Details";
+    TimesheetInfo? selectedTimesheetInfo = null;
     TaskInfo? selectedTaskInfo = null;
     SfGrid<TaskInfo> sfgrid;
     SfGrid<TaskDetailedInfo> sfgrid1;
+    SfGrid<TimesheetInfo> sfgrid2;
     SfDateRangePicker<DateTime?> sfDateRange;
+    private Dictionary<string, object> TaskDetailsGridAttributes { get; set; } = new Dictionary<string, object>();
 
     DateTime? StartValue { get; set; } = DateTime.Now;
     DateTime? EndValue { get; set; } = DateTime.Now;
-    DateTime prevStartDate = DateTime.Now;
-    DateTime prevEndDate = DateTime.Now;
+    DateTime? prevStartDate = null;
+    DateTime? prevEndDate = null;
     string sourcePDF = "", SourceBookLabel = "Source PDF :   ";
     bool VisibleSpinner = false;
+    bool payrollAdmin = false;
+    string payrollDisplay = "block";
+    float hoursWorked = 0F;
+    int pagesWorked = 0;
+    string timesheetStatus = "";
+    string toggleTaskDetails = "Hide Task Details";
+    bool hideTaskDetailsHeader = false;
+    bool hideTaskDetailsGrid = false;
 
     /************************************************************************************/
     //******** Message Dialog Box
@@ -286,6 +477,30 @@
             });
     }
     //************************************************************************************/
+    //******** Toggle Task Details Table
+    /************************************************************************************/
+    // https://www.syncfusion.com/forums/183296/how-to-programmatically-hide-and-show-grid
+    private void ToggleTaskDetails()
+    {
+        switch(toggleTaskDetails)
+        {
+            case "Hide Task Details":
+                toggleTaskDetails = "Show Task Details";
+                // if (TaskDetailsGridAttributes.ContainsKey("hidden")) TaskDetailsGridAttributes["hidden"] = "yes";
+                // else TaskDetailsGridAttributes.Add("hidden", "yes");
+                hideTaskDetailsHeader = false;
+                hideTaskDetailsGrid = true;
+                break;
+            case "Show Task Details":
+                toggleTaskDetails = "Hide Task Details";
+                // if (TaskDetailsGridAttributes.ContainsKey("hidden")) TaskDetailsGridAttributes["hidden"] = "no";
+                // TaskDetailsGridAttributes.Remove("hidden");
+                hideTaskDetailsHeader = true;
+                hideTaskDetailsGrid = false;
+                break;
+        }
+    }
+    //************************************************************************************/
     //******** UserID value change event
     /************************************************************************************/
     private void SelectUserIDValueChangeHandler(ChangeEventArgs<string, DataItem> args)
@@ -295,7 +510,47 @@
             selectUserID = args.ItemData.ID;
             selectUserName = args.ItemData.Text;
         }
-        else selectUserID = selectUserName = String.Empty;
+        //else selectUserID = selectUserName = String.Empty;
+    }
+    //************************************************************************************/
+    //******** OnSaveTimesheet()
+    /************************************************************************************/
+    private void OnSaveTimesheet()
+    {
+        if (timesheetStatus.Contains(selectedStatus)) return;
+        timesheetStatus = selectedStatus;
+        if (timesheetStatus == "Approve") timesheetStatus = "Approved";
+        if (selectedTimesheetInfo == null) return;
+        //List<TimesheetInfo> listTimesheet = new List<TimesheetInfo>(TimesheetInfoRecords);
+        //TimesheetInfoRecords = new List<TimesheetInfo>();
+        TimesheetInfo newTimesheetInfo;
+        List<TimesheetInfo> newTimesheetInfoList = new List<TimesheetInfo>();
+        foreach(TimesheetInfo timesheetInfo in TimesheetInfoRecords)
+        {
+            newTimesheetInfo = new TimesheetInfo(timesheetInfo);
+            if (selectedTimesheetInfo.date == newTimesheetInfo.date)
+                newTimesheetInfo.status = timesheetStatus;
+            newTimesheetInfoList.Add(newTimesheetInfo);
+        }
+        // update status in listTimesheet
+        string[] f = selectedTimesheetInfo.date.Split("/");
+        if (f.Length != 3) return;
+        string selectedDate = String.Format("{0}-{1}-{2}", f[2], f[1], f[0]);
+        ClientTimesheet? clientTimesheet = State.dataFile.GetClientTimesheet();
+        for(int i = 0; i < listTimesheet.Count; ++i)
+        {
+            if (listTimesheet[i].Date == selectedDate &&
+                listTimesheet[i].UserID == selectedTimesheetInfo.userID ) 
+                {
+                    listTimesheet[i].Status = timesheetStatus;
+                    if (clientTimesheet != null) 
+                    {
+                        clientTimesheet.UpdateTimesheetStatus(listTimesheet[i]);
+                    }
+                }
+        }
+        selectedStatus = "";
+        TimesheetInfoRecords = newTimesheetInfoList;
     }
     /************************************************************************************/
     //******** Show Tasks
@@ -303,18 +558,23 @@
     private void ShowTaskActivities()
     {
         const string _timeFormat_ = "dd/MM/yyyy";
-        DateTime startDate = DateTime.Now;
-        DateTime endDate = DateTime.Now;
         DateTime dt = (DateTime)StartValue;
-        startDate = new DateTime(dt.Year, dt.Month, dt.Day);
+        DateTime startDate = new DateTime(dt.Year, dt.Month, dt.Day);
         DateTime ed = ((DateTime)EndValue).AddDays(1);
-        endDate = new DateTime(ed.Year, ed.Month, ed.Day, 0, 0, 0);
+        DateTime endDate = new DateTime(ed.Year, ed.Month, ed.Day, 0, 0, 0);
 
-        if (prevStartDate == startDate && prevEndDate == endDate && prevSelectUserID == selectUserID) return;
-        
+        bool getNewTimesheetData = false;
+        if (prevStartDate == null && prevEndDate == null ||
+            prevStartDate != StartValue || prevEndDate != EndValue) getNewTimesheetData = true;
+
+        if (getNewTimesheetData == false && prevSelectUserID == selectUserID) return;
+
+        ClientTimesheet? clientTimesheet = State.dataFile.GetClientTimesheet();
+
         // if the dates are new retrieve task activities
-        if (prevStartDate != startDate)
+        if (getNewTimesheetData)
         {
+            if (clientTimesheet != null) listTimesheet = clientTimesheet.GetTimesheetRange((DateTime)StartValue, (DateTime)EndValue);
             TaskInfoRecords.Clear();
             List<TaskInfo> listTaskRecords = new List<TaskInfo>();
             ClientTaskActivityLog clientTaskActivityLog = State.dataFile.GetClientTaskActivityLog();
@@ -395,15 +655,26 @@
         // select the task to display
         if (selectUserID == null || prevSelectUserID != selectUserID)
         {
-            if (selectUserID == null) selectUserID = "All";
-            userIDs = new List<DataItem>() { new DataItem() { ID = "All", Text = "All" } };
+            bool addUserIDs = false;
+            if (selectUserID == null)
+            {
+                selectUserID = "All";
+                selectUserName = "All";
+                userIDs = new List<DataItem>() { new DataItem() { ID = "All", Text = "All" } };
+                addUserIDs = true;
+            }
+            else
+            {
+                var item = userIDs.Where(r => r.ID == selectUserID);
+                if (item != null) selectUserName = ((DataItem)item.First()).Text;
+            }
             SelectedTaskInfoRecords = new List<TaskInfo>();
             foreach(KeyValuePair<string, List<TaskInfo>> kv in dictUserTasks)
             {
                 string uid = "";
                 foreach(TaskInfo item in kv.Value)
                 {
-                    if (selectUserID == "All" || selectUserName == item.UserName)
+                    if (selectUserID == "All" || selectUserID == item.UserID)
                     {
                         uid = item.UserID;
                         SelectedTaskInfoRecords.Add(new TaskInfo()
@@ -426,14 +697,69 @@
                         });
                     }
                 }
-                userIDs.Add(new DataItem() { ID = uid, Text = kv.Key } );
+                if (addUserIDs) userIDs.Add(new DataItem() { ID = uid, Text = kv.Key } );
             }
         }
-        prevStartDate = startDate;
-        prevEndDate = endDate;
+        prevStartDate = StartValue;
+        prevEndDate = EndValue;
         prevSelectUserID = selectUserID;
         prevSelectUserName = selectUserName;
         TaskInfoRecords = SelectedTaskInfoRecords;
+
+        // do Timesheet display
+        if (listTimesheet.Count > 0)
+        {
+            TimesheetInfoRecords = GetUserTimesheetInfo(selectUserID);
+        }
+    }
+    private List<TimesheetInfo> GetUserTimesheetInfo(string userID = "All")
+    {
+        List<TimesheetInfo> timesheetInfoList = new List<TimesheetInfo>();
+        // process data 
+        hoursWorked = 0F;
+        pagesWorked = 0;
+        timesheetStatus = "";
+        List<Timesheet> timesheetList = listTimesheet;
+        // var timesheetList = (from item in listTimesheet 
+        //           where item.UserID == userID
+        //           select item).ToList();
+        foreach(Timesheet timesheet in timesheetList)
+        {
+            if (userID == "All" || timesheet.UserID == userID)
+            {
+                DateTime sTime = timesheet.StartTime;
+                DateTime eTime = timesheet.EndTime;
+                TimeSpan dt = eTime - sTime;
+                float deltaTime = (float)dt.Hours + dt.Minutes/60;
+                int day = Int32.Parse(timesheet.Date.Substring(8));
+                hoursWorked += deltaTime;
+                pagesWorked += timesheet.EndPage - timesheet.StartPage + 1;
+                string hrs = String.Format("{0}-{1} ({2})", sTime.ToString("HH:mm"), eTime.ToString("HH:mm"), deltaTime);
+                string[] f = timesheet.Date.Split('-');
+                timesheetInfoList.Add(new TimesheetInfo()
+                {
+                    rowKey = timesheet.RowKey,
+                    date = String.Format("{0}/{1}/{2}", f[2], f[1], f[0]),
+                    userID = timesheet.UserID,
+                    dayOfMonth = day,
+                    hours = hrs,
+                    startTime = sTime,
+                    endTime = eTime,
+                    docNo = timesheet.DocNo,
+                    task = timesheet.Task,
+                    description = timesheet.Description,
+                    startPage = timesheet.StartPage,
+                    endPage = timesheet.EndPage,
+                    pages = timesheet.EndPage - timesheet.StartPage + 1,
+                    // pageNos = String.Format("{0}-{1} ({2})", timesheet.StartPage, timesheet.EndPage, 
+                    //             timesheet.EndPage - timesheet.StartPage + 1),
+                    pageNos = "300-399 (100)",
+                    status = timesheet.Status,
+                });
+            }
+        }
+        // dictUserTimesheetInfo[userID] = timesheetInfoList;
+        return timesheetInfoList;
     }
     public void DateRangePickerValueChangeHandler(RangePickerEventArgs<DateTime?> args)
     {
@@ -449,6 +775,7 @@
     {
         if (State.dataFile == null) return;
         TaskInfo taskInfo = args.Data;
+        DocNoTitle = taskInfo.DocNo;
         List<TaskDetailedInfo> taskDetailedInfo = new List<TaskDetailedInfo>();
 
         // //**********************************************************/
@@ -485,6 +812,15 @@
         // taskDetailedInfo[0].CorrectionCount = (correctionCount > 0) ? correctionCount : null;
         TaskDetailedInfoRecords = taskDetailedInfo;
     }
+    //**********************************************************/
+    //******** RowSelectHandler_Timesheet()
+    //**********************************************************/
+    public void RowSelectHandler_Timesheet(RowSelectEventArgs<TimesheetInfo> args)
+    {
+        selectedTimesheetInfo = args.Data;
+        if (selectedTimesheetInfo == null) return;
+        timesheetStatus = selectedTimesheetInfo.status;
+    }
     /************************************************************************************/
     //******** Grid events
     /************************************************************************************/
@@ -498,6 +834,19 @@
                 ExcelProperties.FileName = "TasksReport.xlsx";
                 ExcelProperties.DataSource = TaskInfoRecords;
                 await this.sfgrid.ExcelExport(ExcelProperties);
+            }
+        }
+    }
+    public async Task ToolbarClick_Timesheet(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args != null)
+        {
+            if (args.Item.Id == "Grid_excelexport")
+            {
+                ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+                ExcelProperties.FileName = "TimesheetReport.xlsx";
+                ExcelProperties.DataSource = TimesheetInfoRecords;
+                await this.sfgrid2.ExcelExport(ExcelProperties);
             }
         }
     }
