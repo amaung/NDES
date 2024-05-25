@@ -771,6 +771,7 @@
     private void PDFValueChangeHandler(ChangeEventArgs<string, DataItem> args)
     {
         ErrMsgNewDocInfo = String.Empty;
+        if (args == null || args.ItemData == null || args.Value == null) return;
         selectedPDF = args.ItemData.Text;
         if (selectedPDF.Length > 0 && dictSourceBooks.ContainsKey(args.Value))
         {
@@ -892,7 +893,7 @@
                 filestream.Close();
                 string[] recs = fileContent.Split("\n");
                 int sPage = 0, ePage = 0, pCount = 0;
-                int n = 0, updateCount = 0; 
+                int n = 0, updateCount = 0, errorCount = 0; 
                 string docPages = "";
                 SuttaInfo? curSuttaInfo = null;
                 ClientSuttaInfo?clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
@@ -900,23 +901,43 @@
                 {
                     string bookID = "";
                     string docNoTrimmed = "";
+                    string title = "";
                     totalCount = 0;
                     bool autoUserTaskAssignment = false;
                     foreach (string rec in recs)
                     {
-                        if (rec.Trim().Length == 0) break;
+                        if (rec.Trim().Length == 0) continue;
                         userID = "";
                         string[] f = rec.Trim().Split(',');
+                        title = f[0].Trim();
                         if (f.Length >= 5)
                         {
                             docNoTrimmed = f[0].Trim();
-                            sPage = Int32.Parse(f[2]);
-                            ePage = Int32.Parse(f[3]);
+                            if (!Int32.TryParse(f[2], out sPage))
+                            {
+                                State.dataFile.AddActivityLog(email, "NewDoc", 
+                                    String.Format("Page number error found in {0}.", rec.Trim()));
+                                errorCount++; continue;
+                            }
+                            //sPage = Int32.Parse(f[2]);
+                            if (!Int32.TryParse(f[3], out ePage))
+                            {
+                                State.dataFile.AddActivityLog(email, "NewDoc", 
+                                    String.Format("Page number error found in {0}.", rec.Trim()));
+                                errorCount++; continue;
+                            }
+                            if (sPage > ePage)
+                            {
+                                State.dataFile.AddActivityLog(email, "NewDoc", 
+                                    String.Format("Error: Start page number greater than end page found in {0}.", rec.Trim()));
+                                errorCount++; continue;
+                            }
+                            // ePage = Int32.Parse(f[3]);
                             bookID = f[4].Trim();
                             pCount = ePage - sPage + 1;
                             if (f.Length == 6)
                             {
-                                userID = f[5];
+                                userID = f[5].Trim().ToLower();
                                 status = "Assigned";
                                 team = userName + ", " + State.dataFile.GetUserName(userID);
                                 autoUserTaskAssignment = true;
@@ -954,13 +975,13 @@
                             // if (curSuttaInfo.Status == "Assigned" && status == "Created")
                             //     flag = true;
 
-                            if (curSuttaInfo.Title != f[1] || curSuttaInfo.BookID != bookID || 
+                            if (curSuttaInfo.Title != title || curSuttaInfo.BookID != bookID || 
                                 curSuttaInfo.StartPage != sPage || curSuttaInfo.EndPage != ePage || 
                                 curSuttaInfo.NoPages != pCount || curSuttaInfo.Status != status || 
                                 !curSuttaInfo.Team.Contains(State.dataFile.GetUserName(userID)) || 
                                 (curSuttaInfo.Status == "Assigned" && status == "Created"))
                             {
-                                curSuttaInfo.Title = f[1];
+                                curSuttaInfo.Title = title;
                                 curSuttaInfo.BookID = bookID;
                                 curSuttaInfo.StartPage = sPage;
                                 curSuttaInfo.EndPage = ePage;
@@ -1000,7 +1021,7 @@
                                 {
                                     srNo = ++n,
                                     docNo = docNoTrimmed,
-                                    docTitle = f[1],
+                                    docTitle = title,
                                     sourceFileCode = bookID,
                                     startPage = sPage,
                                     endPage = ePage,
@@ -1015,7 +1036,7 @@
                             listSuttaInfo.Add(new SuttaInfo()
                                 {
                                     RowKey = docNoTrimmed,
-                                    Title = f[1],
+                                    Title = title,
                                     StartPage = sPage,
                                     EndPage = ePage,
                                     NoPages = pCount,
@@ -1025,9 +1046,9 @@
                                     BookID = bookID,
                                 });
                             // **** create List<TaskAssignment> to update to the server
-                            dictParameters["AssigneeUserID"] = f.Length == 6 ? f[5] : "";
+                            dictParameters["AssigneeUserID"] = f.Length == 6 ? userID : "";
                             dictParameters["DocNo"] = docNoTrimmed;
-                            dictParameters["Title"] = f[1];
+                            dictParameters["Title"] = title;
                             dictParameters["PageRange"] = pageRange;
                             dictParameters["NoPages"] = (ePage - sPage + 1).ToString();
                             listTaskAssignmentInfo.Add(GetTaskAssignmentInfo(dictParameters));
@@ -1041,35 +1062,6 @@
                         }
                         // end of new doc data collection
                         //
-                        // do the docs that are to be updated
-                        // if (listExistingDocs.Count() > 0)
-                        // {
-                        //     ClientSuttaInfo clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
-                        //     TaskAssignmentInfo? taskAssignmentInfo = null; 
-                        //     if (clientSuttaInfo != null && clientTaskAssignmentInfo != null)
-                        //     {
-                        //         foreach(SuttaInfo suttaInfo in listUpdateDocs)
-                        //         {
-                        //             clientSuttaInfo.UpdateTableRec(suttaInfo).Wait();
-                        //             if (clientSuttaInfo.DBErrMsg.Length > 0)
-                        //                 Console.WriteLine();
-                        //             taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(suttaInfo.RowKey);
-                        //             if (taskAssignmentInfo != null)
-                        //             {
-                        //                 // var listUserTaskProgressInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
-                        //                 taskAssignmentInfo.DocTitle = suttaInfo.Title;
-                        //                 taskAssignmentInfo.PageNos = String.Format("{0}-{1} ({2})", 
-                        //                     suttaInfo.StartPage, suttaInfo.EndPage, (suttaInfo.EndPage - suttaInfo.StartPage + 1));
-                        //                 taskAssignmentInfo.PagesSubmitted = suttaInfo.PagesSubmitted;
-                        //                 if (autoUserTaskAssignment)
-                        //                 {
-                        //                     UpdateUserProgressInfo(taskAssignmentInfo, userID);
-                        //                 }
-                        //                 clientTaskAssignmentInfo.UpdateTaskAssignmentInfo(taskAssignmentInfo);
-                        //             }
-                        //         }
-                        //     }
-                        // }
                     }
                     // update existing docs
                     totalCount += recs.Length;
@@ -1104,8 +1096,8 @@
                     AlertBtn(State.dataFile.ErrMsg, "Error");
                 }
                 State.dataFile.AddActivityLog(email, "NewDoc", 
-                    String.Format("{0} new docs added. {1} docs updated.", 
-                    listSuttaInfo.Count, updateCount));
+                    String.Format("{0} new docs added. {1} docs updated. {2} page number error(s) found.", 
+                    listSuttaInfo.Count, updateCount, errorCount));
                 // string desc = String.Format("New doc ({0}-{1}) added.", startPage, endPage);
                 // State.dataFile.AddTaskActivityLog(formattedDocNo, email, "Created", (int)(endPage - startPage + 1), 0, 0, desc);
                 // ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
@@ -1123,8 +1115,8 @@
                     AlertBtn(State.dataFile.ErrMsg, "Error");
                 }
                 DocDisplayRecords = listDocInfo;
-                AlertBtn(String.Format("{0} new docs imported.  {1} docs updated.", 
-                    listSuttaInfo.Count, updateCount), "Success");
+                AlertBtn(String.Format("{0} new docs imported.  {1} docs updated. {2} page number error(s) found. See activity log.", 
+                    listSuttaInfo.Count, updateCount, errorCount), "Success");
             }
             VisibleSpinner = false;
         }

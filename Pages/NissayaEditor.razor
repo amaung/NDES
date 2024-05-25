@@ -497,6 +497,7 @@
                 doc_ID = docNo;
                 dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);
             }
+            // VisibleSpinner = false;
         }
     }
     //**************************************************************************************/
@@ -508,6 +509,7 @@
         doc_ID = State.doc_ID;
         doc_Title = State.doc_Title;
         dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded);
+        // VisibleSpinner = false;
         // set start date if not set yet
         dataFile.LogTaskStartDate(doc_ID, State.UserTaskInfo);
     }
@@ -527,10 +529,14 @@
         //await dataFile.GetServerSuttaData(docID, TurnOffSpinner);
         doc_ID = dataFile.GetDocID();
         doc_Title = dataFile.GetDocTitle();
+        VisibleSpinner = fileUpload = false;
+        if (dataFile.GetNoPages() == 0)
+        {
+            AlertBtn(String.Format("{0} has no data.", doc_ID), "Alert" );
+        };
         newParaMarker = dataFile.GetNewParaMarker();
         LoadPageMenu();
         //LoadFirstPage();
-        VisibleSpinner = fileUpload = false;
         enableServerUploadMenu();
         //UpdateRecentlyUsedFileList(doc_ID);
     }

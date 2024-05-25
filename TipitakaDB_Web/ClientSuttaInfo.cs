@@ -54,12 +54,13 @@ namespace Tipitaka_DB
             list = (List<SuttaInfo>)objResult;
             return list;
         }
-        public SortedDictionary<string, string> GetAllSuttaInfo()
+        public SortedDictionary<string, string> GetAllSuttaInfo(bool withData = true)
         {
             SortedDictionary<string, string> sortedSuttaList = new SortedDictionary<string, string>();
             List<SuttaInfo> list = new List<SuttaInfo>();
-            string rowKey = "";
-            QueryTableRec(rowKey).Wait();
+            string query = "";
+            if (withData) { query = "PagesSubmitted gt 0"; }
+            QueryTableRec(query).Wait();
             list = (List<SuttaInfo>)objResult;
             foreach(var suttaInfo in list)
                 sortedSuttaList.Add(suttaInfo.RowKey, suttaInfo.Title);
