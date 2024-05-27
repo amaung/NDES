@@ -125,7 +125,7 @@
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
-        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Multiple"></GridSelectionSettings>
         <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick" DataBound="TaskDataBound"></GridEvents>
         @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
@@ -239,6 +239,10 @@
     </SfGrid>
 </div>
 <label style="margin-left:260px;padding-top:10px;width:700px;text-align: right;"><strong>@overdueLabel</strong>@overdueDay</label>
+
+@* <span>@checking</span> *@
+<SfSpinner Type=SpinnerType.Bootstrap4 @bind-Visible="@VisibleSpinner">
+</SfSpinner>
 
 @***************************************************************************************@
 @***************************** Correction Detailed DataGrid ****************************@
@@ -449,6 +453,7 @@
     SfDatePicker<DateTime?> sfdatepicker;
     SfDropDownList<string, DataItem> userDropdown;
     SfDropDownList<string, DataItem> taskDropdown;
+    bool VisibleSpinner = false;
 
     /************************************************************************************/
     //******** Variables
@@ -463,6 +468,7 @@
     List<DataItem> listUsers = new List<DataItem>();
     List<DataItem> listTasks = new List<DataItem>();
     List<SuttaInfo> newSuttaList = new List<SuttaInfo>();
+    List<int> SelectedRowIndexes { get; set; }
 
     Dictionary<string, int> dictPDFPageCount = new Dictionary<string, int>();
     public SfDropDownList<string, DataItem> docDropdown;
@@ -783,10 +789,23 @@
     //************************************************************************************************
     private void SaveTaskClick()
     {
+        string docNo = "";
+        if (SelectedRowIndexes.Count == 0) return;
+        VisibleSpinner = true;
+        foreach(int rowIdx in SelectedRowIndexes)
+        {
+            SaveTask(TaskInfoRecords[rowIdx].DocNo);
+        }
+        searchTypeValue = TaskCategories._Assigned_;
+        ShowTasks();
+        VisibleSpinner = false;
+    }
+    private void SaveTask(string docNo)
+    {
         List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>();
         // save task assignment info
         string userTaskAssignments = "";
-        string docNo = TaskDetailedInfoRecords[0].DocNo;
+        //string docNo = TaskDetailedInfoRecords[0].DocNo;
         DateTime dt = (DateTime)DateValue;
         TaskDetailedInfoRecords[0].LastUpdate = String.Format("{0}/{1}/{2}", dt.Day, dt.Month, dt.Year);
         List<string> teamMembers = new List<string>();
@@ -855,8 +874,8 @@
                 clientKeyValueData.AddUserDocByCategory("admin", TaskCategories._Recent_, docNo);
                 clientKeyValueData.AddUserDocByCategory(userList.ToArray(), TaskCategories._Assigned_, docNo);
             }
-            searchTypeValue = TaskCategories._Assigned_;
-            ShowTasks();
+            //searchTypeValue = TaskCategories._Assigned_;
+            //ShowTasks();
         }
     }
     /************************************************************************************/
@@ -901,9 +920,10 @@
     //********************************
     //******** RowSelectHandler()
     //********************************
-    public void RowSelectHandler(RowSelectEventArgs<TaskInfo> args)
+    public async Task RowSelectHandler(RowSelectEventArgs<TaskInfo> args)
     {
         if (State.dataFile == null) return;
+        SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexes();
         TaskInfo taskInfo = args.Data;
         selectedTaskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;

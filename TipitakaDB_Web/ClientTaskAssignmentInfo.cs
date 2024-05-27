@@ -60,7 +60,7 @@ namespace Tipitaka_DB
                 taskAssignmentInfo1.StartDate = taskAssignmentInfo.StartDate;
                 taskAssignmentInfo1.LastDate = taskAssignmentInfo.LastDate;
                 taskAssignmentInfo1.CorrectionCount = taskAssignmentInfo.CorrectionCount;
-                taskAssignmentInfo1.Status = taskAssignmentInfo1.Status;
+                taskAssignmentInfo1.Status = taskAssignmentInfo.Status;
                 UpdateTableRec(taskAssignmentInfo1).Wait();
                 return; 
             }
