@@ -28,7 +28,7 @@
 <body id="maincontainer" style="background-color:#f7f0df">
     <br />
     <h3 class="pageheader">Welcome to the Nissaya Data Entry System!</h3>
-    <h5>Version Beta 0.4</h5>
+    <h5>Version Beta 0.5</h5>
     <br />
     <h6><em>@ServerStorage</em></h6>
     <br />
@@ -169,7 +169,7 @@
         if (State.screenID > 1 && clientActivityLog != null)
             clientActivityLog.AddActivityLog(State.email, "Logout", State.userName);
         State.screenID = 0;
-        //GetClientGeoLocation();
+        GetClientGeoLocation();
         JS.InvokeVoidAsync("setBrowserWindow", "");
         ServerStorage = "Server Storage: " + ((TipitakaDB_w.devModeDebug) ? "dystorage2021" : "tipitakadata2023");
     }
@@ -177,7 +177,7 @@
     {
         UserAgent = httpContextAccessor.HttpContext.Request.Headers["User-Agent"];
         IPAddress = httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
-        IPAddress = "73.93.203.178";
+        //IPAddress = "73.93.203.178";
         //string regInfo = GetUserCountryByIp(IPAddress);
     }
     //https://www.syncfusion.com/faq/blazor/web-api/how-do-you-send-an-http-get-request-using-httpclient-in-blazor

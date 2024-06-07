@@ -41,6 +41,18 @@
         payrollAdmin = userClass == "S" || State.dataFile.PayrollAdmin();
         if (payrollAdmin) payrollDisplay = "block";
         else payrollDisplay = "none";
+        // DataItem dataItem = new DataItem()
+        // {
+        //     ID = "All",
+        //     Text = "All"
+        // };
+        userIDs = new List<DataItem>();
+        userIDs.Add(new DataItem()
+        {
+            ID = "All",
+            Text = "All"
+        });
+        selectUserID = "All";
     }
 }
 

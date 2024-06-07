@@ -308,22 +308,23 @@
             if (activities.Count > 0)
             {
                 List<ActivityDataItem> listActivities = new List<ActivityDataItem>();
-                foreach(ActivityLog activityLog in activities)
+                foreach (ActivityLog activityLog in activities)
                 {
                     string dt = GetLocalTime(activityLog.RowKey);
                     string name = State.dataFile.GetUserName(activityLog.UserID);
-                    listActivities.Add(new ActivityDataItem() 
-                    {
-                        SrNo = listActivities.Count + 1,
-                        DateTime = GetLocalTime(activityLog.RowKey),
-                        Name = State.dataFile.GetUserName(activityLog.UserID),
-                        UserID = activityLog.UserID,
-                        Activity = activityLog.Activity,
-                        Description = activityLog.Description
-                    });
+                    listActivities.Add(new ActivityDataItem()
+                        {
+                            SrNo = listActivities.Count + 1,
+                            DateTime = GetLocalTime(activityLog.RowKey),
+                            Name = State.dataFile.GetUserName(activityLog.UserID),
+                            UserID = activityLog.UserID,
+                            Activity = activityLog.Activity,
+                            Description = activityLog.Description
+                        });
                 }
                 ActivityDataRecords = listActivities;
             }
+            else ActivityDataRecords = new List<ActivityDataItem>();
         }
     }
     private void ShowTaskActivities()
