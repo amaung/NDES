@@ -760,6 +760,41 @@ namespace NissayaEditor_Web.Data
             }
             return startDate;
         }
+        public void RemoveTaskFromUsers(string docNo)
+        {
+            // remove from User-Tasks, Task-Assigned, Task-Edit-Upload
+            if (clientKeyValueData == null) return;
+            List<string> userList = clientKeyValueData.GetUsersForDoc(docNo);
+            foreach (string userID in userList)
+            {
+                if (GetUserName(userID).Length > 0)
+                {
+                    clientKeyValueData.RemoveUserTask(userID, docNo);
+                    clientKeyValueData.RemoveUserDocByCategory(userID, TaskCategories._Assigned_, docNo);
+                }
+            }
+        }
+        public void RemoveUserDocFromKeyValue(string docNo, string userID)
+        {
+            if (clientKeyValueData == null) return;
+            clientKeyValueData.RemoveUserTask(userID, docNo);
+            clientKeyValueData.RemoveUserDocByCategory(userID, "Assigned", docNo);
+        }
+        public void RemoveUserFromDocTeam(string docNo, string userID)
+        {
+            string userName = GetUserName(userID);
+            if (userName.Length > 0 && clientSuttaInfo != null)
+            {
+                SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo(docNo);
+                if (suttaInfo != null)
+                {
+                    List<string> team = suttaInfo.Team.Split(',').Select(x => x.Trim()).ToList();
+                    team.Remove(userName);
+                    suttaInfo.Team = String.Join(", ", team);
+                    clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+                }
+            }
+        }
         public void LogTaskStartDate(string docNo, Dictionary<string, string> userTaskInfo)
         {
             if (clientTaskAssignmentInfo != null)

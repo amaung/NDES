@@ -205,7 +205,7 @@
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        <GridEvents TValue="TaskDetailedInfo" RowSelected="RowSelectHandlerTaskAssignment" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick"></GridEvents>
+        <GridEvents TValue="TaskDetailedInfo" RowSelected="RowSelectHandlerTaskAssignment" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick"></GridEvents>
         @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(TaskDetailedInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
@@ -444,6 +444,7 @@
     public DateTime? DateValue { get; set; }
     private List<DataItem> docSearchTypes = new List<DataItem>();
     List<TaskInfo> TaskInfoRecords = new List<TaskInfo>();
+    List<TaskInfo> listSelectedTaskInfo = new List<TaskInfo>();
     List<TaskDetailedInfo> TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
     List<CorrectionInfo> CorrectionInfoRecords = new List<CorrectionInfo>();
     TaskInfo? selectedTaskInfo = null;
@@ -469,6 +470,8 @@
     List<DataItem> listTasks = new List<DataItem>();
     List<SuttaInfo> newSuttaList = new List<SuttaInfo>();
     List<int> SelectedRowIndexes { get; set; }
+    List<string> listDeleteTaskDetailedInfo = new List<string>();
+    TaskDetailedInfo? selectedTaskDetailedInfo = null;
 
     Dictionary<string, int> dictPDFPageCount = new Dictionary<string, int>();
     public SfDropDownList<string, DataItem> docDropdown;
@@ -592,8 +595,8 @@
         if (selectedTaskInfo != null)
         {
             var listTask = (from item in TaskInfoRecords 
-                  where item.DocNo == selectedTaskInfo.DocNo 
-                  select item).ToList();
+                            where item.DocNo == selectedTaskInfo.DocNo 
+                            select item).ToList();
             var totalPages = (int)((TaskInfoRecords.Count - 1) / 5) + 1;
             var curPage = (int)((listTask[0].SrNo - 1) / 5) + 1;
             int rowIdx = (listTask[0].SrNo % 5);
@@ -792,26 +795,49 @@
         string docNo = "";
         if (SelectedRowIndexes.Count == 0) return;
         VisibleSpinner = true;
+        // if there are rows deleted, process them first
+        if (listDeleteTaskDetailedInfo.Count > 0)
+        {
+            // remove user from task
+            foreach (string item in listDeleteTaskDetailedInfo)
+            {
+                string[] f = item.Split("|");
+                if (f.Length == 2)
+                {
+                    State.dataFile.RemoveUserFromDocTeam(f[0], f[1]);
+                    State.dataFile.RemoveUserDocFromKeyValue(f[0], f[1]);
+                }
+            }
+            listDeleteTaskDetailedInfo.Clear();
+        }
         foreach(int rowIdx in SelectedRowIndexes)
         {
-            SaveTask(TaskInfoRecords[rowIdx].DocNo);
+            if (!SaveTask(TaskInfoRecords[rowIdx].DocNo)) break;
         }
-        searchTypeValue = TaskCategories._Assigned_;
+        //searchTypeValue = TaskCategories._Assigned_;
         ShowTasks();
         VisibleSpinner = false;
     }
-    private void SaveTask(string docNo)
+    private bool SaveTask(string docNo)
     {
         List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>();
         // save task assignment info
         string userTaskAssignments = "";
         //string docNo = TaskDetailedInfoRecords[0].DocNo;
+        if (DateValue == null)
+        {
+            AlertBtn("Please select the estimated completion date before contuning.", "Error");
+            return false;
+        }
         DateTime dt = (DateTime)DateValue;
         TaskDetailedInfoRecords[0].LastUpdate = String.Format("{0}/{1}/{2}", dt.Day, dt.Month, dt.Year);
         List<string> teamMembers = new List<string>();
-        string key;
+        string key, userName;
         foreach (var item in TaskDetailedInfoRecords)
         {
+            userName = State.dataFile.GetUserName(item.UserID);
+            // continue only if the userID is valid
+            if (userName.Length == 0) continue; // skip if the userID is not valid
             if (item.Status.Length == 0) item.Status = TaskCategories._Assigned_; 
             if (item.PagesSubmitted == null) item.PagesSubmitted = 0;
             userTaskAssignments = State.dataFile.UserTaskAssignment(userTaskAssignments, item.UserID, item.Task,
@@ -828,7 +854,7 @@
                     corrections = 0,
                     status = item.Status
                 });
-            teamMembers.Add(State.dataFile.GetUserName(item.UserID));
+            if (userName.Length > 0) teamMembers.Add(userName);
         }
         // SerializeObject to string using NewtonSoft Json
         userTaskAssignments = JsonConvert.SerializeObject(dictUserTaskProgressInfo);
@@ -874,9 +900,8 @@
                 clientKeyValueData.AddUserDocByCategory("admin", TaskCategories._Recent_, docNo);
                 clientKeyValueData.AddUserDocByCategory(userList.ToArray(), TaskCategories._Assigned_, docNo);
             }
-            //searchTypeValue = TaskCategories._Assigned_;
-            //ShowTasks();
         }
+        return true;
     }
     /************************************************************************************/
     //******** Grid events
@@ -913,13 +938,27 @@
             {
                 // TaskDetailedInfoRecords
                 IsVisible_NewDocInfo = false;
-                // args.Cancel = true;
+                if (selectedTaskDetailedInfo != null)
+                {
+                    string st = selectedTaskDetailedInfo.Status;
+                    if (st == "Created")
+                    {
+                        AlertBtn("You cannot remove the doc owner.", "Error");
+                        args.Cancel = true;
+                    }
+                    // if (st != "Assigned" && st != "Created" || selectedTaskDetailedInfo.PagesSubmitted > 0)
+                    if (selectedTaskDetailedInfo.PagesSubmitted > 0)
+                    {
+                        AlertBtn("This user has already started the job and cannot be removed anymore.", "Error");
+                        args.Cancel = true;
+                    }
+                }
             }
         }
     }
-    //********************************
+    //****************************************************************
     //******** RowSelectHandler()
-    //********************************
+    //****************************************************************
     public async Task RowSelectHandler(RowSelectEventArgs<TaskInfo> args)
     {
         if (State.dataFile == null) return;
@@ -1027,7 +1066,7 @@
         {
             dt2 = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
         }
-        
+
         if (dt1 != null && dt2 != null)
         {
             if (dt2 < dt1) //dt2 = ((DateTime)dt2).AddDays(-1);
@@ -1056,8 +1095,19 @@
     public void RowSelectHandlerTaskAssignment(RowSelectEventArgs<TaskDetailedInfo> args)
     {
         if (State.dataFile == null) return;
-        TaskDetailedInfo taskDetailedInfo = args.Data;
+        selectedTaskDetailedInfo = args.Data;
         idxTaskAssignmentRowSelect = args.RowIndex;
+    }
+    private void ActionBeginUser(ActionEventArgs<TaskDetailedInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
+            {
+                string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
+                listDeleteTaskDetailedInfo.Add(s);
+            }
+        }
     }
     private void ActionCompleteUser(ActionEventArgs<TaskDetailedInfo> args)
     {
@@ -1073,4 +1123,5 @@
         beforeEdit = correctionInfo.BeforeEdit;
         afterEdit = correctionInfo.AfterEdit;
     }
+
 }

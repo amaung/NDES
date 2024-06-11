@@ -149,8 +149,10 @@
     {
         if (State.dataFile != null) State.dataFile.ClearLoadedUserProfiles();
         UserDisplayRecords = new List<UserDisplayProfile>();
-        LoadUsers();
-        LoadUserTasks();
+        VisibleSpinner = true;
+        LoadUsers().Wait();
+        LoadUserTasks().Wait();
+        VisibleSpinner = false;
     }
     int GetSrNo()
     {
@@ -159,9 +161,7 @@
     private async Task LoadUsers()
     {
         if (UserDisplayRecords != null && UserDisplayRecords.Count > 0) return;
-        VisibleSpinner = true;
         var result = State.dataFile.GetAllUserProfiles();
-        VisibleSpinner = false;
         if (sfgrid == null) sfgrid = new SfGrid<UserDisplayProfile>();
         UserRecords = (List<UserProfile>)result;
         UserDisplayRecords = new List<UserDisplayProfile>();
@@ -183,7 +183,7 @@
         foreach (UserDisplayProfile userRec in UserDisplayRecords)
             sfgrid.AddRecordAsync(userRec);
     }
-    private void LoadUserTasks()
+    private async Task LoadUserTasks()
     {
         ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
         ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();

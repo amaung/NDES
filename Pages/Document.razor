@@ -81,7 +81,7 @@
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal" Dialog="DialogParams">
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
-        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Multiple"></GridSelectionSettings>
         <GridEvents RowSelected="RowSelectHandler" TValue="DocInfo" OnToolbarClick="ToolbarClick" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser"></GridEvents>
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
@@ -287,6 +287,7 @@
     string ErrMsgNewDocInfo = "";
     int nextCount = 10;
     int nPages = 0, sPages = 0, totalCount = 0;
+    List<int> SelectedRowIndexes { get; set; }
     bool hideFileUpload = true;
     string showNextButton = "none";
     bool IsVisible_NewDocInfo = false;
@@ -516,7 +517,7 @@
     private void Doc_Insert()
     {
         //if (curDocUserAction != DocUserAction.Add || State.dataFile == null) return;
-       
+
         // **************************************************
         // Add new doc to the display
         // **************************************************
@@ -569,9 +570,9 @@
             }
         }
         DocDisplayRecords = listDocInfoTmp; // assign new data to grid source DocDisplayRecords
-        // **************************************************
-        // Add doc info to SuttaInfo
-        // **************************************************
+                                            // **************************************************
+                                            // Add doc info to SuttaInfo
+                                            // **************************************************
         SuttaInfo suttaInfo = new SuttaInfo()
             {
                 RowKey = formattedDocNo,
@@ -719,8 +720,9 @@
         }
         // check if the DocNo is still in created status; if not cannot delete anymore
         State.dataFile.RemoveSourceBookDocNo(selected_PdfID, docNo_ToDelete);
-        State.dataFile.RemoveSuttaInfo(docNo);
+        State.dataFile.RemoveSuttaInfo(docNo_ToDelete);
         State.dataFile.RemoveTaskAssignmentInfo(docNo_ToDelete);
+        State.dataFile.RemoveTaskFromUsers(docNo_ToDelete);
         var itemToRemove = DocDisplayRecords.Single(r => r.docNo == docNo_ToDelete);
         DocDisplayRecords.Remove(itemToRemove);
     }
@@ -731,6 +733,14 @@
         await DialogService.AlertAsync(msg, warn, new DialogOptions()
             {
                 PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+    private async Task PromptBtn(string msg, string warn)
+    {
+        await DialogService.PromptAsync(msg, warn, new DialogOptions()
+            {
+               PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+
             });
     }
     private async Task AddNewDocToGrid(DocInfo docInfo, int rowIndex)
@@ -830,7 +840,7 @@
                 {
                     userID = userID,
                     task = "Edit-Upload",
-                    startDate = today,
+                    startDate = "",
                     lastDate = "",
                     submitted = 0,
                     corrections = 0,
@@ -849,7 +859,7 @@
                 PageNos = String.Format("{0} ({1})", pageRange, noPages),
                 PagesSubmitted = 0,
                 AssigneeProgress = JsonConvert.SerializeObject(dictUserTaskProgressInfo),
-                StartDate = today,
+                StartDate = "",
                 LastDate = "",
                 CorrectionCount = 0,
                 Status = status,
@@ -875,7 +885,9 @@
             Dictionary<string, string> dictParameters = new Dictionary<string, string>();
             List<SuttaInfo> listExistingDocs = new List<SuttaInfo>();
             List<SuttaInfo> listUpdateDocs = new List<SuttaInfo>();   // this is the list of docs to update
+            List<string> listInvalidUserIDs = new List<string>();
             ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+            ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
             if (State.dataFile != null) listExistingDocs = State.dataFile.GetSuttaList("All");
             VisibleSpinner = true;
             //*************************************************/
@@ -893,7 +905,7 @@
                 filestream.Close();
                 string[] recs = fileContent.Split("\n");
                 int sPage = 0, ePage = 0, pCount = 0;
-                int n = 0, updateCount = 0, errorCount = 0; 
+                int n = 0, updateCount = 0, errorCount = 0, uidErrCount = 0; 
                 string docPages = "";
                 SuttaInfo? curSuttaInfo = null;
                 ClientSuttaInfo?clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
@@ -935,18 +947,22 @@
                             // ePage = Int32.Parse(f[3]);
                             bookID = f[4].Trim();
                             pCount = ePage - sPage + 1;
+                            autoUserTaskAssignment = false;
                             if (f.Length == 6)
                             {
                                 userID = f[5].Trim().ToLower();
-                                status = "Assigned";
-                                team = userName + ", " + State.dataFile.GetUserName(userID);
-                                autoUserTaskAssignment = true;
+                                if (State.dataFile.GetUserName(userID).Length > 0)
+                                {
+                                    status = "Assigned";
+                                    team = userName + ", " + State.dataFile.GetUserName(userID);
+                                    autoUserTaskAssignment = true;
+                                }
+                                else listInvalidUserIDs.Add(userID);
                             }
-                            else
+                            if (!autoUserTaskAssignment)
                             {
                                 status = "Created";
                                 team = "";
-                                autoUserTaskAssignment = false;
                             }   
                         }
                         // check if docNo is an existing doc
@@ -957,23 +973,6 @@
                             curSuttaInfo = existingDoc.First();
                             string uName = State.dataFile.GetUserName(userID);
                             bool flag = curSuttaInfo.Team.Contains(State.dataFile.GetUserName(userID));
-
-                            // if (curSuttaInfo.Title != f[1])
-                            //     flag = true;
-                            // if (curSuttaInfo.BookID != bookID)
-                            //     flag = true;
-                            // if (curSuttaInfo.StartPage != sPage)
-                            //     flag = true;
-                            // if (curSuttaInfo.EndPage != ePage)
-                            //     flag = true;
-                            // if (curSuttaInfo.NoPages != pCount)
-                            //     flag = true;
-                            // if (curSuttaInfo.Status != status)
-                            //     autoUserTaskAssignment = true;
-                            // if (!curSuttaInfo.Team.Contains(State.dataFile.GetUserName(userID)))
-                            //     flag = true;
-                            // if (curSuttaInfo.Status == "Assigned" && status == "Created")
-                            //     flag = true;
 
                             if (curSuttaInfo.Title != title || curSuttaInfo.BookID != bookID || 
                                 curSuttaInfo.StartPage != sPage || curSuttaInfo.EndPage != ePage || 
@@ -1061,7 +1060,7 @@
                                 dictBookDocList.Add(bookID, new List<string>() { docNoTrimmed });
                         }
                         // end of new doc data collection
-                        //
+                    //
                     }
                     // update existing docs
                     totalCount += recs.Length;
@@ -1095,18 +1094,43 @@
                 {
                     AlertBtn(State.dataFile.ErrMsg, "Error");
                 }
-                State.dataFile.AddActivityLog(email, "NewDoc", 
+                if (listInvalidUserIDs.Count > 0)
+                {
+                    string uids = String.Join(',', listInvalidUserIDs);
+                    string msg = String.Format("{0} new docs added. {1} docs updated. {2} page number error(s) found with", listSuttaInfo.Count, updateCount, errorCount);
+                    msg += String.Format(" invalid user IDs: {0}", uids);
+                    State.dataFile.AddActivityLog(email, "NewDoc", msg);
+                }
+                else
+                    State.dataFile.AddActivityLog(email, "NewDoc", 
                     String.Format("{0} new docs added. {1} docs updated. {2} page number error(s) found.", 
                     listSuttaInfo.Count, updateCount, errorCount));
                 // string desc = String.Format("New doc ({0}-{1}) added.", startPage, endPage);
                 // State.dataFile.AddTaskActivityLog(formattedDocNo, email, "Created", (int)(endPage - startPage + 1), 0, 0, desc);
                 // ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
-                if (clientTaskAssignmentInfo != null && listTaskAssignmentInfo.Count() > 0)
+                if (clientTaskAssignmentInfo != null && clientKeyValueData != null && listTaskAssignmentInfo.Count() > 0)
                 {
                     clientTaskAssignmentInfo.InsertBatch(new List<object>(listTaskAssignmentInfo)).Wait();
                     if (State.dataFile.ErrMsg.Length > 0)
                     {
                         AlertBtn(State.dataFile.ErrMsg, "Error");
+                    }
+                    // update Task assignment
+                    foreach (TaskAssignmentInfo taskAssignmentInfo in listTaskAssignmentInfo)
+                    {
+                        List<string> listUsers = new List<string>();
+                        var listUserTaskProgressInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                        foreach(UserTaskProgressInfo userTaskProgressInfo in listUserTaskProgressInfo)
+                        {
+                            if (userTaskProgressInfo.status != "Created")
+                            {
+                                clientKeyValueData.AddUserDocByCategory(userTaskProgressInfo.userID, TaskCategories._Assigned_, taskAssignmentInfo.RowKey);
+                                // add to User-Tasks for valid userIDs
+                                if (State.dataFile.GetUserName(userTaskProgressInfo.userID).Length > 0)
+                                    listUsers.Add(userTaskProgressInfo.userID);
+                            }
+                        }
+                        clientKeyValueData.AddUserTask(listUsers.ToArray(), taskAssignmentInfo.RowKey);
                     }
                 }
                 State.dataFile.UpdateSourceBookDocInfo(dictBookDocList);
@@ -1115,7 +1139,11 @@
                     AlertBtn(State.dataFile.ErrMsg, "Error");
                 }
                 DocDisplayRecords = listDocInfo;
-                AlertBtn(String.Format("{0} new docs imported.  {1} docs updated. {2} page number error(s) found. See activity log.", 
+                if (listInvalidUserIDs.Count > 0)
+                    AlertBtn(String.Format("{0} new docs imported.  {1} docs updated. {2} page number error(s), {3} UserID error(s) found. See activity log.", 
+                    listSuttaInfo.Count, updateCount, errorCount, listInvalidUserIDs.Count), "Success");
+                else
+                    AlertBtn(String.Format("{0} new docs imported.  {1} docs updated. {2} page number error(s) found. See activity log.",
                     listSuttaInfo.Count, updateCount, errorCount), "Success");
             }
             VisibleSpinner = false;
@@ -1164,7 +1192,7 @@
                     {
                         userID = userID,
                         task = "Edit-Upload",
-                        startDate = DateTime.Now.ToString("d'/'M'/'yyyy"),
+                        startDate = "", //DateTime.Now.ToString("d'/'M'/'yyyy"),
                         lastDate = "",
                         submitted = 0,
                         corrections = 0,
@@ -1207,10 +1235,10 @@
         List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass);
         totalCount = State.dataFile.GetSearchResultCount();
         DocDisplayRecords = new List<DocInfo>();
-        // if (totalCount == 0)
-        // {
-        //     AlertBtn("No documents found.", "Alert"); return;
-        // }
+        if (totalCount == 0)
+        {
+            AlertBtn("No documents found.", "Alert"); return;
+        }
         int n = 0;
         List<DocInfo> listDocInfo = new List<DocInfo>();
         foreach(SuttaInfo suttaInfo in listSuttaInfo)
@@ -1307,15 +1335,42 @@
                 if (State.dataFile != null)
                 {
                     curDocUserAction = DocUserAction.Delete;
-                    SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(formattedDocNo); // exact match
-                    if (suttaInfo != null)
+                    List<string> docAlreadyStarted = new List<string>();
+                    foreach (int idx in SelectedRowIndexes)
                     {
-                        // check if the doc has already started
-                        if (suttaInfo.PagesSubmitted > 0)// || suttaInfo.Status != "Created")
+                        string dNo = DocDisplayRecords[idx].docNo;
+                        SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(dNo); // exact match
+                        if (suttaInfo != null)
                         {
-                            AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
-                            args.Cancel = true;
+                            // check if the doc has already started
+                            if (suttaInfo.PagesSubmitted > 0)// || suttaInfo.Status != "Created")
+                            {
+                                docAlreadyStarted.Add(dNo);
+                                // AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
+                                // args.Cancel = true;
+                            }
                         }
+                    }
+                    // all selected docNos have already started. cannot delete anymore
+                    if (docAlreadyStarted.Count == SelectedRowIndexes.Count)
+                    {
+                        switch (docAlreadyStarted.Count)
+                        {
+                            case 1:
+                                AlertBtn("Selected document has already started and cannot be deleted anymore.", "Warning");
+                                break;
+                            default:
+                                AlertBtn("Selected documents have already started and cannot be deleted anymore.", "Warning");
+                                break;
+                        }
+                        args.Cancel = true;
+                    }
+                    if (docAlreadyStarted.Count > 0 && docAlreadyStarted.Count < SelectedRowIndexes.Count)
+                    {
+                        string msg = String.Join(',', docAlreadyStarted);
+                        string verb = docAlreadyStarted.Count == 1 ? " doc has" : " docs have";
+                        AlertBtn(msg + verb + " started. Please select docNo again.", "Error");
+                        args.Cancel = true;
                     }
                 }
             }
@@ -1328,10 +1383,11 @@
             }
         }
     }
-    public void RowSelectHandler(RowSelectEventArgs<DocInfo> args)
+    public async Task RowSelectHandler(RowSelectEventArgs<DocInfo> args)
     {
         DocInfo docInfo = args.Data;
         selectedRowDocInfo = args.Data;
+        SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexes();
         int idx = 0;
         if (docInfo.srNo != null) idx = Convert.ToInt16(docInfo.srNo) - 1;
         //selected_docNo = docInfo.docNo;
@@ -1392,12 +1448,29 @@
                         AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
                     else
                     {
-                        //State.dataFile.RemoveDocInfo(selected_PdfID, formattedDocNo);
-                        State.dataFile.RemoveSourceBookDocNo(selected_PdfID, formattedDocNo);
-                        State.dataFile.RemoveSuttaInfo(docNo);
-                        State.dataFile.RemoveTaskAssignmentInfo(formattedDocNo);
-                        var itemToRemove = DocDisplayRecords.Single(r => r.docNo == formattedDocNo);
-                        DocDisplayRecords.Remove(itemToRemove);
+                        VisibleSpinner = true;
+                        string pdfID, delDocNo;
+                        List<string> listDocToRemove = new List<string>();
+                        foreach (int idx in SelectedRowIndexes)
+                        {
+                            string item = String.Format("{0}|{1}", DocDisplayRecords[idx].docNo, DocDisplayRecords[idx].sourceFileCode);
+                            listDocToRemove.Add(item);
+                        }
+                        foreach (string item in listDocToRemove)
+                        {
+                            string[] f = item.Split('|');
+                            if (f.Length != 2) continue;
+                            delDocNo = f[0];
+                            pdfID = f[1];
+                            State.dataFile.RemoveSourceBookDocNo(pdfID, delDocNo);
+                            State.dataFile.RemoveSuttaInfo(delDocNo);
+                            State.dataFile.RemoveTaskAssignmentInfo(delDocNo);
+                            // remove from User-Tasks, Task-Assigned, Task-Edit-Upload
+                            State.dataFile.RemoveTaskFromUsers(delDocNo);
+                            var itemToRemove = DocDisplayRecords.Single(r => r.docNo == delDocNo);
+                            DocDisplayRecords.Remove(itemToRemove);
+                        }
+                        VisibleSpinner = false;
                     }
                 }
             }

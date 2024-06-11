@@ -89,9 +89,10 @@ namespace NissayaEditor_Web.Data
                         }
                         else
                         {
-                            if (tasks.Contains(docNo)) { continue; }
-                            if (tasks.Length > 0) { tasks += ";" + docNo; }
-                            else { tasks = docNo; }
+                            List<string> list = tasks.Split(';').ToList();
+                            if (list.Contains(docNo)) { continue; }
+                            list.Add(docNo);
+                            tasks = String.Join(';', list);
                         }
                     }
                     else
@@ -189,6 +190,27 @@ namespace NissayaEditor_Web.Data
                 }
             }
             return dict;
+        }
+        public List<string> GetUsersForDoc(string docNo)
+        {
+            List<string> users = new List<string>();
+            string rowKey = "User-Tasks";
+            RetrieveTableRec(rowKey).Wait();
+            if (StatusCode == 200 || StatusCode == 204)
+            {
+                KeyValueData keyValueData = (KeyValueData)objResult;
+                string[] userTasks = keyValueData.Value.Split("|");
+                foreach(string userTask in userTasks)
+                {
+                    string[] f = (string[])userTask.Split("=");
+                    if (f.Length == 2 && f[1].Length > 0)
+                    {
+                        List<string> docList = f[1].Split(';').ToList();
+                        if (docList.Contains(docNo)) users.Add(f[0]);
+                    }
+                }
+            }
+            return users;
         }
         //*************************************************************
         // Get DocNos worked on by the user
@@ -288,5 +310,6 @@ namespace NissayaEditor_Web.Data
                 DeleteTableRecBatch(list).Wait();
             }
         }
+
     }
 }
