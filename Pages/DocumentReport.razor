@@ -123,8 +123,8 @@
 @****************************** Document DataGrid ******************************@
 @*******************************************************************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowSelection="true"
-            Toolbar="@(new List<string>() { "ExcelExport" })" AllowExcelExport="true" AllowSorting="true" AllowTextWrap="false" Height="380" Width="1000">
+    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="true" AllowSelection="true"
+            Toolbar="@(new List<string>() { "ExcelExport", "Search" })" AllowExcelExport="true" AllowSorting="true" AllowTextWrap="false" Height="380" Width="1000">
             @* AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">

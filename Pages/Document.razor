@@ -75,12 +75,12 @@
 @****************************** Document DataGrid ******************************@
 @*******************************************************************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
-            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="380" Width="1000">
+    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="450" Width="1000">
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal" Dialog="DialogParams">
         </GridEditSettings>
-        <GridPageSettings PageSize="10"></GridPageSettings>
+        @* <GridPageSettings PageSize="10"></GridPageSettings> *@
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Multiple"></GridSelectionSettings>
         <GridEvents RowSelected="RowSelectHandler" TValue="DocInfo" OnToolbarClick="ToolbarClick" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser"></GridEvents>
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@

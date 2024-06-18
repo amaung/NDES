@@ -1684,6 +1684,8 @@ namespace NissayaEditor_Web.Data
         }
         public SortedDictionary<string, SourceBookInfo> GetSourceBookInfo()
         {
+            // always refresh
+            dicSourceDocInfo.Clear();
             if (clientKeyValueData != null && dicSourceDocInfo.Count == 0)
             {
                 string qualifier = "all";
