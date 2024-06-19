@@ -72,6 +72,8 @@
                     });
             }
         }
+        await Task.Delay(300);
+        taskInfoPageSize = sfgrid.PageSettings.PageSize;
     }
 }
 
@@ -126,8 +128,9 @@
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Multiple"></GridSelectionSettings>
-        <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick" DataBound="TaskDataBound"></GridEvents>
-        @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
+        <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnActionBegin="ActionBeginTaskInfo" 
+            OnActionComplete="ActionCompleteTaskInfo" OnToolbarClick="ToolbarClick" DataBound="TaskDataBound"></GridEvents>
+        @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBeginTaskInfo" OnActionComplete="ActionCompleteTaskInfo" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(TaskInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
                         IsPrimaryKey="true" AllowEditing="false" Width="8%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
@@ -472,6 +475,8 @@
     List<int> SelectedRowIndexes { get; set; }
     List<string> listDeleteTaskDetailedInfo = new List<string>();
     TaskDetailedInfo? selectedTaskDetailedInfo = null;
+    int taskInfoCurrentPage { get; set; } = 0;
+    int taskInfoPageSize { get; set; } = 0;
 
     Dictionary<string, int> dictPDFPageCount = new Dictionary<string, int>();
     public SfDropDownList<string, DataItem> docDropdown;
@@ -492,7 +497,6 @@
     int idxTaskRowSelect = -1;
     int totalCount = 0, nextCount = 0;
     int nCorrections = 0;
-
     bool IsVisible_NewDocInfo = false;
 
     private void InputHandler_NewDocInfo(InputEventArgs args)
@@ -520,6 +524,7 @@
     /************************************************************************************/
     private void ShowTasks()
     {
+        selectedTaskInfo = null;
         if (searchTypeValue == null || searchTypeValue.Length == 0)
         {
             AlertBtn("Please select search type first.", "Warning");
@@ -597,6 +602,7 @@
             var listTask = (from item in TaskInfoRecords 
                             where item.DocNo == selectedTaskInfo.DocNo 
                             select item).ToList();
+            if (listTask.Count == 0) return;
             var totalPages = (int)((TaskInfoRecords.Count - 1) / 5) + 1;
             var curPage = (int)((listTask[0].SrNo - 1) / 5) + 1;
             int rowIdx = (listTask[0].SrNo % 5);
@@ -810,9 +816,15 @@
             }
             listDeleteTaskDetailedInfo.Clear();
         }
+        int rowInList = 0;
         foreach(int rowIdx in SelectedRowIndexes)
         {
-            if (!SaveTask(TaskInfoRecords[rowIdx].DocNo)) break;
+            // get the actual SrNo
+            rowInList = rowIdx + (taskInfoCurrentPage - 1) * taskInfoPageSize;
+            if (rowInList >= 0 && rowInList < TaskInfoRecords.Count)
+            {
+                if (!SaveTask(TaskInfoRecords[rowInList].DocNo)) break;
+            }
         }
         //searchTypeValue = TaskCategories._Assigned_;
         ShowTasks();
@@ -966,6 +978,7 @@
         TaskInfo taskInfo = args.Data;
         selectedTaskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;
+
         //TaskInfo taskInfo = listTaskInfo[taskInfo.SrNo];
         TaskAssignmentInfo taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(taskInfo.DocNo);
         if (taskAssignmentInfo.LastDate.Length > 0) 
@@ -1115,6 +1128,32 @@
         {
             TaskDetailedInfo taskDetailedInfo = args.Data;
             //dataFile.DelNISRecord(page_No, nis);
+        }
+    }
+    private void ActionBeginTaskInfo(ActionEventArgs<TaskInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
+            {
+                string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
+                listDeleteTaskDetailedInfo.Add(s);
+            }
+        }
+    }
+    private void ActionCompleteTaskInfo(ActionEventArgs<TaskInfo> args)
+    {
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        {
+            if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
+            {
+                string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
+                listDeleteTaskDetailedInfo.Add(s);
+            }
+        }
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Paging))
+        {
+            taskInfoCurrentPage = sfgrid.PageSettings.CurrentPage;
         }
     }
     public void RowSelectHandlerCorrectionGrid(RowSelectEventArgs<CorrectionInfo> args)

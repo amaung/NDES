@@ -255,8 +255,8 @@
                             </SfDropDownList>
                         </div>
                     </div> *@
-                    <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
-                        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="300" Width="500">
+                    <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="false" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
+                        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="600" Width="500">
                         <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
                         <GridPageSettings PageSize="20"></GridPageSettings>
                         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
