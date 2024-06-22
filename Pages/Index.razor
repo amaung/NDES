@@ -28,7 +28,7 @@
 <body id="maincontainer" style="background-color:#f7f0df">
     <br />
     <h3 class="pageheader">Welcome to the Nissaya Data Entry System!</h3>
-    <h5>Version Beta 0.8</h5>
+    <h5>Version Beta 0.9</h5>
     <br />
     <h6><em>@ServerStorage</em></h6>
     <br />
@@ -255,13 +255,21 @@
         bool firstTime = true;
         this.VisibleSpinner = true;
         UserProfile userProfile = clientUserProfile.GetUserProfile(email);
+        this.VisibleSpinner = false;
         firstTime = (clientUserProfile.StatusCode != 200);
         if (firstTime)
         {
-            IsVisible = true; this.VisibleSpinner = false;
+            AlertBtn("Currently no more new accounts accepted to work on this project.", "Sorry");
+            //IsVisible = true; 
+            return;
         }
         else
         {
+            if (userProfile.LastDate != null && userProfile.LastDate.Length > 0)
+            {
+                AlertBtn(email + " account has been deactivated.", "Warning");
+                return;
+            }
             userName = userProfile.Name_E;
             userClass = userProfile.UserClass;
             userProfile.LoginCount++;

@@ -128,7 +128,7 @@ namespace NissayaEditor_Web.Data
         public void SetFileContent(string fnm, string content)
         {
             fname = fnm;
-            fileContent = content;
+            fileContent = content.Replace("ၕ", "^");
             if (fileContent.Length > 0)
             {
                 fext = fname.Substring(fname.Length - 3).ToLower();
@@ -1290,7 +1290,8 @@ namespace NissayaEditor_Web.Data
             }
             return list;
         }
-        public async Task GetServerSuttaData(string docID, Action<string> callback)
+        //public void GetServerSuttaData(string docID, Action<Object> callback)
+        public async Task GetServerSuttaData(string docID, Action<Object> callback) //, Object mainThread = null)
         {
             //parentCallback = callback;
             if (docID.Length == 0 || clientSuttaPageData == null || clientSuttaInfo == null)
@@ -1309,17 +1310,19 @@ namespace NissayaEditor_Web.Data
             DocTitle = suttaInfo.Title;
             clientSuttaPageData!.SetSubPartitionKey(docID);
             var objResult = await clientSuttaPageData!.QueryTableRec(docID);
+            //clientSuttaPageData!.QueryTableRec(docID).Wait();
             List<SuttaPageData> listSuttaPageData = (List<SuttaPageData>)objResult;
-
-            string pgno;
-            //List<NIS> listNIS;
-            foreach (var item in listSuttaPageData)
+            if (listSuttaPageData.Count() > 0)
             {
-                pgno = item.PageNo.ToString();
-                pageNos.Add(pgno);
-                Pages[pgno] = GetNISDataFromPage(item.PageData);
+                string pgno;
+                foreach (var item in listSuttaPageData)
+                {
+                    pgno = item.PageNo.ToString();
+                    pageNos.Add(pgno);
+                    Pages[pgno] = GetNISDataFromPage(item.PageData);
+                }
             }
-            callback(DocTitle);
+            if (callback != null) callback(DocID);
         }
         public List<NIS> GetNISDataFromPage(string page)
         {

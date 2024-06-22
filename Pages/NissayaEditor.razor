@@ -255,10 +255,10 @@
                             </SfDropDownList>
                         </div>
                     </div> *@
-                    <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="false" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
-                        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="600" Width="500">
+                    <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
+                        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="510" Width="500">
                         <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
-                        <GridPageSettings PageSize="20"></GridPageSettings>
+                        <GridPageSettings PageSize="14"></GridPageSettings>
                         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
                         <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="DocType"></GridEvents>
                         <GridColumns>
@@ -478,6 +478,7 @@
     }
     private void onDocSelOKClick()
     {
+        VisibleSpinner = false;
         IsVisible_DocSelection = false;
         string docNo = string.Empty;
         if (sfgridDocList.SelectedRowIndex == -1)
@@ -496,11 +497,16 @@
             if (docNo.Length > 0) 
             {
                 doc_ID = docNo;
-                dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);
+                nissayaEditPage = this;
+                Object mainObj = (Object)this;
+                dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);//, mainObj);
+                                                                          // AfterServerDataLoaded(docNo);
+                                                                          // VisibleSpinner = false;
             }
             // VisibleSpinner = false;
         }
     }
+    NissayaEditor_Web.Data.NissayaEditor? nissayaEditPage = null;
     //**************************************************************************************/
     //**** This routine is called after returning from Task Assignments screen.
     //**************************************************************************************/
@@ -509,36 +515,40 @@
         VisibleSpinner = true;
         doc_ID = State.doc_ID;
         doc_Title = State.doc_Title;
-        dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded);
+        dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded).Wait();
         // VisibleSpinner = false;
         // set start date if not set yet
         dataFile.LogTaskStartDate(doc_ID, State.UserTaskInfo);
     }
-    private void LoadDocumentFromServer(string docID)
-    {
-        dataFile.GetServerSuttaData(docID, AfterServerDataLoaded);
-        doc_ID = docID;
-        doc_Title = dataFile.GetDocTitle();
-        newParaMarker = dataFile.GetNewParaMarker();
-        LoadPageMenu();
-        LoadFirstPage();
-        fileUpload = false;
-        enableServerUploadMenu();
-    }
-    private void AfterServerDataLoaded(string docTitle = "")
+    // private void LoadDocumentFromServer(string docID)
+    // {
+    //     dataFile.GetServerSuttaData(docID, AfterServerDataLoaded);
+    //     doc_ID = docID;
+    //     doc_Title = dataFile.GetDocTitle();
+    //     newParaMarker = dataFile.GetNewParaMarker();
+    //     LoadPageMenu();
+    //     LoadFirstPage();
+    //     fileUpload = false;
+    //     enableServerUploadMenu();
+    // }
+    private void AfterServerDataLoaded(Object mainThread)
     {
         //await dataFile.GetServerSuttaData(docID, TurnOffSpinner);
         doc_ID = dataFile.GetDocID();
         doc_Title = dataFile.GetDocTitle();
         VisibleSpinner = fileUpload = false;
-        if (dataFile.GetNoPages() == 0)
+        if (dataFile.GetNoPages() > 0)
         {
-            AlertBtn(String.Format("{0} has no data.", doc_ID), "Alert" );
-        };
-        newParaMarker = dataFile.GetNewParaMarker();
-        LoadPageMenu();
+            newParaMarker = dataFile.GetNewParaMarker();
+            LoadPageMenu();
+            enableServerUploadMenu();
+        }
+        else
+        {
+            nissayaEditPage.VisibleSpinner = false;
+            nissayaEditPage.AlertBtn(String.Format("{0} has no data.", doc_ID), "Alert" );
+        }
         //LoadFirstPage();
-        enableServerUploadMenu();
         //UpdateRecentlyUsedFileList(doc_ID);
     }
     private void onDocSelCancelClick()
@@ -1428,7 +1438,7 @@
     private void enableSystemAdminMenu()
     {
         // (userClass == "S")
-        MenuData[3].Hidden = (userClass != "S");
+        MenuData[3].Hidden = (userClass != "S" && userClass != "A");
         foreach (var item in MenuData[4].Items)
         {
             if (item.Text == ExportHTML) item.Hidden = (userClass != "S");

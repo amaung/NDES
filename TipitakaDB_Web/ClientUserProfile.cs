@@ -66,7 +66,7 @@ namespace Tipitaka_DB
             serverUserProfile.Name_M = userProfile.Name_M;
             serverUserProfile.LoginCount = userProfile.LoginCount;
             serverUserProfile.UserClass = userProfile.UserClass;
-            //serverUserProfile.LastDate = userProfile.LastDate;
+            serverUserProfile.LastDate = userProfile.LastDate;
             UpdateTableRec(serverUserProfile).Wait();
             return;
         }

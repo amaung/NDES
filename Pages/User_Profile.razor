@@ -145,13 +145,13 @@
     }
     private DialogSettings DialogParams = new DialogSettings { Width = "800px", Height = "450px" };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (State.dataFile != null) State.dataFile.ClearLoadedUserProfiles();
         UserDisplayRecords = new List<UserDisplayProfile>();
         VisibleSpinner = true;
-        LoadUsers().Wait();
-        LoadUserTasks().Wait();
+        await LoadUsers();
+        await LoadUserTasks();
         VisibleSpinner = false;
     }
     int GetSrNo()
