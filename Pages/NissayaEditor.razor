@@ -1202,7 +1202,8 @@
 
             int pagesSubmitted = Int32.Parse(dictServerDocInfo["PagesSubmitted"]);
             int serverSubmittedLastPage = bookDocStartPage + pagesSubmitted - 1;
-            int submitStartPage = bookDocStartPage + pagesSubmitted;
+            // int submitStartPage = bookDocStartPage + pagesSubmitted;
+            int submitStartPage = bookDocStartPage;
             int submitEndPage = Int32.Parse(dictServerDocInfo["ImportedEndPage"]);
             int submitPages = submitEndPage - submitStartPage + 1;
 
@@ -1220,7 +1221,8 @@
             hidePageSubmitRange = false;
             if (userTask != "DataEntry" && userTask != "Edit-Upload") hidePageSubmitRange = true;
             hideReviewPageSubmitRange = !hidePageSubmitRange;
-            serverUploadStartPage = bookDocStartPage + pagesSubmitted;
+            // serverUploadStartPage = bookDocStartPage + pagesSubmitted;
+            serverUploadStartPage = bookDocStartPage;
             docStartPage = bookDocStartPage;
             docEndPage = bookDocEndPage;
             startValue = serverUploadStartPage;
@@ -1246,7 +1248,9 @@
             userTask == Tipitaka_DBTables.TaskCategories._EditUpload_) && sdate.Length == 0)
         {
             // start date has not been set
-            IsVisible_StartDateDialog = true;
+            sdate = DateTime.Now.ToString("d/M/yyyy");
+            //IsVisible_StartDateDialog = true;
+            UploadToServer(sdate);
         }
         else UploadToServer(sdate);
     }
@@ -1263,7 +1267,8 @@
         int bookDocStartPage = Int32.Parse(dictServerDocInfo["BookDocStartPage"]);
         int bookDocEndPage = Int32.Parse(dictServerDocInfo["BookDocEndPage"]);
         int pagesSubmitted = Int32.Parse(dictServerDocInfo["PagesSubmitted"]);
-        int submitStartPage = bookDocStartPage + pagesSubmitted;
+        // int submitStartPage = bookDocStartPage + pagesSubmitted;
+        int submitStartPage = bookDocStartPage;
         int submitEndPage = Int32.Parse(dictServerDocInfo["ImportedEndPage"]);
         int submitPages = submitEndPage - submitStartPage + 1;
         var stopWatch = new Stopwatch();

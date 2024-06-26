@@ -820,7 +820,8 @@
         foreach(int rowIdx in SelectedRowIndexes)
         {
             // get the actual SrNo
-            rowInList = rowIdx + (taskInfoCurrentPage - 1) * taskInfoPageSize;
+            if (taskInfoCurrentPage <= 0) rowInList = rowIdx;
+            else rowInList = rowIdx + (taskInfoCurrentPage - 1) * taskInfoPageSize;
             if (rowInList >= 0 && rowInList < TaskInfoRecords.Count)
             {
                 if (!SaveTask(TaskInfoRecords[rowInList].DocNo)) break;

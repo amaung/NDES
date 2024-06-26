@@ -201,7 +201,9 @@ namespace NissayaEditor_Web.Data
         private void parseTXTIntoPages()
         {
             dictInvalidNISRecords = new Dictionary<string, List<NIS>>();
-            List<string> paraPages = fileContent.Split('\n').ToList();
+            // split data by page#
+            List<string> paraPages = GetPageData();
+            //List<string> paraPages = fileContent.Split('\n').ToList();
             pageNos = new List<string>();
             int recno = 0;
             string pgno = string.Empty;
@@ -363,14 +365,21 @@ namespace NissayaEditor_Web.Data
             }
             return new List<NIS>();
         }
-        //public async Task<List<NIS>> GetPageDataAsync(string pgno)
-        //{
-        //    if (Pages.ContainsKey(pgno))
-        //    {
-        //        return Pages[pgno];
-        //    }
-        //    return new List<NIS>();
-        //}
+        public List<string> GetPageData()
+        {
+            List<string> result = new List<string>();
+            if (fileContent.Length == 0) return result;
+            List<string> pageData = fileContent.Split('#').ToList();
+            string pg;
+            for (int i = 0; i < pageData.Count; i++)
+            {
+                pg = pageData[i].Trim();
+                if (pg.Length == 0) { continue; }
+                pg = "#" + pg.Replace("\n", "").Replace("\r", "");
+                result.Add(pg);
+            }
+            return result;
+        }
         public void SetPageData(string pgno, List<NIS> listNISRecords)
         {
             Pages[pgno].Clear(); Pages[pgno] = new List<NIS>(listNISRecords);
@@ -471,7 +480,7 @@ namespace NissayaEditor_Web.Data
                         ++n;
                         if (nis.Pali!.Length == 0 || nis.Trans!.Length == 0)
                         {
-                            ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. ", kv.Key, n);
+                            ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. Upload aborted.", kv.Key, n);
                             return pageData;
                         }
                         if (nis.Pali!.Length > 0)
@@ -499,8 +508,18 @@ namespace NissayaEditor_Web.Data
         public async Task<string> UploadDocument(string startPage, string endPage)
         {
             Dictionary<string, string> data = GetUploadPageData(startPage, endPage);
-            if (clientKeyValueData != null)
+            if (clientKeyValueData != null && clientSuttaPageData != null)
             {
+                // first clear all records for DocID
+                //List<SuttaPageData> suttaPageData = new List<SuttaPageData>();
+                clientSuttaPageData.SetSubPartitionKey(DocID);
+                await clientSuttaPageData.QueryTableRec("");
+                List<SuttaPageData> listSuttaPageData = (List<SuttaPageData>)clientSuttaPageData.objResult;
+                if (listSuttaPageData.Count() > 0)
+                {
+                    // delete existing records if they exist
+                    await clientSuttaPageData.DeleteTableRecBatch(new List<Object>(listSuttaPageData));
+                }
                 await clientSuttaPageData!.InsertTableRecBatch(DocID, email, data);
                 if (clientSuttaPageData.StatusCode != 202)
                 {

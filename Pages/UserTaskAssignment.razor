@@ -579,9 +579,9 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         if (taskList.Count > 0)
         {
             if (taskList[0].Status == "Created") errMsg = "You are not assigned to import data.";
-            if (taskList[0].Status == "Not Ready") errMsg = "You are not ready to import data yet.";
-            if (taskList[0].Status == "Completed" || taskList[0].Status == "Uploaded") 
-                errMsg = "You have completed data import.";
+            // if (taskList[0].Status == "Not Ready") errMsg = "You are not ready to import data yet.";
+            // if (taskList[0].Status == "Completed" || taskList[0].Status == "Uploaded") 
+            //     errMsg = "You have completed data import.";
             if (errMsg.Length > 0)
             {
                 AlertBtn(errMsg, "Alert"); 

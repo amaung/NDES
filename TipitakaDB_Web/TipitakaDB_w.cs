@@ -18,7 +18,7 @@ namespace Tipitaka_DB
         public string DBErrMsg = string.Empty;
         public object objResult = new object();
         public string ErrMsg = string.Empty;
-        public static bool devModeDebug = true;
+        public static bool devModeDebug = false;
         public TipitakaDB_w(string partitionKey)
         {
             try
