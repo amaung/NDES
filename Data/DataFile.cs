@@ -91,6 +91,7 @@ namespace NissayaEditor_Web.Data
         public ClientActivityLog? GetClientActivityLog() { return clientActivityLog; }
         public ClientSuttaInfo? GetClientSuttaInfo() { return clientSuttaInfo; }
         public ClientTimesheet? GetClientTimesheet() { return clientTimesheet; }
+        public ClientSourceBookInfo? GetClientSourceBookInfo() { return clientSourceBookInfo; }
         public DataFile(ClientTipitakaDB_w? clientUserTipitakaDB)
         {
             if (clientUserTipitakaDB != null)
@@ -734,17 +735,18 @@ namespace NissayaEditor_Web.Data
                     {
                         pdfFileName = sourceBookInfo.BookFilename ?? pdfFileName;
                     }
-                    suttaInfo.PagesSubmitted = newSubmittedPages;
+                    suttaInfo.PagesSubmitted = (newSubmittedPages > suttaInfo.NoPages) ? suttaInfo.NoPages : newSubmittedPages;
                     if (completeCount == userTaskCount - 1 && newSubmittedPages == pages)
                     {
                         // work on this doc is complete now
                         if (suttaInfo.Status != "Uploaded") suttaInfo.Status = "Completed";
                         // update in the project 
-                        UpdateSourceBookCompletedPages(suttaInfo.BookID!, pages);
+                        //UpdateSourceBookCompletedPages(suttaInfo.BookID!, pages);
                     }
                     else
                         suttaInfo.Status = dictUserTask["Task"];
                     clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+                    UpdateSourceBookCompletedPages(suttaInfo.BookID!, pages);
                 }
             }
 
@@ -853,12 +855,19 @@ namespace NissayaEditor_Web.Data
         }
         public void UpdateSourceBookCompletedPages(string bookID, int pageCount)
         {
-            if (clientSourceBookInfo != null)
+            if (clientSourceBookInfo != null && clientSuttaInfo != null)
             {
+                string query = String.Format("BookID eq '{0}'", bookID);
+                List<SuttaInfo> listSuttaInfo = clientSuttaInfo.QuerySuttaInfo(query);
+                pageCount = 0;
+                foreach (SuttaInfo suttaInfo in listSuttaInfo)
+                {
+                    pageCount += suttaInfo.PagesSubmitted;
+                }
                 SourceBookInfo? sourceBookInfo = clientSourceBookInfo.GetSourceBookInfo(bookID);
                 if (sourceBookInfo != null)
                 {
-                    sourceBookInfo.Completed += pageCount;
+                    sourceBookInfo.Completed = pageCount;
                     clientSourceBookInfo.UpdateSourceBookInfo(sourceBookInfo).Wait();
                 }
             }
@@ -942,7 +951,6 @@ namespace NissayaEditor_Web.Data
                     dictServerDocInfo["ImportedStartPage"] = Pages.First().Key;
                     dictServerDocInfo["ImportedEndPage"] = Pages.Last().Key;
                     dictServerDocInfo["ImportedNoPages"] = Pages.Count().ToString();
-
                 }
             }
             return dictServerDocInfo;
@@ -1718,10 +1726,10 @@ namespace NissayaEditor_Web.Data
                 {
                     foreach(SourceBookInfo sourceBookInfo in listSourceBookInfo) 
                     {
-                        if (sourceBookInfo.RowKey.Contains("MN-01"))
-                        {
-                            qualifier = sourceBookInfo.RowKey;
-                        }
+                        //if (sourceBookInfo.RowKey.Contains("MN-01"))
+                        //{
+                        //    qualifier = sourceBookInfo.RowKey;
+                        //}
                         dicSourceDocInfo.Add(sourceBookInfo.RowKey, sourceBookInfo);
                     }
                 }
@@ -1925,7 +1933,7 @@ namespace NissayaEditor_Web.Data
                 }
                 // TaskActivityLog
                 clientTaskActivityLog.AddTaskActivityLog(docNo, userID, activity, pages, totalSubmittedPages, submittedPages, desc);
-                string uid = (userClass != null && userClass == "U") ? userID : "admin";
+                //string uid = (userClass != null && userClass == "U") ? userID : "admin";
                 //if (userClass == "U") clientKeyValueData.AddUserDocByCategory(uid, TaskCategories._Assigned_, docNo);
                 if (desc == "Completed")
                 {
@@ -1952,6 +1960,26 @@ namespace NissayaEditor_Web.Data
             }
             return false;
         }
+        public void GetDocPages(Int32 pages, out int docPages, out int bookPages)
+        {
+            string subbkPages = pages.ToString();
+            if (subbkPages.Length >= 3)
+            {
+                if (subbkPages.Length < 6)
+                {
+                    subbkPages = "000" + subbkPages;
+                    subbkPages = subbkPages.Substring(subbkPages.Length - 6);
+                }
+            }
+            docPages = Int32.Parse(subbkPages.Substring(0, 3));
+            bookPages = Int32.Parse(subbkPages.Substring(3));
+        }
+        public Int32 CombineSubBkPages(int docPages, int bookPages)
+        {
+            if (bookPages < 100) docPages *= 10000; else docPages *= 1000;
+
+            return docPages + bookPages; 
+        }
         //***************************************************************************************
         //*** JSON functions
         //***************************************************************************************
@@ -1971,75 +1999,6 @@ namespace NissayaEditor_Web.Data
         // https://www.newtonsoft.com/json
 
         //const string jsonRecord = "{\"UserID\":\"user0@gmail.com\", \r\n\"Task:\"NewDoc\", \r\n\"StartDate\":\"\", \r\n\"LastUpdated\":\"\", \r\n\"Submitted\":0}";
-        public void FillTestData(int nCount = 1)
-        {
-            if (clientSuttaInfo == null || clientTaskAssignmentInfo == null || clientKeyValueData == null) return;
-            string[] userIDs = { "user1@gmail.com", "user2@gmail.com", "user3@gmail.com", "user4@gmail.com" };
-            clientKeyValueData.AddUserTask(userIDs, "MN-014");
-            //SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo("MN-014");
-            //if (suttaInfo == null) return;
-            //// generate SuttaInfo
-            //List<object> listObjects = new List<object>();
-            //string suttaNo = "";
-            //List<string> listDoc = new List<string>() { "MN-014" };
-            //for (int i = 0; i < nCount; i++)
-            //{
-            //    suttaNo = (i + 1).ToString("d3");
-            //    listDoc.Add("Test-" + suttaNo);
-            //    SuttaInfo suttaInfo1 = new SuttaInfo()
-            //    {
-            //        RowKey = "Test-" + suttaNo,
-            //        Title = "Sutta-" + suttaNo,
-            //        StartPage = suttaInfo.StartPage,
-            //        EndPage = suttaInfo.EndPage,
-            //        NoPages = suttaInfo.NoPages,
-            //        PagesSubmitted = suttaInfo.PagesSubmitted,
-            //        Status = suttaInfo.Status,
-            //        Team = suttaInfo.Team,
-            //        BookID = suttaInfo.BookID
-            //    };
-            //    listObjects.Add(suttaInfo1);
-            //}
-            //clientSuttaInfo.InsertBatch(listObjects).Wait();
-            //// generate TaskAssignmentInfo
-            //listObjects.Clear();
-            //TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo("MN-014");
-            //if (taskAssignmentInfo == null) return;
-            //for (int i = 0; i < nCount; i++)
-            //{
-            //    suttaNo = (i + 1).ToString("d3");
-            //    listObjects.Add(new TaskAssignmentInfo()
-            //    {
-            //        RowKey = "Test-" + suttaNo,
-            //        DocTitle = "Sutta-" + suttaNo,
-            //        PageNos = taskAssignmentInfo.PageNos,
-            //        PagesSubmitted = taskAssignmentInfo.PagesSubmitted,
-            //        AssigneeProgress = taskAssignmentInfo.AssigneeProgress,
-            //        StartDate = taskAssignmentInfo.StartDate,
-            //        LastDate = taskAssignmentInfo.LastDate,
-            //        CorrectionCount = taskAssignmentInfo.CorrectionCount,
-            //        Status = taskAssignmentInfo.Status,
-            //    });
-            //}
-            //clientTaskAssignmentInfo.InsertBatch(listObjects).Wait();
-            //// generate KeyValueData
-            //listObjects.Clear();
-            //string docNos = String.Join('|', listDoc);
-            //KeyValueData keyValueData = new KeyValueData()
-            //            {
-            //                RowKey = "admin-Task-Recent",
-            //                Value = docNos,
-            //            };
-            //clientKeyValueData.UpdateKeyValueData(keyValueData);
-            //keyValueData.RowKey = "user1@gmail.com-Task-Recent";
-            //clientKeyValueData.UpdateKeyValueData(keyValueData);
-            //keyValueData.RowKey = "user2@gmail.com-Task-Recent";
-            //clientKeyValueData.UpdateKeyValueData(keyValueData);
-            //keyValueData.RowKey = "user3@gmail.com-Task-Recent";
-            //clientKeyValueData.UpdateKeyValueData(keyValueData);
-            //keyValueData.RowKey = "user4@gmail.com-Task-Recent";
-            //clientKeyValueData.UpdateKeyValueData(keyValueData);
-        }
         public void ResetDataTables()
         {
             if (email == null || email != "dhammayaungchi2011@gmail.com") return;

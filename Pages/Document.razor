@@ -964,6 +964,7 @@
                             if (f.Length == 6)
                             {
                                 userID = f[5].Trim().ToLower();
+                                string uName = State.dataFile.GetUserName(userID);
                                 if (State.dataFile.GetUserName(userID).Length > 0)
                                 {
                                     status = "Assigned";
@@ -1424,10 +1425,15 @@
 
         selected_PdfID = docInfo.sourceFileCode;
         var t3 = (from item in listPDFItems where item.ID == selected_PdfID select item).ToList();
-        selectedPDF = sourceBookPDF = (t3.Count > 0) ? t3[0].Text : "";
+        selectedPDF = sourceBookPDF = "";
+        if (t3.Count > 0)
+        {
+            selectedPDF = t3[0].Text;
+            sourceBookPDF = String.Format("{0} ({1})", t3[0].Text, t3[0].ID);
+        }
         selectedBookPages = dictSourceBooks[selected_PdfID].Pages;
         formatDocNo();
-
+        //sourceBookPDF
         docTitle = docInfo.docTitle;
         int p = docTitle.IndexOf('/');
         if (p != -1)
@@ -1465,23 +1471,27 @@
                     {
                         VisibleSpinner = true;
                         string pdfID, delDocNo;
+                        int pages;
                         List<string> listDocToRemove = new List<string>();
                         foreach (int idx in SelectedRowIndexes)
                         {
-                            string item = String.Format("{0}|{1}", DocDisplayRecords[idx].docNo, DocDisplayRecords[idx].sourceFileCode);
+                            string item = String.Format("{0}|{1}|{2}", DocDisplayRecords[idx].docNo, DocDisplayRecords[idx].sourceFileCode,
+                                            DocDisplayRecords[idx].pageCount);
                             listDocToRemove.Add(item);
                         }
                         foreach (string item in listDocToRemove)
                         {
                             string[] f = item.Split('|');
-                            if (f.Length != 2) continue;
+                            if (f.Length != 3) continue;
                             delDocNo = f[0];
                             pdfID = f[1];
+                            if (f[2].Length > 0) pages = Int32.Parse(f[2]); else pages = 0;
                             State.dataFile.RemoveSourceBookDocNo(pdfID, delDocNo);
                             State.dataFile.RemoveSuttaInfo(delDocNo);
                             State.dataFile.RemoveTaskAssignmentInfo(delDocNo);
                             // remove from User-Tasks, Task-Assigned, Task-Edit-Upload
                             State.dataFile.RemoveTaskFromUsers(delDocNo);
+                            State.dataFile.AddTaskActivityLog(delDocNo, email, "Delete", pages, 0, 0, "Doc removed.");
                             var itemToRemove = DocDisplayRecords.Single(r => r.docNo == delDocNo);
                             DocDisplayRecords.Remove(itemToRemove);
                         }

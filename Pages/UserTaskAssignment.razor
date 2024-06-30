@@ -459,7 +459,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     string showNextButton = "none";
     string overdueLabel = "";
     string overdueDay = "";
-    
+
     int selectedBookPages = 0;
     int idxTaskAssignmentRowSelect = -1;
     int idxTaskRowSelect = -1;
@@ -640,9 +640,9 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         State.dataFile.AddDocNoToRecent();
         State.screenID = 6; // screenID to Retrieve doc from server on MainPage.
-        //State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
-        //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
-        // the following data will be used in DataFile::LogTaskStartDate()
+                            //State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
+                            //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
+                            // the following data will be used in DataFile::LogTaskStartDate()
         State.UserTaskInfo.Add(email + "-Task", taskList[0].Task);
         string pages = "0";
         string[] f = taskList[0].NoPages.Split(' ');
@@ -676,8 +676,8 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             {
                 PrimaryButtonOptions = new DialogButtonOptions() {  }
             });
-            bool res = (bool)result;
-            ProceedAfterConfirmation(res);
+        bool res = (bool)result;
+        ProceedAfterConfirmation(res);
     }
     private void SaveUserTaskInfoInState()
     {

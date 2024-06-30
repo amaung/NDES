@@ -871,6 +871,8 @@
         }
         // SerializeObject to string using NewtonSoft Json
         userTaskAssignments = JsonConvert.SerializeObject(dictUserTaskProgressInfo);
+        string lastStatus = GetLastStatus(userTaskAssignments);
+        if (lastStatus.Length == 0) lastStatus = TaskCategories._Assigned_;
         TaskAssignmentInfo taskAssignmentInfo = new TaskAssignmentInfo()
             {
                 RowKey = docNo,
@@ -879,25 +881,26 @@
                 StartDate = TaskDetailedInfoRecords[0].StartDate,
                 LastDate = TaskDetailedInfoRecords[0].LastUpdate,
                 CorrectionCount = 0,
-                Status = TaskCategories._Assigned_,
+                Status = lastStatus,
             };
         // update screens
         string team = String.Join(", ", teamMembers);
         if (idxTaskRowSelect >= 0)
         {
             var newlist = TaskInfoRecords.ToList();
-            newlist[idxTaskRowSelect].Status = TaskCategories._Assigned_;
+            newlist[idxTaskRowSelect].Status = lastStatus;
             newlist[idxTaskRowSelect].Team = team;
             TaskInfoRecords = newlist;
             sfgrid.SelectRow(idxTaskRowSelect);
         }
         if (State.dataFile != null)
         {
-            taskAssignmentInfo.Status = TaskCategories._Assigned_;
+            taskAssignmentInfo.Status = lastStatus;
+
             // user and doc will be updated to KeyValueData
             State.dataFile.UpdateTaskAssignmentInfo(taskAssignmentInfo, docNo);
             // Update suttaInfo
-            State.dataFile.UpdateSuttaInfo(docNo, TaskCategories._Assigned_, team);
+            State.dataFile.UpdateSuttaInfo(docNo, lastStatus, team);
             State.dataFile.AddActivityLog(email, "Task", String.Format("{0} task assigned.", docNo));
             //                int percentage = (int)(((float)totalSubmittedPages / (float)pages) * 100);
             string[] pgNos = State.dataFile.ParsePageInfo(TaskDetailedInfoRecords[0].NoPages);
@@ -915,6 +918,15 @@
             }
         }
         return true;
+    }
+    private string GetLastStatus(string userTaskAssignments)
+    {
+        string lastStatus = "";
+        if (userTaskAssignments.Length == 0) return lastStatus;
+        var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(userTaskAssignments);
+        if (listUserTaskInfo.Count > 0)
+            lastStatus = listUserTaskInfo[listUserTaskInfo.Count - 1].status;
+        return lastStatus;
     }
     /************************************************************************************/
     //******** Grid events
@@ -1133,25 +1145,25 @@
     }
     private void ActionBeginTaskInfo(ActionEventArgs<TaskInfo> args)
     {
-        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
-        {
-            if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
-            {
-                string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
-                listDeleteTaskDetailedInfo.Add(s);
-            }
-        }
+        // if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        // {
+        //     if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
+        //     {
+        //         string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
+        //         listDeleteTaskDetailedInfo.Add(s);
+        //     }
+        // }
     }
     private void ActionCompleteTaskInfo(ActionEventArgs<TaskInfo> args)
     {
-        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
-        {
-            if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
-            {
-                string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
-                listDeleteTaskDetailedInfo.Add(s);
-            }
-        }
+        // if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
+        // {
+        //     if (selectedTaskDetailedInfo != null && selectedTaskDetailedInfo.Status == "Assigned")
+        //     {
+        //         string s = String.Format("{0}|{1}", selectedTaskDetailedInfo.DocNo, selectedTaskDetailedInfo.UserID);
+        //         listDeleteTaskDetailedInfo.Add(s);
+        //     }
+        // }
         if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Paging))
         {
             taskInfoCurrentPage = sfgrid.PageSettings.CurrentPage;

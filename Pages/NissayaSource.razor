@@ -172,13 +172,17 @@
     {
         int pages = 0;
         int rowIndex = 0;
+        int docPages, bkPages;
         if (NissayaBookRecords.Count == 0)
         {
             SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
             foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
             {
+                sourceBookInfo.DocCount = sourceBookInfo.DocNos.Split(',').ToList().Count;
+                State.dataFile.GetDocPages(sourceBookInfo.Pages, out docPages, out bkPages);
+                sourceBookInfo.Pages = bkPages;
                 NissayaBookRecords.Add(sourceBookInfo);
-                pages += sourceBookInfo.Pages;
+                pages += bkPages;
             }
             noBooks = NissayaBookRecords.Count;
             totalPages = pages;

@@ -135,9 +135,12 @@
     string totalHTMLStatus = "";
     string SystemAdminButtonHide = "none";
     List<BookDocStatus> NissayaBookRecords = new List<BookDocStatus>();
+    SortedDictionary<string, SourceBookInfo>? dictSourceBookInfo;
 
     protected override async Task OnInitializedAsync()
     {
+        dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
+        // AdjustSourceBookSubmittedPages();
         PopulateGrid();
         SystemAdminButtonHide = (userClass == "S") ? "block" : "none";
         SystemAdminButtonHide = "none";
@@ -151,28 +154,38 @@
     {
         int nPages = 0;
         int rowIndex = 0;
+        int completed = 0;
         List<BookDocStatus> list = new List<BookDocStatus>();
 
-        SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
+        //dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
+        if (dictSourceBookInfo == null || dictSourceBookInfo.Count == 0) return;
+        int docPages, bookPages, displayPages;
         foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
         {
+            // if (sourceBookInfo.RowKey == "DN-13")
+            //     Console.WriteLine();
+            State.dataFile.GetDocPages(sourceBookInfo.Pages, out docPages, out bookPages);
+            displayPages = docPages > bookPages ? docPages : bookPages;
             BookDocStatus bookDocStatus = new BookDocStatus();
+            displayPages = docPages > bookPages ? docPages : bookPages;
+            completed = sourceBookInfo.Completed;
+            if (completed > displayPages) completed = displayPages;
             bookDocStatus = new BookDocStatus()
             {
                 BookID =  sourceBookInfo.RowKey,
                 BookFilename = sourceBookInfo.BookFilename,
-                DocCount = sourceBookInfo.DocCount,
+                DocCount = sourceBookInfo.DocNos.Split(',').ToList().Count(),
                 DocNos = sourceBookInfo.DocNos,
-                Pages = sourceBookInfo.Pages,
-                Completed = sourceBookInfo.Completed,
+                Pages = displayPages, //sourceBookInfo.Pages,
+                Completed = completed, //sourceBookInfo.Completed,
                 HTML = sourceBookInfo.HTML,
             };
             if (sourceBookInfo.Completed > 0) 
-                bookDocStatus.Status = String.Format("{0}%", (int)(sourceBookInfo.Completed*100.0/sourceBookInfo.Pages));
+                bookDocStatus.Status = String.Format("{0}%", (int)(sourceBookInfo.Completed*100.0/displayPages));
             if (sourceBookInfo.HTML > 0) 
                 bookDocStatus.HTMLStatus = String.Format("{0}%", (int)(sourceBookInfo.HTML*100.0/sourceBookInfo.DocCount));
             list.Add(bookDocStatus);
-            nPages += sourceBookInfo.Pages;
+            nPages += displayPages; // sourceBookInfo.Pages;
             totalCompleted += sourceBookInfo.Completed;
             totalHTML += sourceBookInfo.HTML;
             totalDocs += sourceBookInfo.DocCount;
@@ -215,10 +228,48 @@
     private void SystemUtils()
     {
         DoDataDelete();
+        //AdjustSourceBookSubmittedPages();
     }
     private async Task DoDataDelete()
     {
         bool isConfirm = await DialogService.ConfirmAsync("Are you sure you want to reset all data tables?", "Reset Data");
         if (isConfirm && State.dataFile != null) State.dataFile.ResetDataTables();
+    }
+    private void AdjustSourceBookSubmittedPages_()
+    {
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+        ClientSourceBookInfo? clientSourceBookInfo = State.dataFile.GetClientSourceBookInfo();
+        int nPages = 0;
+        int bkPages = 0;
+        int docPages = 0;
+        double splitPgs = 0.0;
+        int completedPages = 0;
+        if (dictSourceBookInfo != null && clientSourceBookInfo != null && clientSuttaInfo != null)
+        {
+            foreach (KeyValuePair<string, SourceBookInfo> keyValue in dictSourceBookInfo)
+            {
+                //if (keyValue.Key != "SN-01") continue;
+                SourceBookInfo sourceBookInfo = keyValue.Value;
+                string query = String.Format("BookID eq '{0}'", keyValue.Key);
+                List<SuttaInfo> listSuttaInfo = clientSuttaInfo.QuerySuttaInfo(query);
+                State.dataFile.GetDocPages(sourceBookInfo.Pages, out docPages, out bkPages);
+                docPages = 0; //bkPages = 810;
+                completedPages = 0;
+                List<string> listDocNo = new List<string>();
+                foreach (SuttaInfo suttaInfo in listSuttaInfo)
+                {
+                    docPages += suttaInfo.NoPages;
+                    completedPages += suttaInfo.PagesSubmitted;
+                    listDocNo.Add(suttaInfo.RowKey);
+                }
+                sourceBookInfo.Pages = State.dataFile.CombineSubBkPages(docPages, bkPages);
+                if (completedPages > docPages) completedPages = docPages;
+                sourceBookInfo.Completed = completedPages;
+                sourceBookInfo.DocNos = String.Join(',', listDocNo);
+                sourceBookInfo.DocCount = listDocNo.Count;
+                sourceBookInfo.HTML = 0;
+                //clientSourceBookInfo.UpdateSourceBookInfo(sourceBookInfo);
+            }
+        }
     }
 }

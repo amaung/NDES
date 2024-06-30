@@ -165,7 +165,7 @@
 <br/><br/>
 <label style="margin-left:780px;width:200px;text-align: right;"><strong>Total: </strong>@TaskActivityRecords.Count</label>
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@TaskActivityRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+    <SfGrid ID="Grid" DataSource="@TaskActivityRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="true" AllowReordering="false" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
             AllowSorting="false" AllowTextWrap="true" Toolbar="@(new List<string>() { "ExcelExport" })" Height="450" Width="1000">
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
@@ -180,11 +180,11 @@
             <GridColumn Field=@nameof(TaskActivityItem.Name) HeaderText="Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(TaskActivityItem.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="10%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(TaskActivityItem.DataEntry) HeaderText="Entry" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
-            <GridColumn Field=@nameof(TaskActivityItem.Review) HeaderText="Review" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
-            <GridColumn Field=@nameof(TaskActivityItem.Edit) HeaderText="Edit" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
-            <GridColumn Field=@nameof(TaskActivityItem.Upload) HeaderText="Upload" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Review) HeaderText="Review" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Edit) HeaderText="Edit" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="6%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Upload) HeaderText="Upload" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.Integer"></GridColumn>
             <GridColumn Field=@nameof(TaskActivityItem.HTML) HeaderText="HTML" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="7%" Type="ColumnType.Integer"></GridColumn>
-            <GridColumn Field=@nameof(TaskActivityItem.Description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="23%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskActivityItem.Description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="22%" Type="ColumnType.String"></GridColumn>
         </GridColumns>
     </SfGrid>
 </div>
