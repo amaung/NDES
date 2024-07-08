@@ -191,6 +191,7 @@ namespace Tipitaka_DBTables
         public const string _StartsWith_ = "Starts with";
         public const string _Current_ = "Current";
         public const string _Recent_ = "Recent";
+        public const string _BookID_ = "Book ID";
         // user tasks
         public const string _DataEntry_ = "DataEntry";
         public const string _Review_ = "Review";

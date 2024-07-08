@@ -67,6 +67,9 @@
     <br />
     <br />
 
+    @***********************@
+    @* Nissaya Grid View   *@
+    @***********************@
     <div class="row">
         <div class="column left" style="background-color:#f2f2f2;">
             <SfButton @onclick="addData" style="width:60px; background-color:#d8e1f2" Disabled="@isPageDisabled">New</SfButton>
@@ -141,6 +144,9 @@
         <label class="footer_text">? @remarks_field</label>
     </div>
     <div>
+        @***************************@
+        @* Nissaya data entry form *@
+        @***************************@
         <SfDialog Width="800px" MinHeight="600px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
             <DialogTemplates>
                 <Header> Add Nissaya Record </Header>
@@ -196,15 +202,17 @@
                 </Content>
             </DialogTemplates>
             <DialogButtons>
-                <DialogButton Content="Add" IsPrimary="true" OnClick="@addClick" />
-                <DialogButton Content="Done" OnClick="@doneClick" />
+                <DialogButton style="width:75px;" Content="Add" IsPrimary="true" OnClick="@addClick" />
+                <DialogButton style="width:75px;" Content="Done" OnClick="@doneClick" />
             </DialogButtons>
         </SfDialog>
     </div>
     @* <span>@checking</span> *@
     <SfSpinner Type="spinnerType" @bind-Visible="@VisibleSpinner">
     </SfSpinner>
+    @***********************@
     @* New doc info dialog *@
+    @***********************@
     @*https://www.syncfusion.com/forums/167852/hide-show-fields-in-insert-and-edit*@
     <div>
         <SfDialog Width="400px" MinHeight="300px" ShowCloseIcon="false" IsModal="true" @bind-Visible="@IsVisible_NewDocInfo">
@@ -236,42 +244,54 @@
                 </Content>
             </DialogTemplates>
             <DialogButtons>
-                <DialogButton Content="Ok" IsPrimary="true" OnClick="@onOKClick" />
-                <DialogButton Content="Cancel" OnClick="@onCancelClick" />
+                <DialogButton style="width:75px;" Content="Ok" IsPrimary="true" OnClick="@onOKClick" />
+                <DialogButton style="width:75px;" Content="Cancel" OnClick="@onCancelClick" />
             </DialogButtons>
         </SfDialog>
     </div>
+    @* ************************* *@
     @* Document selection dialog *@
-    <SfDialog Width="550px" MinHeight="300px" ShowCloseIcon="false" IsModal="true" @bind-Visible="@IsVisible_DocSelection">
+    @* ************************* *@
+    <SfDialog Width="550px" MinHeight="400px" ShowCloseIcon="false" IsModal="true" @bind-Visible="@IsVisible_DocSelection">
         <DialogTemplates>
             <Header>@docSelectionDialHeader</Header>
             <Content>
                 <div id="ControlRegion">
-                    @* <div class="col-lg-12 control-section">
-                        <div class="control_wrapper">
-                            <SfDropDownList TItem="DocType" DataSource="@DocTypes" @ref="sfdropdownlist" @bind-Value="@DocTypeValue" TValue="string" PopupHeight="100px" Index=-1 Placeholder="Select document type">
+                    <div style="width:250px" class="form-group col-md-2 column">
+                    @* <div class="col-lg-6 control-section" style="float:left; width:50%"> *@
+                        @* <div class="control_wrapper"> ValueChanged="@OnSelectValueChange" *@
+                        @* https://www.syncfusion.com/forums/181813/valuechange-event-fires-twice-when-bind-value-is-set *@
+                            @* <SfDropDownList TItem="DocType" DataSource="@BookIDList" @ref="sfdropdownlist" @bind-Value="selectedBookID" TValue="string" 
+                                               PopupHeight="500px" Index=-1 Placeholder="Select book ID or blank for all.">
                                 <DropDownListFieldSettings Text="Text" Value="Id"></DropDownListFieldSettings>
-                                <DropDownListEvents TValue="string" TItem="DocType" OnValueSelect="@OnDocTypeValueSelect"></DropDownListEvents>
-                            </SfDropDownList>
-                        </div>
-                    </div> *@
-                    <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
-                        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="510" Width="500">
-                        <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
-                        <GridPageSettings PageSize="14"></GridPageSettings>
-                        <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
-                        <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="DocType"></GridEvents>
-                        <GridColumns>
-                            <GridColumn Field=@nameof(DocType.Id) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="30%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
-                            <GridColumn Field=@nameof(DocType.Text) HeaderText="Title" TextAlign="TextAlign.Left" Width="70%" Type="ColumnType.String"></GridColumn>
-                        </GridColumns>
-                    </SfGrid>
+                                <DropDownListEvents TValue="string" TItem="DocType" ></DropDownListEvents>
+                            </SfDropDownList> *@
+                        @* </div> *@
+                        <input id="InputText" class="heighttext" type="search" spellcheck="false" placeholder="Enter Book ID. Blank for all." @bind-value="@selectedBookID" />
+                    </div>
+                    <div style="width:180px; padding-top:8px;" class="form-group col-md-2 column">
+                        <SfButton style="width:75px;height:35px" IsPrimary="true" CssClass="e-custom2" OnClick="@ShowDocs"> Show </SfButton>
+                    </div>
+                    <br/><br/><br/>
+                    <div>
+                        <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
+                            AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="435" Width="500">
+                            <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
+                            <GridPageSettings PageSize="12"></GridPageSettings>
+                            <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
+                            <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="DocType"></GridEvents>
+                            <GridColumns>
+                                <GridColumn Field=@nameof(DocType.Id) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="30%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                                <GridColumn Field=@nameof(DocType.Text) HeaderText="Title" TextAlign="TextAlign.Left" Width="70%" Type="ColumnType.String"></GridColumn>
+                            </GridColumns>
+                        </SfGrid>
+                    </div>
                 </div>
             </Content>
         </DialogTemplates>
         <DialogButtons>
-            <DialogButton Content="Ok" IsPrimary="true" OnClick="@onDocSelOKClick" />
-            <DialogButton Content="Cancel" OnClick="@onDocSelCancelClick" />
+            <DialogButton style="width:75px;" Content="Ok" IsPrimary="true" OnClick="@onDocSelOKClick" />
+            <DialogButton style="width:75px;" Content="Cancel" OnClick="@onDocSelCancelClick" />
         </DialogButtons>
     </SfDialog>
 </body>
@@ -326,19 +346,23 @@
     private int add_dialog_field_no = -1;
     private string newParaMarker = "။ ။";
     DataFile dataFile;
+    // [Parameter]
+    // public Expression<Func<TVal>> selectedBookID {get; set;} = "";
+    public string selectedBookID { get; set; } = "";
 
     DateTime? StartDateValue { get; set; } = new DateTime(DateTime.Now.Year,DateTime.Now.Month,DateTime.Now.Day);
     DateTime MaxStartDate { get; set; } = new DateTime(DateTime.Now.Year,DateTime.Now.Month,DateTime.Now.Day);
 
     SortedDictionary<string, string>? allDocList = null;
     public string[] Value = new string[] { "Pg-01" };
-    //SfDropDownList<string, DocType>? sfdropdownlist;
+    SfDropDownList<string, DocType>? sfdropdownlist;
     SfListBox<string[], PageData>? ListBoxObj;
     public List<PageData> Pages = new List<PageData> { new PageData { Text = "", Id = "Pg-01" } };
     public List<PageData> Item = new List<PageData>{ new PageData{ Text = "", Id = "Pg-0001"} };
     //public List<DocType> DocTypes = new List<DocType>() { new DocType { Text = "", Id = "Doc-001" } };
     public List<DocType>? DocGridList { get; set; }
     public List<DocType> docItem = new List<DocType> { new DocType { Text = "", Id = "Doc-001" } };
+    public List<DocType>? BookIDList { get; set; } = new List<DocType>();
     private List<string> RUFList = new List<string>();
     private const int RUFList_MaxSize = 5;
     public class DocType
@@ -375,6 +399,7 @@
             hide_file_browser = true;
             LoadServerData();
         }
+        // FillBookIDs(); // for Doc Selection menu
     }
 
     public int GetSrNo() 
@@ -411,12 +436,19 @@
             await this.sfgrid.ExcelExport(ExcelProperties);
         }
     }
-    private void PrepareDocSelectDialog()
+    private void ShowDocs()
     {
-        if (DocGridList == null) DocGridList = new List<DocType>();
-        if (allDocList == null)
+        string s = selectedBookID;
+        if (s.Length == 0) s = "All";
+        PrepareDocSelectDialog(s);
+    }
+    private void PrepareDocSelectDialog(string s)
+    {
+        DocGridList = new List<DocType>();
+        //if (allDocList == null || allDocList.Count == 0) allDocList = dataFile.GetAllSuttaList();
+        VisibleSpinner = true;
+        if (s == "All") 
         {
-            //VisibleSpinner = true;
             allDocList = dataFile.GetAllSuttaList();
             foreach (KeyValuePair<string, string> kv in allDocList)
             {
@@ -424,6 +456,35 @@
                 DocGridList.Add(d);
             }
         }
+        else 
+        {
+            List<string> listDoc = dataFile.GetPDFDocList(s);
+            if (listDoc.Count > 0)
+            {
+                foreach(String item in listDoc)
+                {
+                    string[] f = item.Split('|');
+                    if (f.Length == 2)
+                    {
+                        DocType d = new DocType() { Id = f[0], Text = f[1] };
+                        DocGridList.Add(d);                
+                    }
+                }
+            }
+            else
+                AlertBtn("No documents found for this source book.", "Not Found");
+        }
+        // else
+        // {
+        //     List<string> docList = dataFile.GetPDFDocList(s);
+        //     foreach (string k in docList)
+        //     {
+        //         DocGridList.Add(new DocType() { Id = k, Text = k });
+        //     }
+        // }
+        VisibleSpinner = false;
+        // if (DocGridList.Count == 0) 
+        //     AlertBtn("No documents found for this source book.", "Not Found");
     }
     private void doneClick()
     {
@@ -479,32 +540,36 @@
     private void onDocSelOKClick()
     {
         VisibleSpinner = false;
-        IsVisible_DocSelection = false;
         string docNo = string.Empty;
         if (sfgridDocList.SelectedRowIndex == -1)
         {
-            if (DocGridList.Count > 0) 
+            if (DocGridList != null && DocGridList.Count > 0) 
             {
                 sfgridDocList.SelectedRowIndex = 0;
                 docNo = DocGridList[0].Id;
+            }
+            else
+            {
+                AlertBtn("No document selected.", "Error");
+                return;
             }
         }
         else
         {
             var item = sfgridDocList.SelectedRecords[0];
             docNo = item.Id;
-            VisibleSpinner = true;
-            if (docNo.Length > 0) 
-            {
-                doc_ID = docNo;
-                nissayaEditPage = this;
-                Object mainObj = (Object)this;
-                dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);//, mainObj);
-                                                                          // AfterServerDataLoaded(docNo);
-                                                                          // VisibleSpinner = false;
-            }
-            // VisibleSpinner = false;
         }
+        VisibleSpinner = true;
+        if (docNo.Length > 0) 
+        {
+            doc_ID = docNo;
+            nissayaEditPage = this;
+            Object mainObj = (Object)this;
+            dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);//, mainObj);
+                                                                        // AfterServerDataLoaded(docNo);
+                                                                        // VisibleSpinner = false;
+        }
+        IsVisible_DocSelection = false;
     }
     NissayaEditor_Web.Data.NissayaEditor? nissayaEditPage = null;
     //**************************************************************************************/
@@ -516,7 +581,7 @@
         doc_ID = State.doc_ID;
         doc_Title = State.doc_Title;
         dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded).Wait();
-        // VisibleSpinner = false;
+        VisibleSpinner = false;
         // set start date if not set yet
         dataFile.LogTaskStartDate(doc_ID, State.UserTaskInfo);
     }
@@ -1129,9 +1194,10 @@
                 ShowUploadInfoDialog();
                 break;
             case getDocumentFromServer:
+                //selectedBookID = "";
                 hide_file_browser = IsVisible_DocSelection = true;
-                docSelectionDialHeader = "Select document from list to retrieve";
-                PrepareDocSelectDialog();
+                docSelectionDialHeader = "Select a document from the list to retrieve.";
+                //PrepareDocSelectDialog();
                 break;
             case downloadAsTXT:
                 hide_file_browser = true;
@@ -1499,7 +1565,7 @@
     .column {
         float: left;
         padding: 9px;
-        height: 530px; /* Should be removed. Only for demonstration */
+        /*height: 530px; Should be removed. Only for demonstration */
     }
 
     .column-dialog {
@@ -1566,6 +1632,13 @@
         background-color: #6fa4e3;
     }
 
+    .heighttext {
+        display: inline-block;
+        line-height: 30px;
+        /* height:35px; */
+        /* outline-width:50px; */
+        width:220px;
+    }
 </style>
 @* Button styles *@
 <style>
@@ -1634,6 +1707,9 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         font-size: 18px;
     }
 </style>
+@**********************************************************************************************************@
+@********************************            User Profile Update           ********************************@
+@**********************************************************************************************************@
 <div>
     <SfDialog Width="400px" MinHeight="370px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsUserProfileVisible">
         <DialogTemplates>

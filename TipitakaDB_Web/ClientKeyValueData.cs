@@ -1,6 +1,7 @@
 ﻿using Tipitaka_DBTables;
 using Tipitaka_DB;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace NissayaEditor_Web.Data
 {
@@ -241,6 +242,7 @@ namespace NissayaEditor_Web.Data
                 List<string> list;
                 list = keyValueData.Value.Trim().Split('|').ToList();
                 if (list.Contains(docNo)) { return; }
+                list = list.Where(s => !string.IsNullOrEmpty(s)).ToList();
                 // add new doc
                 //if (keyValueData.Value.Trim().Length > 0) list = keyValueData.Value.Split('|').ToList();
                 //else list = new List<string>();
@@ -286,6 +288,7 @@ namespace NissayaEditor_Web.Data
                 List<string> listDocs = keyValueData.Value.Split('|').ToList();
                 if (listDocs == null || listDocs.Count == 0) {  return; }
                 listDocs.Remove(docNo);
+                listDocs = listDocs.Where(s => !string.IsNullOrEmpty(s)).ToList();
                 if (listDocs.Count == 0) { keyValueData.Value = ""; }
                 else keyValueData.Value = String.Join("|", listDocs);
                 UpdateTableRec(keyValueData).Wait();

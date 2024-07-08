@@ -51,7 +51,7 @@
 <h5><strong>User Tasks</strong></h5>
 <br />
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@UserTaskDisplayRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+    <SfGrid ID="Grid" DataSource="@UserTaskDisplayRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
             AllowSorting="true" Toolbar="@(new List<string>() { "ExcelExport", "Search" })" AllowTextWrap="true" Height="380" Width="1000">
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                             NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">

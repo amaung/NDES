@@ -23,7 +23,7 @@
 </Administration>
 <br/>
 <label style="font-size:16px; text-align:left">No. of Books = @noBooks</label>
-<label style="font-size:16px; margin-left:400px; width:250px; text-align:right">Total Pages: @totalPages</label>
+<label style="font-size:16px; margin-left:400px; width:250px; text-align:right">Total Docs (Pages): &nbsp;&nbsp;&nbsp;@totalDocs (@totalPages)</label>
 <br />
 @**************************** NissayaSource DataGrid ****************************@
 <div id="ControlRegion">
@@ -149,6 +149,7 @@
 
     int noBooks = 0;
     int totalPages = 0;
+    int totalDocs = 0;
     bool hide_file_browser = true;
     string pdfFileName = "PDF File Name :";
     string ProjectAdminButtonHide = "none";
@@ -178,11 +179,15 @@
             SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
             foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
             {
-                sourceBookInfo.DocCount = sourceBookInfo.DocNos.Split(',').ToList().Count;
+                if (sourceBookInfo.DocNos.Length > 0)
+                    sourceBookInfo.DocCount = sourceBookInfo.DocNos.Split(',').ToList().Count;
+                else
+                    sourceBookInfo.DocCount = 0;
                 State.dataFile.GetDocPages(sourceBookInfo.Pages, out docPages, out bkPages);
                 sourceBookInfo.Pages = bkPages;
                 NissayaBookRecords.Add(sourceBookInfo);
                 pages += bkPages;
+                totalDocs += sourceBookInfo.DocCount;
             }
             noBooks = NissayaBookRecords.Count;
             totalPages = pages;

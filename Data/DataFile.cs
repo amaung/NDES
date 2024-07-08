@@ -1122,7 +1122,7 @@ namespace NissayaEditor_Web.Data
         public List<string> listDocSearchTypes = new List<string>()
         {
             TaskCategories._Recent_, TaskCategories._New_, TaskCategories._Assigned_, TaskCategories._Completed_, TaskCategories._Uploaded_,
-            TaskCategories._HTMLCompleted_, TaskCategories._HTMLToDo_, TaskCategories._ExactMatch_,
+            TaskCategories._HTMLCompleted_, TaskCategories._HTMLToDo_, TaskCategories._BookID_, TaskCategories._ExactMatch_,
             TaskCategories._StartsWith_
         };
         public List<string> listTaskSearchTypes = new List<string> 
@@ -1239,6 +1239,9 @@ namespace NissayaEditor_Web.Data
                     case TaskCategories._HTMLToDo_:     // HTML Todo
                         query = "Status eq 'Completed' or Status eq 'Uploaded'";
                         break;
+                    case TaskCategories._BookID_:
+                        query = String.Format("BookID eq '{0}'", matchPattern);
+                        break;
                     case TaskCategories._ExactMatch_:     // Exact match
                         query = String.Format("RowKey eq '{0}'", matchPattern);
                         break;
@@ -1317,7 +1320,19 @@ namespace NissayaEditor_Web.Data
             }
             return list;
         }
-        //public void GetServerSuttaData(string docID, Action<Object> callback)
+        public List<string> GetPDFDocList(string pdfNo)
+        {
+            List<string> list = new List<string>();
+            List<SuttaInfo> suttaInfoList = GetPDFSuttaList(pdfNo.ToUpper());
+            if (suttaInfoList == null || suttaInfoList.Count == 0) return list;
+            foreach (SuttaInfo suttaInfo in suttaInfoList)
+            {
+                if (suttaInfo.PagesSubmitted > 0)
+                    list.Add(String.Format("{0}|{1}", suttaInfo.RowKey, suttaInfo.Title));
+            }
+            list.Sort();
+            return list;
+        }
         public async Task GetServerSuttaData(string docID, Action<Object> callback) //, Object mainThread = null)
         {
             //parentCallback = callback;
@@ -1900,6 +1915,17 @@ namespace NissayaEditor_Web.Data
                 }
             }
             return book;
+        }
+        List<string> SourceBookIDList = new List<string>();
+        public List<string> GetSourceBookIDs()
+        {
+            if (SourceBookIDList.Count > 0) return SourceBookIDList;
+            SortedDictionary<string, SourceBookInfo> dictSourceBookInfo = GetSourceBookInfo();
+            foreach (string key in dictSourceBookInfo.Keys)
+            {
+                SourceBookIDList.Add(key);
+            }
+            return SourceBookIDList;
         }
         //***************************************************************************************
         //*** ီActivityLog & TaskActivityLog functions

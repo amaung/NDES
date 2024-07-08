@@ -1012,12 +1012,23 @@
                                         taskAssignmentInfo.PageNos = String.Format("{0}-{1} ({2})", 
                                             curSuttaInfo.StartPage, curSuttaInfo.EndPage, (curSuttaInfo.EndPage - curSuttaInfo.StartPage + 1));
                                         curSuttaInfo.PagesSubmitted = curSuttaInfo.PagesSubmitted;
-                                        if (UpdateUserProgressInfo(taskAssignmentInfo, userID, out assigneeNames))
+                                        List<string> currentAssignedUserID = new List<string>();
+                                        if (UpdateUserProgressInfo(taskAssignmentInfo, userID, out assigneeNames, currentAssignedUserID))
                                         {
                                             // update TaskAssignmentInfo
                                             clientTaskAssignmentInfo.UpdateTaskAssignmentInfo(taskAssignmentInfo);
                                         };
+                                        // remove current assigned user from their assigned task list
+                                        if (clientKeyValueData != null && currentAssignedUserID.Count > 0)
+                                            clientKeyValueData.RemoveUserDocByCategory(currentAssignedUserID.ToArray(), TaskCategories._Assigned_, docNoTrimmed);
                                     }
+                                    // **** create List<TaskAssignment> to update to the server
+                                    dictParameters["AssigneeUserID"] = userID;
+                                    dictParameters["DocNo"] = docNoTrimmed;
+                                    dictParameters["Title"] = title;
+                                    dictParameters["PageRange"] = String.Format("{0}-{1}", sPage, ePage);
+                                    dictParameters["NoPages"] = (ePage - sPage + 1).ToString();
+                                    listTaskAssignmentInfo.Add(GetTaskAssignmentInfo(dictParameters));
                                 }
                                 curSuttaInfo.Team = assigneeNames;
                                 // update suttaInfo
@@ -1172,7 +1183,7 @@
     //************************************************************************************/
     //******** UpdateUserProgressInfo
     /************************************************************************************/    
-    private bool UpdateUserProgressInfo(TaskAssignmentInfo taskAssignmentInfo, string userID, out string userNames)
+    private bool UpdateUserProgressInfo(TaskAssignmentInfo taskAssignmentInfo, string userID, out string userNames, List<string> currentAssignedUserID)
     {
         bool update = false;
         userNames = "";
@@ -1184,6 +1195,7 @@
             if (item.Count() > 0)
             {
                 var assignedUser = item.First();
+                currentAssignedUserID.Add(assignedUser.userID);
                 if (userID.Length == 0)
                 {
                     update = true;
