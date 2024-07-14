@@ -365,6 +365,7 @@
     }
     List<SuttaInfo> SuttaInfoRecords = new List<SuttaInfo>();
     List<DocInfo> DocDisplayRecords = new List<DocInfo>();
+    List<DocInfo> SelectedDocRecords = new List<DocInfo>();
     SortedDictionary<string, SourceBookInfo>? dictSourceBooks = null;
     /************************************************************************************/
     //******** Initialization
@@ -660,8 +661,10 @@
     {
         if (State.dataFile == null) return;
         doc_No = (docNo.Contains("-")) ? docNo.Split("-")[1] : docNo;
-        doc_Title = docTitle;
-        doc_SubTitle = docSubTitle;
+        // doc_Title = docTitle;
+        // doc_SubTitle = docSubTitle;
+        docTitle = doc_Title;
+        docSubTitle = doc_SubTitle;
         PDF_DropDownValue = selected_PdfID;
         //listPDFItems
         string title = doc_Title;
@@ -673,13 +676,14 @@
         {
             status = (selectedRowDocInfo.team.Length > 0) ? "Assigned" : "Created";
         }
+        int pages = (int)(endPage - startPage + 1);
         SuttaInfo suttaInfo = new SuttaInfo()
         {
             RowKey = formattedDocNo,
             Title = title,
             StartPage = (int)startPage,
             EndPage = (int)endPage,
-            NoPages = (int)(endPage - startPage + 1),
+            NoPages = pages,
             PagesSubmitted = 0,
             Status = status,
             Team = (selectedRowDocInfo != null) ? selectedRowDocInfo.team : "",
@@ -689,6 +693,7 @@
         if (clientSuttaInfo != null)
         {
             clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+            State.dataFile.AddTaskActivityLog(formattedDocNo, email, "Update", pages, 0, 0, "Doc updated.");
         }
         // update TaskAssignmentInfo
         ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
@@ -1364,9 +1369,9 @@
                 {
                     curDocUserAction = DocUserAction.Delete;
                     List<string> docAlreadyStarted = new List<string>();
-                    foreach (int idx in SelectedRowIndexes)
+                    foreach (DocInfo docInfo in SelectedDocRecords)
                     {
-                        string dNo = DocDisplayRecords[idx].docNo;
+                        string dNo = docInfo.docNo;
                         SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(dNo); // exact match
                         if (suttaInfo != null)
                         {
@@ -1380,7 +1385,7 @@
                         }
                     }
                     // all selected docNos have already started. cannot delete anymore
-                    if (docAlreadyStarted.Count == SelectedRowIndexes.Count)
+                    if (docAlreadyStarted.Count == SelectedDocRecords.Count)
                     {
                         switch (docAlreadyStarted.Count)
                         {
@@ -1393,7 +1398,7 @@
                         }
                         args.Cancel = true;
                     }
-                    if (docAlreadyStarted.Count > 0 && docAlreadyStarted.Count < SelectedRowIndexes.Count)
+                    if (docAlreadyStarted.Count > 0 && docAlreadyStarted.Count < SelectedDocRecords.Count)
                     {
                         string msg = String.Join(',', docAlreadyStarted);
                         string verb = docAlreadyStarted.Count == 1 ? " doc has" : " docs have";
@@ -1415,7 +1420,9 @@
     {
         DocInfo docInfo = args.Data;
         selectedRowDocInfo = args.Data;
-        SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexes();
+        //SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexes();
+        var selRecords = sfgrid.GetSelectedRecordsAsync();
+        SelectedDocRecords = (List<DocInfo>)selRecords.Result;
         int idx = 0;
         if (docInfo.srNo != null) idx = Convert.ToInt16(docInfo.srNo) - 1;
         //selected_docNo = docInfo.docNo;
@@ -1473,42 +1480,21 @@
         {
             if (State.dataFile != null)
             {
-                SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(formattedDocNo); // exact match
-                if (suttaInfo != null)
+                string pdfID, delDocNo;
+                int pages;
+                foreach (DocInfo docInfo in SelectedDocRecords)
                 {
-                    // check if the doc has already started
-                    if (suttaInfo.PagesSubmitted > 0)
-                        AlertBtn("Selected document has already been started. It cannot be deleted anymore.", "Warning");
-                    else
-                    {
-                        VisibleSpinner = true;
-                        string pdfID, delDocNo;
-                        int pages;
-                        List<string> listDocToRemove = new List<string>();
-                        foreach (int idx in SelectedRowIndexes)
-                        {
-                            string item = String.Format("{0}|{1}|{2}", DocDisplayRecords[idx].docNo, DocDisplayRecords[idx].sourceFileCode,
-                                            DocDisplayRecords[idx].pageCount);
-                            listDocToRemove.Add(item);
-                        }
-                        foreach (string item in listDocToRemove)
-                        {
-                            string[] f = item.Split('|');
-                            if (f.Length != 3) continue;
-                            delDocNo = f[0];
-                            pdfID = f[1];
-                            if (f[2].Length > 0) pages = Int32.Parse(f[2]); else pages = 0;
-                            State.dataFile.RemoveSourceBookDocNo(pdfID, delDocNo);
-                            State.dataFile.RemoveSuttaInfo(delDocNo);
-                            State.dataFile.RemoveTaskAssignmentInfo(delDocNo);
-                            // remove from User-Tasks, Task-Assigned, Task-Edit-Upload
-                            State.dataFile.RemoveTaskFromUsers(delDocNo);
-                            State.dataFile.AddTaskActivityLog(delDocNo, email, "Delete", pages, 0, 0, "Doc removed.");
-                            var itemToRemove = DocDisplayRecords.Single(r => r.docNo == delDocNo);
-                            DocDisplayRecords.Remove(itemToRemove);
-                        }
-                        VisibleSpinner = false;
-                    }
+                    delDocNo = docInfo.docNo;
+                    pdfID = docInfo.sourceFileCode;
+                    pages = docInfo.pageCount;
+                    State.dataFile.RemoveSourceBookDocNo(pdfID, delDocNo);
+                    State.dataFile.RemoveSuttaInfo(delDocNo);
+                    State.dataFile.RemoveTaskAssignmentInfo(delDocNo);
+                    // remove from User-Tasks, Task-Assigned, Task-Edit-Upload
+                    State.dataFile.RemoveTaskFromUsers(delDocNo);
+                    State.dataFile.AddTaskActivityLog(delDocNo, email, "Delete", pages, 0, 0, "Doc removed.");
+                    var itemToRemove = DocDisplayRecords.Single(r => r.docNo == delDocNo);
+                    DocDisplayRecords.Remove(itemToRemove);
                 }
             }
         }

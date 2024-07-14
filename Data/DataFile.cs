@@ -1630,7 +1630,7 @@ namespace NissayaEditor_Web.Data
             {
                 if (clientUserProfile != null)
                 {
-                    UserProfiles = clientUserProfile.GetAllUsers(inclDev, false);
+                    UserProfiles = clientUserProfile.GetAllUsers(inclDev);
                     foreach (UserProfile user in UserProfiles)
                     {
                         if (user.LastLogin != null) user.LastLogin = user.LastLogin.Value.ToLocalTime();
