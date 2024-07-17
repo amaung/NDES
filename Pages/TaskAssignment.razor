@@ -816,17 +816,21 @@
             }
             listDeleteTaskDetailedInfo.Clear();
         }
-        int rowInList = 0;
-        foreach(int rowIdx in SelectedRowIndexes)
+        foreach(TaskInfo taskInfo in listSelectedTaskInfo)
         {
-            // get the actual SrNo
-            if (taskInfoCurrentPage <= 0) rowInList = rowIdx;
-            else rowInList = rowIdx + (taskInfoCurrentPage - 1) * taskInfoPageSize;
-            if (rowInList >= 0 && rowInList < TaskInfoRecords.Count)
-            {
-                if (!SaveTask(TaskInfoRecords[rowInList].DocNo)) break;
-            }
+            if (!SaveTask(taskInfo.DocNo)) break;
         }
+        //int rowInList = 0;
+        // foreach(int rowIdx in SelectedRowIndexes)
+        // {
+        //     // get the actual SrNo
+        //     if (taskInfoCurrentPage <= 0) rowInList = rowIdx;
+        //     else rowInList = rowIdx + (taskInfoCurrentPage - 1) * taskInfoPageSize;
+        //     if (rowInList >= 0 && rowInList < TaskInfoRecords.Count)
+        //     {
+        //         if (!SaveTask(TaskInfoRecords[rowInList].DocNo)) break;
+        //     }
+        // }
         //searchTypeValue = TaskCategories._Assigned_;
         ShowTasks();
         VisibleSpinner = false;

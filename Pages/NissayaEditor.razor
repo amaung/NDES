@@ -1254,6 +1254,7 @@
 
         int fileFirstPage = dataFile.GetFirstPageNo();
         int fileLastPage = dataFile.GetLastPageNo();
+        int fileNoPages = dataFile.GetNoPages();
 
         dictServerDocInfo["Task"] = userTask;
         int bookDocStartPage = Int32.Parse(dictServerDocInfo["BookDocStartPage"]);
@@ -1296,11 +1297,19 @@
             IsImportInfoDialogVisible = true;
             disableFileImportOk = false;
             ErrMsgImportFile = "";
-            if (userTask == "Edit-Upload" && (fileFirstPage != bookDocStartPage || fileLastPage != bookDocEndPage))
+            if (userTask == "Edit-Upload")
             {
                 disableFileImportOk = true;
-                ErrMsgImportFile = String.Format("Cannot import file without all required {0} pages.", bookDocPages);
                 pagesToSubmit = doc_Pages;
+                if (fileFirstPage != bookDocStartPage || fileLastPage != bookDocEndPage)
+                {
+                    ErrMsgImportFile = String.Format("File pages do not match with document pages.");
+                }
+                if (bookDocPages != fileNoPages)
+                {
+                    ErrMsgImportFile = String.Format("File page count ({0}) does not match with document page count ({1}).",
+                    fileNoPages, bookDocPages);
+                }
             }
         }
         else

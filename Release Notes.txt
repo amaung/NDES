@@ -1,0 +1,12 @@
+Beta 0.15a (2024-07-17)
+- Edit-Upload now checks for file page numbers and page count against doc book page numbers and count. Previously it did not check the page count.
+- In Admin Task Assignments now uses actual row data instead of indexes.
+
+Beta 0.15 (2024-07-16)
+- All user profiles not retrieved because of server table did not have LastDate column for some users. Added now.
+- code change in searching user profiles active/non-active users is fixed
+- In User Task Assignments page "Import from File" button will be enabled only when the user selects his/her task
+- In Admin Task Assignment page there was a hard coded test data for page nos. for new tasks is now removed. It now shows the actual page nos.
+- For Edit-Upload tasks are no longer allowed to import to the server if the file does not have all the required pages of the doc. Only Cancel button will be enabled.
+- In SourceBook page, in the doc list for each book, non-completed docs were not showing the percentage finished. It was showing just the task name. Now it shows percentage. 
+- In SourceBook page, "Upload Additional Book Info From File" is no longer available for the current project.
