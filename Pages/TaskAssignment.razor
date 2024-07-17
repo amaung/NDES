@@ -54,7 +54,7 @@
                     Text = item
                 });
             }
-            List<UserProfile> userProfiles = State.dataFile.GetAllUserProfiles();
+            List<UserProfile> userProfiles = State.dataFile.GetActiveUserProfiles();
             foreach (UserProfile user in userProfiles)
             {
                 listUsers.Add(new DataItem()
@@ -95,7 +95,7 @@
     <div style="width:200px" class="form-group col-md-2 column">
         <label class="col-form-label">Search Type</label>
         <SfDropDownList TValue="string" TItem="DataItem" @bind-Value="searchTypeValue"
-                        MultiSelectMode="None" PopupHeight="335px" DataSource="@docSearchTypes">
+                        MultiSelectMode="None" PopupHeight="400px" DataSource="@docSearchTypes">
             <DropDownListEvents TItem="DataItem" TValue="string" ValueChange="@SearchTypeValueChangeHandler"></DropDownListEvents>
             <DropDownListFieldSettings Text="Text" Value="ID"></DropDownListFieldSettings>
         </SfDropDownList>
@@ -776,7 +776,7 @@
                     DocNo = listTaskDetailedInfo[0].DocNo,
                     UserID = userDropDownValue,
                     UserName = State.dataFile.GetUserName(userDropDownValue),
-                    NoPages = "371-383 (399)", //listTaskDetailedInfo[0].NoPages,
+                    NoPages = listTaskDetailedInfo[0].NoPages,
                     PagesSubmitted = 0,
                     Task = task,
                     StartDate = "",
@@ -988,6 +988,7 @@
     {
         if (State.dataFile == null) return;
         SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexes();
+        listSelectedTaskInfo = await this.sfgrid.GetSelectedRecordsAsync();
         TaskInfo taskInfo = args.Data;
         selectedTaskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;

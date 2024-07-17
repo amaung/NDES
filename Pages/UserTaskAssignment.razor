@@ -219,7 +219,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
 <div id="ControlRegion">
     <div class="form-row">
         <div style="width:200px;height:32px; padding-top:0px; padding-bottom:15px; margin-left:200px" class="column-dialog left-dialog" hidden="@hideButton">
-            <SfButton OnClick="@OnImportData"> Import Data From File </SfButton>
+            <SfButton OnClick="@OnImportData" Disabled="@disableOnClick"> Import Data From File </SfButton>
         </div>
         <div style="width:200px;height:32px; padding-top:0px; padding-bottom:15px;margin-left:150px" class="column-dialog right-dialog" hidden="@hideButton">
             <SfButton OnClick="@OnRetrieveData"> Retrieve Data From Server </SfButton>
@@ -459,6 +459,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     string showNextButton = "none";
     string overdueLabel = "";
     string overdueDay = "";
+    bool disableOnClick = true;
 
     int selectedBookPages = 0;
     int idxTaskAssignmentRowSelect = -1;
@@ -842,6 +843,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         if (State.dataFile == null) return;
         TaskDetailedInfo taskDetailedInfo = args.Data;
         idxTaskAssignmentRowSelect = args.RowIndex;
+        disableOnClick = taskDetailedInfo.Status == "Created";
     }
     public void RowSelectHandlerCorrectionGrid(RowSelectEventArgs<CorrectionInfo> args)
     {

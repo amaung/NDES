@@ -140,7 +140,7 @@
     protected override async Task OnInitializedAsync()
     {
         dictSourceBookInfo = State.dataFile.GetSourceBookInfo();
-        // AdjustSourceBookSubmittedPages();
+        //AdjustSourceBookSubmittedPages();
         PopulateGrid();
         SystemAdminButtonHide = (userClass == "S") ? "block" : "none";
         SystemAdminButtonHide = "none";
@@ -162,8 +162,8 @@
         int docPages, bookPages, displayPages;
         foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
         {
-            // if (sourceBookInfo.RowKey == "DN-13")
-            //     Console.WriteLine();
+            if (sourceBookInfo.RowKey == "SN-07")
+                Console.WriteLine();
             State.dataFile.GetDocPages(sourceBookInfo.Pages, out docPages, out bookPages);
             displayPages = docPages > bookPages ? docPages : bookPages;
             BookDocStatus bookDocStatus = new BookDocStatus();
@@ -212,6 +212,8 @@
             }
         }
     }
+
+
     public async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
         if (args != null)
@@ -248,7 +250,7 @@
         {
             foreach (KeyValuePair<string, SourceBookInfo> keyValue in dictSourceBookInfo)
             {
-                //if (keyValue.Key != "SN-01") continue;
+                //if (keyValue.Key != "SN-07") continue;
                 SourceBookInfo sourceBookInfo = keyValue.Value;
                 string query = String.Format("BookID eq '{0}'", keyValue.Key);
                 List<SuttaInfo> listSuttaInfo = clientSuttaInfo.QuerySuttaInfo(query);

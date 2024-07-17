@@ -1294,6 +1294,14 @@
             startValue = serverUploadStartPage;
             endValue = docEndPage;
             IsImportInfoDialogVisible = true;
+            disableFileImportOk = false;
+            ErrMsgImportFile = "";
+            if (userTask == "Edit-Upload" && (fileFirstPage != bookDocStartPage || fileLastPage != bookDocEndPage))
+            {
+                disableFileImportOk = true;
+                ErrMsgImportFile = String.Format("Cannot import file without all required {0} pages.", bookDocPages);
+                pagesToSubmit = doc_Pages;
+            }
         }
         else
         {
@@ -1807,11 +1815,15 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                         <SfNumericTextBox TValue="int?" ShowSpinButton="false" @bind-Value="@endValue" Max=@docEndPage Min=@docStartPage></SfNumericTextBox>
                     </div>
                 </div>
+                <div>
+                    <br/>
+                    <p style="color:brown">@ErrMsgImportFile</p>
+                </div>
             </Content>
         </DialogTemplates>
         <DialogButtons>
             <DialogButton Content="Cancel" CssClass="e-custom-dial-button" OnClick="@okCancel_ImportInfoDialog" />
-            <DialogButton Content="Ok" CssClass="e-custom-dial-button" IsPrimary="true" OnClick="@okClick_ImportInfoDialog" />
+            <DialogButton Content="Ok" CssClass="e-custom-dial-button" IsPrimary="true" OnClick="@okClick_ImportInfoDialog" Disabled=@disableFileImportOk/>
         </DialogButtons>
     </SfDialog>
 </div>
@@ -1849,12 +1861,14 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     bool IsImportInfoDialogVisible = false;
     string userTask = "";
     string submittedPagesOnServer = "", pagesToSubmit = "", doc_Pages = "", pagesInFile = "";
+    string ErrMsgImportFile = "";
     const string _NoNewPagesToSubmit_ = "No new pages to submit.";
     int serverUploadStartPage = 0;
     int docStartPage = 0, docEndPage = 0;
     int? startValue = 0, endValue = 0;
     bool hidePageSubmitRange = false;
     bool hideReviewPageSubmitRange = true;
+    bool disableFileImportOk = false;
 
     private void okCancel_ImportInfoDialog()
     {

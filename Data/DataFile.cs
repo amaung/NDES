@@ -1623,14 +1623,18 @@ namespace NissayaEditor_Web.Data
         //***************************************************************************************
         //public List<UserProfile> AllUserProfiles = new List<UserProfile>();
         public void ClearLoadedUserProfiles() { UserProfiles = new List<UserProfile>(); }
-        public List<UserProfile> GetAllUserProfiles()
+        public List<UserProfile> GetActiveUserProfiles()
+        {
+            return GetAllUserProfiles(true);
+        }
+        public List<UserProfile> GetAllUserProfiles(bool active = false)
         {
             bool inclDev = false;
             if (UserProfiles != null && UserProfiles.Count == 0)
             {
                 if (clientUserProfile != null)
                 {
-                    UserProfiles = clientUserProfile.GetAllUsers(inclDev);
+                    UserProfiles = clientUserProfile.GetAllUsers(inclDev, active);
                     foreach (UserProfile user in UserProfiles)
                     {
                         if (user.LastLogin != null) user.LastLogin = user.LastLogin.Value.ToLocalTime();

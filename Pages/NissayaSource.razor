@@ -54,7 +54,7 @@
 <br />
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@DocInfoRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="false" AllowTextWrap="true" Height="250" Width="800">
+            AllowSorting="false" AllowTextWrap="true" Height="300" Width="800">
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
@@ -74,7 +74,7 @@
 @*********************** Button: Upload more source books ************************@
 <div style="width:180px;height:32px; padding-top:23px; padding-left:11px" class="form-group col-md-2 column">
     @* hidden="@(!hide_file_browser)"*@
-    <SfButton CssClass="e-custom2" OnClick="@UploadMoreBooks"> Upload Additional Book Info From File  </SfButton>
+    @* <SfButton CssClass="e-custom2" OnClick="@UploadMoreBooks"> Upload Additional Book Info From File  </SfButton> *@
 </div>
 @********************* End Button: Upload more source books **********************@
 
@@ -268,8 +268,19 @@
         List<SuttaInfo> list = State.dataFile.GetPDFSuttaList(sourceBookInfo.RowKey);
         DocInfoRecords = new List<DocInfo>();
         int n = 0;
+        string taskStatus = "";
         foreach(SuttaInfo suttaInfo in list)
         {
+            taskStatus = suttaInfo.Status;
+            if (taskStatus != "Completed")
+            {
+                if (suttaInfo.PagesSubmitted == suttaInfo.NoPages) taskStatus = "Completed";
+                else
+                {
+                    int pct = (int)(suttaInfo.PagesSubmitted * 100F / suttaInfo.NoPages);
+                    taskStatus = String.Format("{0}%", pct);
+                }
+            }
             DocInfoRecords.Add(new DocInfo()
             {
                 srNo = ++n,
@@ -279,7 +290,7 @@
                 endPage = suttaInfo.EndPage,
                 pages = suttaInfo.NoPages,
                 PageNos = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.NoPages),
-                status = suttaInfo.Status
+                status = taskStatus
             });
         }
     }
