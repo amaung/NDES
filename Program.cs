@@ -14,7 +14,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 //builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddScoped<SfDialogService>();
-builder.Services.AddSingleton<State>();
+//builder.Services.AddSingleton<State>();
+builder.Services.AddScoped<State>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
