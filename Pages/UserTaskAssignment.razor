@@ -498,7 +498,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         if (State.dataFile == null) return;
 
-        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass);
+        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern);//, userClass);
         totalCount = State.dataFile.GetSearchResultCount();
 
         TaskInfoRecords = new List<TaskInfo>();

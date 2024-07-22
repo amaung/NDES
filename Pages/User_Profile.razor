@@ -379,10 +379,10 @@
                     return;
                 }
                 //rowData.userClass = rowData.userClass.ToLower();
-                if (rowData.userClass != "A" && rowData.userClass != "Admin" && rowData.userClass != "U" && rowData.userClass != "User")
+                if (rowData.userClass != "A" && rowData.userClass != "U" && rowData.userClass != "D")
                 {
                     args.Cancel = true;
-                    AlertBtn("User class can only be A or U.", "User Class Error");
+                    AlertBtn("User class can only be A, U or D.", "User Class Error");
                     return;
                 }
             }

@@ -5,7 +5,6 @@
 
 @inject NavigationManager NavManager
 
-
 <PageTitle>Administration</PageTitle>
 
 <body id="maincontainer" style="background-color:#f7f0df;">
@@ -17,7 +16,7 @@
         </div>
     </div>
     <br />
-    <h5>NDES Administration Office</h5>
+    <h5>@title</h5>
     <br />
     <label>User: @userName</label>
     <br />
@@ -53,11 +52,17 @@
     const string _Project = "Project";
     const string _DataPage = "DataPage";
     const string _Logout = "Logout";
+    string title = "NDES Administration Office";
 
 #pragma warning disable
     protected override void OnInitialized()
     {
         //State.dataFile = new DataFile(State.clientTipitakaDB, email, userName);
+        if (userClass == "D")
+        {
+            title = "NDES Document Administration";
+            MenuData[0].Hidden = MenuData[3].Hidden = MenuData[4].Hidden = MenuData[6].Hidden = true;
+        }
     }
     private List<MenuItem> MenuData = new List<MenuItem>
     {

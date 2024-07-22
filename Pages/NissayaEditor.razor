@@ -1208,6 +1208,7 @@
                 hide_file_browser = true;
                 CreateTXT();
                 break;
+            case documents:
             case administration:
                 hide_file_browser = true;
                 //JS.InvokeAsync<object>("open", String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass), "_blank");
@@ -1509,7 +1510,7 @@
     private void enableAdminstratorMenu()
     {
         //MenuData[0].Items[0].Hidden = //MenuData[0].Items[3].Hidden = //MenuData[0].Items[5].Hidden =
-            //(userClass != "A" && userClass != "S");
+        //(userClass != "A" && userClass != "S");
     }
     private void enableServerUploadMenu()
     {
@@ -1526,7 +1527,14 @@
     private void enableSystemAdminMenu()
     {
         // (userClass == "S")
-        MenuData[3].Hidden = (userClass != "S" && userClass != "A");
+        MenuData[3].Hidden = true;
+        if (userClass == "D")
+        {
+            MenuData[3].Hidden = false;
+            MenuData[3].Text = documents;
+        }
+        if (userClass == "S" || userClass == "A") MenuData[3].Hidden = false;
+        // MenuData[3].Hidden = (userClass != "S" && userClass != "A");
         foreach (var item in MenuData[4].Items)
         {
             if (item.Text == ExportHTML) item.Hidden = (userClass != "S");

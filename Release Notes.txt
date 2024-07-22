@@ -1,3 +1,10 @@
+Beta 0.16 (2024-07-21)
+- NDES now checks for out of page number sequence error in the import file.
+- NDES now has new user type 'D' (Document Administrator). When user of type 'D' logs in, the DataPage will have a new 'Documents' menu.
+- In 'Documens' page, the menu will be Documents, Task Assignments, SourceBooks, DataPage, Logout
+- In 'Documents' page, the 'D' user has the same priviledge as an administrator.
+- In the DataPage/User/Task Assignments, the 'D' will be  the same as 'U'.
+
 Beta 0.15a (2024-07-17)
 - Edit-Upload now checks for file page numbers and page count against doc book page numbers and count. Previously it did not check the page count.
 - In Admin Task Assignments now uses actual row data instead of indexes.

@@ -28,7 +28,7 @@
 <body id="maincontainer" style="background-color:#f7f0df">
     <br />
     <h3 class="pageheader">Welcome to the Nissaya Data Entry System!</h3>
-    <h5>Version Beta 0.15a</h5>
+    <h5>Version Beta 0.16</h5>
     <br />
     <h6><em>@ServerStorage</em></h6>
     <br />
@@ -281,11 +281,14 @@
             State.userName_M = userProfile.Name_M;
             if (clientActivityLog != null)
                 clientActivityLog.AddActivityLog(State.email, "Login", userName);
-            if (userClass == "U") NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
-            else 
+            if (userClass == "S" || userClass == "A")
             {
                 State.dataFile = new DataFile(clientTipitakaDB, email, userName);
                 NavManager.NavigateTo(String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass));
+            }
+            else 
+            {
+                NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
             }
         }
     }

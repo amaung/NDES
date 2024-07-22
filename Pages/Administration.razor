@@ -85,6 +85,11 @@
 #pragma warning disable
     protected override void OnInitialized()
     {
+        if (userClass == "D")
+        {
+            MenuData[0].Hidden = MenuData[3].Hidden = MenuData[4].Hidden = MenuData[6].Hidden = true;
+        }
+
         MenuData[0].Disabled = (componentName == "UseProfile");
         MenuData[1].Disabled = (componentName == _Documents);
         MenuData[2].Disabled = (componentName == "TaskAssignment");

@@ -128,6 +128,7 @@ namespace NissayaEditor_Web.Data
         public void ClearPageData() { Pages = new Dictionary<string, List<NIS>>(); }
         public void SetFileContent(string fnm, string content)
         {
+            ErrMsg = "";
             fname = fnm;
             fileContent = content.Replace("ၕ", "^");
             if (fileContent.Length > 0)
@@ -207,7 +208,7 @@ namespace NissayaEditor_Web.Data
             //List<string> paraPages = fileContent.Split('\n').ToList();
             pageNos = new List<string>();
             int recno = 0;
-            string pgno = string.Empty;
+            string pgno = string.Empty, nextpgno = "";
             try
             {
                 List<NIS> listNISRecords = new List<NIS>();
@@ -270,15 +271,26 @@ namespace NissayaEditor_Web.Data
                                 }
                             }
                         }
+                        if (nextpgno.Length > 0 && nextpgno != pgno)
+                        {
+                            ErrMsg = String.Format("Page numbering out of sequence. Page #{0} expected but #{1} found.", nextpgno, pgno);
+                            return;
+                        }
+                        //if (pageNos.Contains(pgno))
+                        //{
+                        //    ErrMsg = "Duplicate page number found.";
+                        //    return;
+                        //}
                         // store pgno and NIS recrods
                         Pages[pgno] = listNISRecords;
                         pageNos.Add(pgno);
+                        nextpgno = (Int32.Parse(pgno) + 1).ToString();
                     }
                 }
             }
             catch (Exception ex)
             {
-                ErrMsg = string.Format("Error: {0} After Page {1} RecNo {2}.", ex.Message, pgno, recno.ToString());
+                ErrMsg = string.Format("{0} after page {1} NIS rec {2}.", ex.Message, pgno, recno);
             }
         }
         private void parseCSVIntoPages()
