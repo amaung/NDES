@@ -539,7 +539,6 @@
     }
     private void onDocSelOKClick()
     {
-        VisibleSpinner = false;
         string docNo = string.Empty;
         if (sfgridDocList.SelectedRowIndex == -1)
         {
@@ -559,25 +558,28 @@
             var item = sfgridDocList.SelectedRecords[0];
             docNo = item.Id;
         }
-        VisibleSpinner = true;
+        //VisibleSpinner = true;
+        IsVisible_DocSelection = false;
+        VisibleSpinner = false;
+        sfgrid.ShowSpinnerAsync();
         if (docNo.Length > 0) 
         {
             doc_ID = docNo;
-            nissayaEditPage = this;
-            Object mainObj = (Object)this;
+            //nissayaEditPage = this;
+            //Object mainObj = (Object)this;
             dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);//, mainObj);
                                                                         // AfterServerDataLoaded(docNo);
                                                                         // VisibleSpinner = false;
         }
-        IsVisible_DocSelection = false;
     }
-    NissayaEditor_Web.Data.NissayaEditor? nissayaEditPage = null;
+    //NissayaEditor_Web.Data.NissayaEditor? nissayaEditPage = null;
     //**************************************************************************************/
     //**** This routine is called after returning from Task Assignments screen.
     //**************************************************************************************/
     private void LoadServerData()
     {
-        VisibleSpinner = true;
+        //VisibleSpinner = true;
+        sfgrid.ShowSpinnerAsync();
         doc_ID = State.doc_ID;
         doc_Title = State.doc_Title;
         dataFile.GetServerSuttaData(doc_ID, AfterServerDataLoaded).Wait();
@@ -602,6 +604,7 @@
         doc_ID = dataFile.GetDocID();
         doc_Title = dataFile.GetDocTitle();
         VisibleSpinner = fileUpload = false;
+        sfgrid.HideSpinnerAsync();
         if (dataFile.GetNoPages() > 0)
         {
             newParaMarker = dataFile.GetNewParaMarker();
@@ -610,8 +613,8 @@
         }
         else
         {
-            nissayaEditPage.VisibleSpinner = false;
-            nissayaEditPage.AlertBtn(String.Format("{0} has no data.", doc_ID), "Alert" );
+            //nissayaEditPage.VisibleSpinner = false;
+            AlertBtn(String.Format("{0} has no data.", doc_ID), "Alert" );
         }
         //LoadFirstPage();
         //UpdateRecentlyUsedFileList(doc_ID);
@@ -1239,7 +1242,7 @@
                     string docNo = selectedItem.Substring(3);
                     //docNo = "MN-005";
                     if (docNo == doc_ID) return;
-                    VisibleSpinner = true;
+                    //VisibleSpinner = true;
                     doc_ID = docNo;
                     dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);
                 }

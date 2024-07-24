@@ -1,3 +1,6 @@
+Beta 0.16b (2024-07-24)
+- When Get Document from Server is clicked the data coming back from the server cannot be displayed because of the spinner still visible. That part of the code is now  replaced with Sfgrid ShowSpinnerAsync() instead of a separate Spinner component.
+
 Beta 0.16a (2024-07-22)
 - The following code change made to avoid sharing the global data with other instances of NDES.
 	builder.Services.AddSingleton<State>() changed to builder.Services.AddScoped<State>(); 
