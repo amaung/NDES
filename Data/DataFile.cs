@@ -41,6 +41,16 @@ namespace NissayaEditor_Web.Data
         {
             RecNo = null; Pali = Trans = Trans2 = Footnote = Remarks = "";
         }
+        public NIS() { }
+        public NIS(NIS rec)
+        {
+            RecNo = rec.RecNo;
+            Pali = rec.Pali;
+            Trans = rec.Trans;
+            Trans2 = rec.Trans2;
+            Footnote = rec.Footnote;
+            Remarks = rec.Remarks;
+        }
     }
     public class SourceDocInfo()
     {

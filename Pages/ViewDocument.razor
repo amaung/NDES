@@ -55,17 +55,19 @@
         docTitle_Text = KinziCorrectionForNotoFont(docTitle).Replace("$", "/");
         if (pageNo == "0")
         {
-            btnVisible = true;
+            pageNos = State.dataFile.GetPageNo();
+            btnVisible = pageNos.Count > 5;
             start = 0; end = 4;
         }
         else
         {
+            pageNos = new List<string>() { pageNo };
             btnVisible = false; start = end = 0;
         }
         pgNo = pageNo;
         nisRecords = State.NISRecords;
-        if (pageNo == "0") pageNos = State.dataFile.GetPageNo();
-        else pageNos = new List<string>() { pageNo };
+        // if (pageNo == "0") pageNos = State.dataFile.GetPageNo();
+        // else pageNos = new List<string>() { pageNo };
         RenderComponent();
     }
     private string KinziCorrectionForNotoFont(string s)

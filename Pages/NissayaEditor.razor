@@ -568,8 +568,8 @@
             //nissayaEditPage = this;
             //Object mainObj = (Object)this;
             dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);//, mainObj);
-                                                                        // AfterServerDataLoaded(docNo);
-                                                                        // VisibleSpinner = false;
+                                                                      // AfterServerDataLoaded(docNo);
+                                                                      // VisibleSpinner = false;
         }
     }
     //NissayaEditor_Web.Data.NissayaEditor? nissayaEditPage = null;
@@ -610,6 +610,12 @@
             newParaMarker = dataFile.GetNewParaMarker();
             LoadPageMenu();
             enableServerUploadMenu();
+            // List<NIS> NISRecs = new List<NIS>();
+            // foreach(NIS nis in NISRecs)
+            // {
+            //     NISRecs.Add(new NIS(nis));
+            // }
+            // NISRecords = NISRecs;
         }
         else
         {
@@ -864,7 +870,8 @@
         List<NIS> GridData = new List<NIS>();
         if (dataFile != null)
         {
-            NISRecords = dataFile.GetPageData(pgno);
+            // Beta 0.16c: solving the issue that does not refresh the display problem
+            NISRecords = new List<NIS>(dataFile.GetPageData(pgno));
         }
     }
     private void LoadPageMenu()

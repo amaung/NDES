@@ -1,3 +1,9 @@
+Beta 0.16c (2024-07-27)
+- State is now Scoped, meaning State object is unique per user session and not shared with other concurrent users. This avoids crashing problem.
+- When viewing docs with no. of pages less than 6 will not show Previous and Next buttons
+- MN-05 book has correct no. of doc pages and now shows 100% complete. Previously it showed 98%.
+- Modified code in LoadPageData() to avoid problem with refreshing data in grid view. Further testing required.
+
 Beta 0.16b (2024-07-24)
 - When Get Document from Server is clicked the data coming back from the server cannot be displayed because of the spinner still visible. That part of the code is now  replaced with Sfgrid ShowSpinnerAsync() instead of a separate Spinner component.
 
