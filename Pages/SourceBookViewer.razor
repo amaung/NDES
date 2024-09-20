@@ -1,0 +1,16 @@
+﻿@page "/source_book_viewer/{docID}"
+@rendermode InteractiveServer
+@using Syncfusion.Blazor;
+@using Syncfusion.Blazor.PdfViewerServer;
+
+<h3>Source Book Viewer</h3>
+
+<SfPdfViewer DocumentPath="@DocumentPath" Height="500px" Width="1060px" ></SfPdfViewer>
+
+@code {
+    [Parameter]
+    public string docID { get; set; } = "";
+
+    private string DocumentPath { get; set; } = "https://drive.google.com/file/d/1GG6uXcDHE5x67uVSrTAT-opgQBepP1To/view?usp=drive_link";
+    DocumentPath = "https://drive.google.com/file/d/1GG6uXcDHE5x67uVSrTAT-opgQBepP1To/view?ts=66c26e47";
+}

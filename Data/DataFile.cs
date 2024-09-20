@@ -1350,7 +1350,7 @@ namespace NissayaEditor_Web.Data
             foreach (SuttaInfo suttaInfo in suttaInfoList)
             {
                 if (suttaInfo.PagesSubmitted > 0)
-                    list.Add(String.Format("{0}|{1}", suttaInfo.RowKey, suttaInfo.Title));
+                    list.Add(String.Format("{0}|{1}|{2}", suttaInfo.RowKey, suttaInfo.Title, suttaInfo.NoPages));
             }
             list.Sort();
             return list;

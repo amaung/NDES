@@ -1,20 +1,47 @@
 ﻿@page "/viewdocument/{docID}/{docTitle}/{pageNo}/{newParaMarker}"
 
+@rendermode InteractiveServer
 @using Syncfusion.Blazor
+@using Syncfusion.Blazor.SfPdfViewer;
 @using Syncfusion.Blazor.Popups
 @using Syncfusion.Blazor.Buttons
 @using System.Text.RegularExpressions
+
 @inject State State
 @inject SfDialogService DialogService
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
 @namespace NissayaEditor_Web.Data
 
-<PageTitle>Document Viwer</PageTitle>
+<PageTitle>Document Viewer</PageTitle>
 <body style="background-color: #f7f0df;">
     <div>
         <h4>@docTitle_Text</h4>
+        <h6>(@docID)</h6>
     </div>
+@*     <SfPdfViewer2 DocumentPath="https://drive.google.com/file/d/1GG6uXcDHE5x67uVSrTAT-opgQBepP1To/view?ts=66c26e47" ID="teste123321"
+                  Height="800px"
+                  Width="800px">
+    </SfPdfViewer2> *@
+@*     <div style="width: 100%; overflow: auto;">
+        <div style="width: 200px; float: left;"> Left </div>
+        <div style="margin-left: 20px;"> Right </div>
+    </div> *@
+    @*https://blazor.syncfusion.com/documentation/pdfviewer-2/getting-started/web-app?_gl=1*ta6lqc*_gcl_au*OTg5NTc5MDgxLjE3MjQwMTc1OTI.*_ga*MTg1MDEwMTAxMS4xNjg0NTQzOTQ3*_ga_41J4HFMX1J*MTcyNDAzNzY4Mi4yNzkuMS4xNzI0MDM3OTA0LjAuMC4w*@
+    @* <div class="row">
+        <div class="column column-1">
+            <section style="margin-left:1%; margin-right:1%;">
+                @DynamicFragment
+            </section>
+        </div>
+        <div class="column column-2">Right *@
+            @* <SfPdfViewer2 DocumentPath="@DocumentPath"></SfPdfViewer2> *@
+            @* <SfPdfViewer2 DocumentPath="https://cdn.syncfusion.com/content/pdf/pdf-succinctly.pdf" ID="teste123321"></SfPdfViewer2> *@
+        @* </div>
+    </div> *@
+    <br/><br/>
+
+    @* <SfPdfViewer2 DocumentPath="https://cdn.syncfusion.com/content/pdf/pdf-succinctly.pdf" ID="teste123321"></SfPdfViewer2> *@
     <section style="margin-left:1%; margin-right:1%;">
         @DynamicFragment
     </section>
@@ -30,6 +57,27 @@
     <br /><br /><br />
         
 </body>
+<style>
+    .row {
+        display: flex;
+    }
+
+    .column {
+        flex: 48%;
+        text-align: left;
+    }
+
+    .column-1 {
+        //background-color: brown;
+        //background-color: lightgray;
+        margin-left: 10px;
+    }
+
+    .column-2 {
+        //background-color: dimgray;
+        margin-left: 10px;
+    }
+</style>
 @code {
     [Parameter]
     public string docID { get; set; }
@@ -48,6 +96,9 @@
     bool innerParaBegin = false;
     bool btnVisible = true;
     bool titleNotoFont = false;
+    string wd = "100%";//"600px";
+    private string DocumentPath { get; set; } = "https://drive.google.com/file/d/1GG6uXcDHE5x67uVSrTAT-opgQBepP1To/view?usp=drive_link";
+    //string DocumentPath = "https://drive.google.com/file/d/1GG6uXcDHE5x67uVSrTAT-opgQBepP1To/view?ts=66c26e47";
 
     protected override void OnInitialized()
     {
@@ -93,7 +144,7 @@
     private int end = 4;
     private int idx = 0;
     List<string> pageNos;
-    
+
     private void NextClick()
     {
         if (end + 1 >= pageNos.Count()) return;
@@ -121,18 +172,19 @@
         bool pOpen = false;
         int pgCount = 0;
         int count = 0;
+        bool newLine = false;
         try
         {
             count = 0; string pgno;
             for(int i = start; i <= end; i++)
             {
                 ++pgCount; pgno = pageNos[i];
-                nisRecords = State.dataFile.GetPageData(pgno);
+                nisRecords = State.dataFile!.GetPageData(pgno);
                 if (pgCount == 1)
                 {
                     builder.OpenElement(1, "br"); builder.CloseElement();
-                    builder.OpenElement(1, "br"); builder.CloseElement();
-                    builder.OpenElement(1, "br"); builder.CloseElement();
+                    // builder.OpenElement(1, "br"); builder.CloseElement();
+                    builder.OpenElement(1, "hr"); builder.CloseElement();
                 }
                 builder.OpenElement(1, "label");
                 builder.AddAttribute(1, "class", "pageno");
@@ -149,19 +201,40 @@
                     builder.OpenElement(0, "span");
                     builder.AddAttribute(1, "class", "pali");
                     if (count == 1) builder.AddContent(2, String.Format("{0}", nisRecord.Pali));
-                    else builder.AddContent(2, String.Format(" {0}", nisRecord.Pali));
+                    else 
+                    {
+                        if (nisRecord.Pali != "-" && nisRecord.Trans != "-")
+                            builder.AddContent(2, String.Format(" {0}", nisRecord.Pali));
+                        else
+                        {
+                            newLine = true;
+                            builder.OpenElement(1, "br"); builder.CloseElement();
+                            builder.OpenElement(1, "br"); builder.CloseElement();
+                        }
+                    }
                     builder.CloseElement();
                     // translation
-                    builder.OpenElement(1, "span");
-                    builder.AddContent(2, String.Format(" {0}{1}{2}", "{", nisRecord.Trans, "}"));
-                    builder.CloseElement();
+                    if (nisRecord.Trans != "-")
+                    {
+                        builder.OpenElement(1, "span");
+                        builder.AddContent(2, String.Format(" {0}{1}{2}", "{", nisRecord.Trans, "}"));
+                        // builder.AddContent(2, String.Format(" {0}", nisRecord.Trans));
+                        builder.CloseElement();
+                    }
                     // footnote
                     if (nisRecord.Footnote.Length > 0)
                     {
                         builder.OpenElement(1, "span");
                         builder.AddAttribute(1, "class", "footnote");
-                        builder.AddContent(2, String.Format(" [{0}]", nisRecord.Footnote));
+                        builder.AddContent(2, String.Format(" {0}", nisRecord.Footnote));
                         builder.CloseElement();
+                        if (newLine)
+                        {
+                            newLine = false;
+                            builder.OpenElement(1, "br"); builder.CloseElement();
+                            builder.OpenElement(1, "br"); builder.CloseElement();
+
+                        }
                     }
                     // does translation have newParaMarker
                     if (nisRecord.Trans.EndsWith(newParaMarker))
@@ -223,6 +296,10 @@
         font-family: 'Padauk Book';
         font-size: 28px;
         font-style: normal;
+    }
+    h6 {
+        text-align: center;
+        margin-top: 20px;
     }
     span {
         font-family: 'Padauk Book';

@@ -63,7 +63,7 @@ namespace Tipitaka_DB
             QueryTableRec(query).Wait();
             list = (List<SuttaInfo>)objResult;
             foreach(var suttaInfo in list)
-                sortedSuttaList.Add(suttaInfo.RowKey, suttaInfo.Title);
+                sortedSuttaList.Add(suttaInfo.RowKey, suttaInfo.Title + "|" + suttaInfo.NoPages.ToString());
             return sortedSuttaList;
         }
         public void DeleteAll(string userID)

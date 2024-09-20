@@ -162,8 +162,8 @@
         int docPages, bookPages, displayPages;
         foreach (SourceBookInfo sourceBookInfo in dictSourceBookInfo.Values)
         {
-            // if (sourceBookInfo.RowKey == "MN-05")
-            //     Console.WriteLine();
+            if (sourceBookInfo.RowKey == "MN-07")
+                Console.WriteLine();
             State.dataFile.GetDocPages(sourceBookInfo.Pages, out docPages, out bookPages);
             displayPages = docPages > bookPages ? docPages : bookPages;
             BookDocStatus bookDocStatus = new BookDocStatus();
@@ -235,7 +235,7 @@
         bool isConfirm = await DialogService.ConfirmAsync("Are you sure you want to reset all data tables?", "Reset Data");
         if (isConfirm && State.dataFile != null) State.dataFile.ResetDataTables();
     }
-    private void AdjustSourceBookSubmittedPages_()
+    private void _AdjustSourceBookSubmittedPages()
     {
         ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
         ClientSourceBookInfo? clientSourceBookInfo = State.dataFile.GetClientSourceBookInfo();
@@ -248,7 +248,7 @@
         {
             foreach (KeyValuePair<string, SourceBookInfo> keyValue in dictSourceBookInfo)
             {
-                if (keyValue.Key != "MN-05") continue;
+                if (keyValue.Key != "SN-02") continue;
                 SourceBookInfo sourceBookInfo = keyValue.Value;
                 string query = String.Format("BookID eq '{0}'", keyValue.Key);
                 List<SuttaInfo> listSuttaInfo = clientSuttaInfo.QuerySuttaInfo(query);

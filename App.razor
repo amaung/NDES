@@ -1,4 +1,11 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
+﻿<head>
+    <!-- Syncfusion Blazor PDF Viewer (Next Gen) control's theme style sheet -->
+    @* <link href="_content/Syncfusion.Blazor.Themes/bootstrap5.css" rel="stylesheet" /> *@
+    <link rel="stylesheet" href="_content/Syncfusion.Blazor.Themes/fluent.css" />
+    <!-- Syncfusion Blazor PDF Viewer (Next Gen) control's scripts -->
+    <script src="_content/Syncfusion.Blazor.SfPdfViewer/scripts/syncfusion-blazor-sfpdfviewer.min.js" type="text/javascript"></script>
+</head>
+<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />

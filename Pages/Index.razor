@@ -28,11 +28,11 @@
 <body id="maincontainer" style="background-color:#f7f0df">
     <br />
     <h3 class="pageheader">Welcome to the Nissaya Data Entry System!</h3>
-    <h5>Version Beta 0.16c</h5>
+    <h5>Version Beta 0.17</h5>
     <br />
     <h6><em>@ServerStorage</em></h6>
     <br />
-    <div id="ControlRegion" style="background-color:#ded8ca; width:100%; height:300px;">
+    <div id="ControlRegion" style="background-color:#ded8ca; width:100%; height:340px;">
         <div class="col-lg-12 control-section">
             <div class="control_wrapper">
                 <br/> 
@@ -51,6 +51,10 @@
                 </div>
                 <div class="btn" style="margin-left:44%">
                     <SfButton IsPrimary="true" @onclick="Login">Enter</SfButton>
+                </div>
+                <br/>
+                <div class="btn" style="margin-left:36.5%;">
+                    <SfButton CssClass="e-custom" @onclick="GuestLogin">Enter as guest</SfButton>
                 </div>
             </div>
             <br/>
@@ -128,6 +132,14 @@
         border-radius: 10px;
         margin-top: 28px;
         width:100px;
+        color:black;
+    }
+    .e-custom {
+        width: 250px;
+    }
+    .e-custom, .e-custom:hover, .e-custom:focus, .e-custom:active {
+        background-color: whitesmoke;
+        color: black;
     }
 </style>
 <script type="text/javascript">
@@ -151,9 +163,9 @@
     string userName = "", userName_M = "";
     string checking = "hello";
     string ServerStorage = "";
-    ClientTipitakaDB_w clientTipitakaDB;
-    ClientUserProfile clientUserProfile;
-    ClientActivityLog clientActivityLog;
+    ClientTipitakaDB_w? clientTipitakaDB;
+    ClientUserProfile? clientUserProfile;
+    ClientActivityLog? clientActivityLog;
     // ClientSuttaInfo clientSuttaInfo;
     // ClientSuttaPageData clientSuttaPageData;
 
@@ -166,7 +178,7 @@
         checking = "Checking ...";
         this.VisibleSpinner = false;
         this.email = this.passcode = this.userClass = "";
-        if (State.screenID > 1 && clientActivityLog != null)
+        if (State.screenID > 1 && clientActivityLog != null && State.email != "guest")
             clientActivityLog.AddActivityLog(State.email, "Logout", State.userName);
         State.screenID = 0;
         GetClientGeoLocation();
@@ -175,8 +187,8 @@
     }
     private void GetClientGeoLocation()
     {
-        UserAgent = httpContextAccessor.HttpContext.Request.Headers["User-Agent"];
-        IPAddress = httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
+        // UserAgent = httpContextAccessor.HttpContext.Request.Headers["User-Agent"];
+        // IPAddress = httpContextAccessor.HttpContext.Connection.RemoteIpAddress.ToString();
         //IPAddress = "73.93.203.178";
         //string regInfo = GetUserCountryByIp(IPAddress);
     }
@@ -229,8 +241,21 @@
 
         return "";
     }
+    private void GuestLogin()
+    {
+        VisibleSpinner = true;
+        NavManager.NavigateTo(String.Format("/guestpage"));
+    }
     private void Login()
     {
+        // check for guest login
+        if (email.ToLower() == "guest" && passcode == "new24")
+        {
+            userClass = "G";
+            State.email = email = "guest";  State.userName = userName = "Guest";
+            NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+            return;
+        }
         if (!CheckValidEmailFormat(email)) return;
         if (email == "dhammayaungchi2011@gmail.com")
         {
@@ -254,41 +279,45 @@
         }
         bool firstTime = true;
         this.VisibleSpinner = true;
-        UserProfile userProfile = clientUserProfile.GetUserProfile(email);
-        this.VisibleSpinner = false;
-        firstTime = (clientUserProfile.StatusCode != 200);
-        if (firstTime)
+        UserProfile? userProfile = null;
+        if (clientUserProfile != null)
         {
-            AlertBtn("Currently no more new accounts accepted to work on this project.", "Sorry");
-            //IsVisible = true; 
-            return;
-        }
-        else
-        {
-            if (userProfile.LastDate != null && userProfile.LastDate.Length > 0)
+            userProfile = clientUserProfile.GetUserProfile(email);
+            this.VisibleSpinner = false;
+            firstTime = (clientUserProfile.StatusCode != 200);
+            if (firstTime)
             {
-                AlertBtn(email + " account has been deactivated.", "Warning");
+                AlertBtn("Currently no more new accounts accepted to work on this project.", "Sorry");
+                //IsVisible = true; 
                 return;
             }
-            userName = userProfile.Name_E;
-            userClass = userProfile.UserClass;
-            userProfile.LoginCount++;
-            userProfile.LastDate = "";
-            clientUserProfile.UpdateUserProfile(userProfile);
-            State.screenID = 1;
-            State.userName = userName;
-            State.email = email;
-            State.userName_M = userProfile.Name_M;
-            if (clientActivityLog != null)
-                clientActivityLog.AddActivityLog(State.email, "Login", userName);
-            if (userClass == "S" || userClass == "A")
+            else
             {
-                State.dataFile = new DataFile(clientTipitakaDB, email, userName);
-                NavManager.NavigateTo(String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass));
-            }
-            else 
-            {
-                NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+                if (userProfile.LastDate != null && userProfile.LastDate.Length > 0)
+                {
+                    AlertBtn(email + " account has been deactivated.", "Warning");
+                    return;
+                }
+                userName = userProfile.Name_E;
+                userClass = userProfile.UserClass;
+                userProfile.LoginCount++;
+                userProfile.LastDate = "";
+                clientUserProfile.UpdateUserProfile(userProfile);
+                State.screenID = 1;
+                State.userName = userName;
+                State.email = email;
+                State.userName_M = userProfile.Name_M;
+                if (clientActivityLog != null)
+                    clientActivityLog.AddActivityLog(State.email, "Login", userName);
+                if (userClass == "S" || userClass == "A")
+                {
+                    State.dataFile = new DataFile(clientTipitakaDB, email, userName);
+                    NavManager.NavigateTo(String.Format("/administration_main/{0}/{1}/{2}", email, userName, userClass));
+                }
+                else 
+                {
+                    NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
+                }
             }
         }
     }

@@ -1,0 +1,173 @@
+﻿@page "/guestpage"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Popups
+
+@namespace NissayaEditor_Web.Data
+
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+<body style="background-color:#f7f0df;">
+    <div style="margin-left:50px">
+        <h2>Welcome to Suttaṃ Nissaya Reader!</h2>
+        <br/>
+        <p style="font-size:20px">This page contains @DocGridList!.Count() suttas available for your reading.</p>
+    </div>
+    <hr />
+    @* <div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
+        <div class="menu-control">
+            <SfMenu Items="@MenuData">
+                <MenuEvents TValue="MenuItem" ItemSelected="menuitemSelected"></MenuEvents>
+            </SfMenu>
+        </div>
+    </div> *@
+    <div style="margin-left:50px">
+        <label style="font-size:18px">Select the document you want to read and click View:</label>
+        <br/><br/>
+        <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
+                AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="503" Width="700">
+            <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
+            <GridPageSettings PageSize="14"></GridPageSettings>
+            <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+            <GridEvents OnRecordClick="DocRecordClickHandler" TValue="DocSelectInfo"></GridEvents>
+            <GridColumns>
+                <GridColumn Field=@nameof(DocSelectInfo.DocNo) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="25%" Type="ColumnType.String"
+                            TextAlign="TextAlign.Left" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                <GridColumn Field=@nameof(DocSelectInfo.Title) HeaderText="Title" TextAlign="TextAlign.Left" Width="65%" Type="ColumnType.String"
+                            CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                <GridColumn Field=@nameof(DocSelectInfo.Pages) HeaderText="Pages" TextAlign="TextAlign.Center" Width="10%" Type="ColumnType.Integer"
+                            CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+    <br/>
+    <div style="margin-left:340px; margin-top:20px">
+        <SfButton IsPrimary="true" CssClass="e-custom" OnClick="@OnViewClick">View</SfButton>
+    </div>
+</body>
+<style>
+    .e-custom {
+        width: 120px;
+    }
+</style>
+<style>
+    .e-grid {
+        line-height: 20px;
+    }
+
+    .e-grid .e-altrow {
+        /* background-color: #f2f2f2; */
+        /* background-color: #d8e1f2; */
+        /* background-color: #f7f8fa; */
+        background-color: #F3F2F1;
+    }
+
+    .e-grid .e-rowcell.e-selectionbackground {
+        background-color: lightsteelblue !important;
+    }
+
+    .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
+        border-block-color: black;
+        border-block-start-color: black;
+        /* border-bottom-color: black; */
+    }
+
+    .e-headercell.e-attr1 {
+        background: #cfcfcf;
+    }
+</style>
+@code {
+    public List<DocSelectInfo>? DocGridList { get; set; } = new List<DocSelectInfo>();
+    SfGrid<DocSelectInfo>? sfgridDocList;
+    ClientTipitakaDB_w? clientTipitakaDB = null;
+    public List<NIS>? NISRecords { get; set; }
+    DataFile? dataFile = null;
+    string docNo = "", docTitle = "";
+
+    public class DocSelectInfo
+    {
+        public string DocNo { get; set; } = "";
+        public string Title { get; set; } = "";
+        public int Pages { get; set; } = 0;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (State.clientTipitakaDB == null) return;
+        clientTipitakaDB = State.clientTipitakaDB;
+        if (State.dataFile != null) dataFile = State.dataFile;
+        else 
+        {
+            dataFile = new DataFile(clientTipitakaDB, "guest@gmail.com", "Guest");
+            State.dataFile = dataFile;
+        }
+        await LoadData();
+    }
+    private async Task LoadData()
+    {
+        int pages = 0;
+        DocGridList = new List<DocSelectInfo>();
+        if (dataFile != null)
+        {
+            var allDocList = dataFile.GetAllSuttaList();
+            if (allDocList != null)
+            {
+                foreach (KeyValuePair<string, string> kv in allDocList)
+                {
+                    string[] f = kv.Value.Split("|");
+                    if (f.Length == 2) pages = Int32.Parse(f[1]);
+                    DocSelectInfo d = new DocSelectInfo() { DocNo = kv.Key, Title = f[0], Pages = pages };
+                    DocGridList.Add(d);
+                }
+            }
+        }
+        return;
+    }
+    private async Task OnViewClick()
+    {
+        //
+        if (dataFile != null && clientTipitakaDB != null)
+        {
+            ClientSuttaPageData? clientSuttaPageData = clientTipitakaDB.GetClientSuttaPageData();
+            if (clientSuttaPageData!= null)
+            {
+                //var result = await clientSuttaPageData.GetSutta(docNo);
+                await dataFile.GetServerSuttaData(docNo, DocRetrieved);
+
+            }
+        }
+    }
+    private void DocRecordClickHandler(RecordClickEventArgs<DocSelectInfo> args)
+    {
+        DocSelectInfo docSelectInfo = args.RowData;
+        docNo = docSelectInfo.DocNo;
+        docTitle = docSelectInfo.Title;
+    }
+    private void DocRetrieved(Object docNo)
+    {
+        var nis = State.NISRecords;
+        string dno = State.dataFile.DocID;
+        string dtitle = State.dataFile.DocTitle;
+        //"/viewdocument/{docID}/{docTitle}/{pageNo}/{newParaMarker}"
+        // NavManager.NavigateTo("/viewdocument///\"0\"/\"။ ။\"");
+        NavManager.NavigateTo(String.Format("/viewdocument/{0}/{1}/{2}/{3}", docNo, docTitle.Replace("/", "$"), 0, "။ ။"));
+        //AlertBtn("Got it", "Alert");
+    }
+    private async Task AlertBtn(string msg, string warn)
+    {
+        await DialogService.AlertAsync(msg, warn, new DialogOptions()
+            {
+                PrimaryButtonOptions = new DialogButtonOptions() { Content = "Ok" }
+            });
+    }
+}

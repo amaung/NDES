@@ -279,10 +279,11 @@
                             <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
                             <GridPageSettings PageSize="12"></GridPageSettings>
                             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
-                            <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="DocType"></GridEvents>
+                            <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="DocSelectInfo"></GridEvents>
                             <GridColumns>
-                                <GridColumn Field=@nameof(DocType.Id) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="30%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
-                                <GridColumn Field=@nameof(DocType.Text) HeaderText="Title" TextAlign="TextAlign.Left" Width="70%" Type="ColumnType.String"></GridColumn>
+                                <GridColumn Field=@nameof(DocSelectInfo.DocNo) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="30%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                                <GridColumn Field=@nameof(DocSelectInfo.Title) HeaderText="Title" TextAlign="TextAlign.Left" Width="58%" Type="ColumnType.String"></GridColumn>
+                                <GridColumn Field=@nameof(DocSelectInfo.Pages) HeaderText="Pages" TextAlign="TextAlign.Center" Width="12%" Type="ColumnType.Integer"></GridColumn>
                             </GridColumns>
                         </SfGrid>
                     </div>
@@ -314,7 +315,7 @@
     public List<string>? SuttaTypes { get; set; } = default!;
     NIS NISRec = new NIS();
     SfGrid<NIS>? sfgrid;
-    SfGrid<DocType>? sfgridDocList;
+    SfGrid<DocSelectInfo>? sfgridDocList;
     //private string DocTypeValue;
     public NIS nisDetails = new NIS();
     private bool IsVisible { get; set; } = false;
@@ -360,11 +361,17 @@
     public List<PageData> Pages = new List<PageData> { new PageData { Text = "", Id = "Pg-01" } };
     public List<PageData> Item = new List<PageData>{ new PageData{ Text = "", Id = "Pg-0001"} };
     //public List<DocType> DocTypes = new List<DocType>() { new DocType { Text = "", Id = "Doc-001" } };
-    public List<DocType>? DocGridList { get; set; }
+    public List<DocSelectInfo>? DocGridList { get; set; } = new List<DocSelectInfo>();
     public List<DocType> docItem = new List<DocType> { new DocType { Text = "", Id = "Doc-001" } };
     public List<DocType>? BookIDList { get; set; } = new List<DocType>();
     private List<string> RUFList = new List<string>();
     private const int RUFList_MaxSize = 5;
+    public class DocSelectInfo
+    {
+        public string DocNo { get; set; } = "";
+        public string Title { get; set; } = "";
+        public int Pages { get; set; } = 0;
+    }
     public class DocType
     {
         public string Text { get; set; } = "";
@@ -444,16 +451,22 @@
     }
     private void PrepareDocSelectDialog(string s)
     {
-        DocGridList = new List<DocType>();
+        DocGridList = new List<DocSelectInfo>();
         //if (allDocList == null || allDocList.Count == 0) allDocList = dataFile.GetAllSuttaList();
         VisibleSpinner = true;
+        int pages = 0;
         if (s == "All") 
         {
             allDocList = dataFile.GetAllSuttaList();
-            foreach (KeyValuePair<string, string> kv in allDocList)
+            if (allDocList != null)
             {
-                DocType d = new DocType() { Id = kv.Key, Text = kv.Value };
-                DocGridList.Add(d);
+                foreach (KeyValuePair<string, string> kv in allDocList)
+                {
+                    string[] f = kv.Value.Split("|");
+                    if (f.Length == 2) pages = Int32.Parse(f[1]);
+                    DocSelectInfo d = new DocSelectInfo() { DocNo = kv.Key, Title = f[0], Pages = pages };
+                    DocGridList.Add(d);
+                }
             }
         }
         else 
@@ -464,9 +477,9 @@
                 foreach(String item in listDoc)
                 {
                     string[] f = item.Split('|');
-                    if (f.Length == 2)
+                    if (f.Length == 3)
                     {
-                        DocType d = new DocType() { Id = f[0], Text = f[1] };
+                        DocSelectInfo d = new DocSelectInfo() { DocNo = f[0], Title = f[1], Pages = Int32.Parse(f[2]) };
                         DocGridList.Add(d);                
                     }
                 }
@@ -545,7 +558,7 @@
             if (DocGridList != null && DocGridList.Count > 0) 
             {
                 sfgridDocList.SelectedRowIndex = 0;
-                docNo = DocGridList[0].Id;
+                docNo = DocGridList[0].DocNo;
             }
             else
             {
@@ -556,7 +569,7 @@
         else
         {
             var item = sfgridDocList.SelectedRecords[0];
-            docNo = item.Id;
+            docNo = item.DocNo;
         }
         //VisibleSpinner = true;
         IsVisible_DocSelection = false;
@@ -791,7 +804,8 @@
         if (State.clientTipitakaDB != null) dataFile = new DataFile(State.clientTipitakaDB, email, userName);
         await ReadFile();
         // if file has BOM remove '\ufeff'
-        if (fileContent[0] == '\ufeff') fileContent = fileContent.Substring(1);
+        if (fileContent != null && fileContent.Length > 0 && fileContent[0] == '\ufeff') 
+            fileContent = fileContent.Substring(1);
         ServerUploadRequired = true;
         hide_file_browser = true;
         dataFile.SetFileContent(file.Name, fileContent);
@@ -975,7 +989,7 @@
             args.Cell.AddClass(new string[] { "footer_text" });
         }
     }
-    public void DocRecordClickHandler(RecordClickEventArgs<DocType> args)
+    public void DocRecordClickHandler(RecordClickEventArgs<DocSelectInfo> args)
     {
         var row = args.RowIndex;
     }
@@ -990,12 +1004,17 @@
     {
         // check for empty fields
         int n = 0;
+        if (NISRecords == null)
+        {
+            var _ = AlertBtn("NISRecords is null.", "Error");
+            return false;
+        }
         foreach(NIS nisRecord in NISRecords)
         {
             ++n;
-            if (nisRecord.Pali.Length == 0 || nisRecord.Trans.Length == 0)
+            if (nisRecord.Pali!.Length == 0 || nisRecord.Trans!.Length == 0)
             {
-                AlertBtn(string.Format("Empty data at record no {0}", n), "Empty data");
+                var _ = AlertBtn(string.Format("Empty data at record no {0}", n), "Empty data");
                 return false;
             }
         }
@@ -1174,16 +1193,19 @@
                 fileUpload = false; enableServerUploadMenu();
                 break;
             case currentPage:
+                // NavManager.NavigateTo(String.Format("/source_book_viewer/{0}", doc_ID));
+                //NavManager.NavigateTo("/home");
+                // break;
             case allPages:
                 hide_file_browser = true;
                 if (doc_ID.Length == 0 || doc_Title.Length == 0)
                 {
-                    AlertBtn("Document No and/or Title empty.", "No document info");
+                    var v1 = AlertBtn("Document No and/or Title empty.", "No document info");
                     return;
                 }
                 if (NISRecords == null || NISRecords.Count() == 0 || Pages == null || Pages.Count() == 0)
                 {
-                    AlertBtn("No data loaded yet.", "No data");
+                    var v2 = AlertBtn("No data loaded yet.", "No data");
                     return;
                 }
                 SaveRestoreDataState(true);
@@ -1227,7 +1249,7 @@
                 //AlertBtn("This feature is not implemented yet.", "Notice");
                 break;
             case DY:
-                JS.InvokeVoidAsync("gotoDhammaYaungchi", new string[] { doc_ID + ".txt" });
+                var _ = JS.InvokeVoidAsync("gotoDhammaYaungchi", new string[] { doc_ID + ".txt" });
                 break;
             case taskAssignment:
                 NavManager.NavigateTo(String.Format("/user_task_assignment/{0}/{1}/{2}", email, userName, userClass));
@@ -1240,7 +1262,9 @@
                 break;
             case invalidNISList:
                 if (InvalidNISDisplayRecords.Count == 0)
-                    AlertBtn("The Probable Invalid NIS Records list is empty.", "Info");
+                { 
+                    var v = AlertBtn("The Probable Invalid NIS Records list is empty.", "Info");
+                }
                 else IsVisible_InvalidNIS = true;
                 break;
             default:
@@ -1310,7 +1334,6 @@
             ErrMsgImportFile = "";
             if (userTask == "Edit-Upload")
             {
-                disableFileImportOk = true;
                 pagesToSubmit = doc_Pages;
                 if (fileFirstPage != bookDocStartPage || fileLastPage != bookDocEndPage)
                 {
@@ -1321,6 +1344,7 @@
                     ErrMsgImportFile = String.Format("File page count ({0}) does not match with document page count ({1}).",
                     fileNoPages, bookDocPages);
                 }
+                if (ErrMsgImportFile.Length > 0) disableFileImportOk = true;
             }
         }
         else
@@ -1538,6 +1562,11 @@
     {
         // (userClass == "S")
         MenuData[3].Hidden = true;
+        if (userClass == "G")
+        {
+            MenuData[1].Items[2].Hidden = true;
+            MenuData[2].Hidden = MenuData[3].Hidden = true;
+        }
         if (userClass == "D")
         {
             MenuData[3].Hidden = false;
@@ -1799,7 +1828,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                 State.userName_M = userName_M;
                 State.dataFile.UpdateUserProfile(email, userName_E, userName_M);
                 IsUserProfileVisible = false;
-                AlertBtn("User profile updated.", "Success");
+                var _ = AlertBtn("User profile updated.", "Success");
             }
         }
     }

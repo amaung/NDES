@@ -1,3 +1,13 @@
+Beta 0.16e (2024-08-24)
+- Public users can now login as Guest and product code "new24".
+- Public users have limited access, Only reading/saving documents are allowed.
+- Get Document from Server dialog now shows page count of each doc.
+- In Viewing documents, non-nissaya paragraphs which are saved in footnote column are shown as separate paragraphs.
+
+Beta 0.16d (2024-07-30)
+- Import dialog box did not enable Ok button even there was no error. The problem is fixed.
+- MN-07 and SN-02 doc pages now recalculated.
+
 Beta 0.16c (2024-07-27)
 - State is now Scoped, meaning State object is unique per user session and not shared with other concurrent users. This avoids crashing problem.
 - When viewing docs with no. of pages less than 6 will not show Previous and Next buttons
