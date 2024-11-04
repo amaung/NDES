@@ -14,7 +14,7 @@
 @namespace NissayaEditor_Web.Data
 
 <PageTitle>Document Viewer</PageTitle>
-<body style="background-color: #f7f0df;">
+<body style="background-color: #f7f0df; width:7in; margin-left:20px">
     <div>
         <h4>@docTitle_Text</h4>
         <h6>(@docID)</h6>
@@ -173,9 +173,10 @@
         int pgCount = 0;
         int count = 0;
         bool newLine = false;
+        string pattern = String.Format("{0}$", DataFile.endOfParagraphMarker);
         try
         {
-            count = 0; string pgno;
+            count = 0; string pgno; string[] ss; int lcount = 0;
             for(int i = start; i <= end; i++)
             {
                 ++pgCount; pgno = pageNos[i];
@@ -183,7 +184,6 @@
                 if (pgCount == 1)
                 {
                     builder.OpenElement(1, "br"); builder.CloseElement();
-                    // builder.OpenElement(1, "br"); builder.CloseElement();
                     builder.OpenElement(1, "hr"); builder.CloseElement();
                 }
                 builder.OpenElement(1, "label");
@@ -198,50 +198,66 @@
                 foreach(NIS nisRecord in nisRecords)
                 {
                     ++count;
-                    builder.OpenElement(0, "span");
-                    builder.AddAttribute(1, "class", "pali");
-                    if (count == 1) builder.AddContent(2, String.Format("{0}", nisRecord.Pali));
-                    else 
+                    if (nisRecord.RecType == "*")
                     {
-                        if (nisRecord.Pali != "-" && nisRecord.Trans != "-")
-                            builder.AddContent(2, String.Format(" {0}", nisRecord.Pali));
-                        else
+                        if (nisRecord.Pali == "-") continue;
+                        builder.OpenElement(0, "span");
+                        builder.AddAttribute(1, "class", "pali");
+                        if (count == 1) builder.AddContent(2, String.Format("{0}၊", nisRecord.Pali));
+                        else 
                         {
-                            newLine = true;
-                            builder.OpenElement(1, "br"); builder.CloseElement();
-                            builder.OpenElement(1, "br"); builder.CloseElement();
+                            if (nisRecord.Pali != "-" && nisRecord.Trans != "-")
+                                builder.AddContent(2, String.Format(" {0}၊", nisRecord.Pali));
+                            else
+                            {
+                                newLine = true;
+                                builder.OpenElement(1, "br"); builder.CloseElement();
+                                builder.OpenElement(1, "br"); builder.CloseElement();
+                            }
+                        }
+                        builder.CloseElement(); // close span
+                                                // translation
+                        if (nisRecord.Trans != "-")
+                        {
+                            builder.OpenElement(1, "span");
+                            // builder.AddContent(2, String.Format(" {0}{1}{2}", "{", nisRecord.Trans, "}"));
+                            // builder.AddContent(2, String.Format(" {0}။", nisRecord.Trans));
+                            MultilineText(nisRecord.Trans!, true);
+                            builder.CloseElement(); // close span
+                        }
+                        // footnote
+                        if (nisRecord.Footnote != null && nisRecord.Footnote.Length > 0)
+                        {
+                            builder.OpenElement(1, "span");
+                            builder.AddAttribute(1, "class", "footnote");
+                            MultilineText(nisRecord.Footnote);
+                            // builder.AddContent(2, String.Format(" {0}", nisRecord.Footnote));
+                            builder.CloseElement(); // close span
+                        }
+                        // does translation have newParaMarker
+                        if (nisRecord.Trans != null && nisRecord.Trans.EndsWith(newParaMarker))
+                        {
+                            builder.OpenElement(0, "p");
+                            builder.AddContent(1, " ");
+                            builder.CloseElement();
                         }
                     }
-                    builder.CloseElement();
-                    // translation
-                    if (nisRecord.Trans != "-")
+                    else
                     {
-                        builder.OpenElement(1, "span");
-                        builder.AddContent(2, String.Format(" {0}{1}{2}", "{", nisRecord.Trans, "}"));
-                        // builder.AddContent(2, String.Format(" {0}", nisRecord.Trans));
-                        builder.CloseElement();
-                    }
-                    // footnote
-                    if (nisRecord.Footnote.Length > 0)
-                    {
-                        builder.OpenElement(1, "span");
-                        builder.AddAttribute(1, "class", "footnote");
-                        builder.AddContent(2, String.Format(" {0}", nisRecord.Footnote));
-                        builder.CloseElement();
-                        if (newLine)
+                        builder.OpenElement(0, "span");
+                        if (nisRecord.RecType == "!") builder.AddAttribute(1, "class", "non-nis");
+                        else 
                         {
-                            newLine = false;
+                            builder.AddAttribute(1, "class", "footnote");
                             builder.OpenElement(1, "br"); builder.CloseElement();
-                            builder.OpenElement(1, "br"); builder.CloseElement();
+                            builder.OpenElement(1, "hr"); builder.CloseElement();
+                        }
 
+                        if (nisRecord.Footnote != null)
+                        {
+                            MultilineText(nisRecord.Footnote);
                         }
-                    }
-                    // does translation have newParaMarker
-                    if (nisRecord.Trans.EndsWith(newParaMarker))
-                    {
-                        builder.OpenElement(0, "p");
-                        builder.AddContent(1, " ");
-                        builder.CloseElement();
+                        builder.CloseElement(); // close span
                     }
                 }
                 builder.OpenElement(1, "br"); builder.CloseElement(); 
@@ -251,6 +267,45 @@
         catch (Exception ex)
         {
             string s = ex.Message;
+        }
+        void MultilineText(string text, bool addPokeMa = false)
+        {
+            if (!text.Contains("\n"))
+            {
+                if (addPokeMa && GetLastChar(text) != '။') builder.AddContent(2, String.Format(" {0}။", text));
+                else builder.AddContent(2, String.Format(" {0}", text));
+                AddEndOfParagraph(text);
+            }
+            else
+            {
+                string[] ss = text.Split("\n");
+                int lcount = 0;
+                foreach (string s in ss)
+                {
+                    ++lcount;
+                    builder.AddContent(2, s);
+                    AddEndOfParagraph(s);
+                    if (lcount < ss.Length)
+                    {
+                        builder.OpenElement(1, "br"); builder.CloseElement();
+                    }
+                }
+            }
+            char GetLastChar(string s)
+            {
+                if (s == null || s.Length == 0) return '\0';
+                return s.Substring(s.Length - 1, 1)[0];
+            }
+        }
+        void AddEndOfParagraph(string s)
+        {
+            string pattern = String.Format("{0}$", DataFile.endOfParagraphMarker);
+            Match match = Regex.Match(s.Trim(), pattern);
+            if (match.Success) 
+            { 
+                builder.OpenElement(1, "br"); builder.CloseElement();
+                builder.OpenElement(1, "br"); builder.CloseElement();
+            }
         }
     };
     private void RenderComponent()
@@ -310,6 +365,11 @@
         font-family: 'Padauk Book';
         font-size: 20px;
         color: #A52A2A;
+    }
+    span.non-nis {
+        font-family: 'Padauk Book';
+        font-size: 20px;
+        color: darkblue;
     }
     span.footnote {
         font-family: 'Padauk Book';

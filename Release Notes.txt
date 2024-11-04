@@ -1,6 +1,13 @@
+Beta 0.17a (2024-09-24)
+- Public readers can now double-click select and read documents
+- Space and button size adjusted
+
+Beta 0.17 (2024-09-19)
+- Public readers can now enter as guest and read documents
+
 Beta 0.16e (2024-08-24)
-- Public users can now login as Guest and product code "new24".
-- Public users have limited access, Only reading/saving documents are allowed.
+- Public users can now login as "guest" with product code "new24".
+- Public users have limited access, Only reading/saving of documents are allowed.
 - Get Document from Server dialog now shows page count of each doc.
 - In Viewing documents, non-nissaya paragraphs which are saved in footnote column are shown as separate paragraphs.
 

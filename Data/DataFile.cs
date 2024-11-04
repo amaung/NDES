@@ -21,6 +21,9 @@ using Newtonsoft.Json;
 using static System.Runtime.CompilerServices.RuntimeHelpers;
 using Syncfusion.Blazor.DropDowns;
 using Syncfusion.Blazor;
+using System;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using static NissayaEditor_Web.Data.NissayaEditor;
 
 
 // https://stackoverflow.com/questions/25391244/how-to-create-and-save-a-temporary-file-on-microsoft-azure-virtual-server
@@ -32,19 +35,24 @@ namespace NissayaEditor_Web.Data
     {
         public int? RecNo { get; set; } = null;
         //public bool? Para { get; set; } = false;
+        public string? RecType { get; set; } = "";
         public string? Pali { get; set; } = "";
         public string? Trans { get; set; } = "";
         public string? Trans2 { get; set; } = "";
         public string? Footnote { get; set; } = "";
         public string? Remarks { get; set; } = "";
+        public NIS()
+        {
+            RecNo = 0; RecType = Pali = Trans = Trans2 = Footnote = Remarks = "";
+        }
         public void Clear()
         {
-            RecNo = null; Pali = Trans = Trans2 = Footnote = Remarks = "";
+            RecNo = null; RecType = Pali = Trans = Trans2 = Footnote = Remarks = "";
         }
-        public NIS() { }
         public NIS(NIS rec)
         {
             RecNo = rec.RecNo;
+            RecType = rec.RecType;
             Pali = rec.Pali;
             Trans = rec.Trans;
             Trans2 = rec.Trans2;
@@ -64,7 +72,7 @@ namespace NissayaEditor_Web.Data
         public string fileContent = string.Empty;
         public string headerData = string.Empty;
         public string version = string.Empty;
-        public string newParaMarker = "။ ။";    // default
+        public string newParaMarker = "။    ။";    // default
         public string email = string.Empty;
         public string userName = string.Empty;
         public string userClass = string.Empty;
@@ -79,6 +87,18 @@ namespace NissayaEditor_Web.Data
         public char[] fieldSeparators = { ',', '\t' };
         public string ErrMsg = string.Empty;
         private bool currentPageUploaded = false;
+
+        private const string _Version_ = "Version";
+        private const string _DocNo_ = "DocNo";
+        private const string _DocTitle_ = "DocTitle";
+        private const string _SourceFile_ = "SourceFile";
+        private const string _StartPage_ = "StartPage";
+        private const string _EndPage_ = "EndPage";
+
+        int startPage, endPage;
+        string sourcePDFfile = "";
+        public static string endOfParagraphMarker = "။    ။";
+
         ClientTipitakaDB_w? clientUserTipitakaDB = null;
         ClientUserProfile? clientUserProfile = null;
         ClientSuttaInfo? clientSuttaInfo = null;
@@ -161,7 +181,7 @@ namespace NissayaEditor_Web.Data
             fileContent = fileContent.Replace("*^", "* ^");
             if (fileContent[fileContent.Length - 1] == '^') fileContent += " ";
         }
-        private void ExtractHeader()
+        private void ExtractHeader0()
         {
             headerData = string.Empty;
             int pos = fileContent.IndexOf("\n");
@@ -199,8 +219,248 @@ namespace NissayaEditor_Web.Data
             }
             return;
         }
+        private void ExtractHeader()
+        {
+            if (fileContent.Length == 0 || fileContent[0] != '{') return;
+            int pos = fileContent.IndexOf("}\r");
+            if (pos == -1) pos = fileContent.IndexOf("}\n");
+            if (pos == -1) return;
+            string s = fileContent.Substring(0, pos + 1).Trim(new char[] { '\r', '\n' });
+            if (s[0] == '{' && s[s.Length - 1] == '}')
+            {
+                s = s.Trim(new char[] { '{', '}' });
+                string[] f = s.Split(';');
+                foreach (string item in f)
+                {
+                    string[] ff = item.Split(':');
+                    if (ff.Length == 2)
+                    {
+                        ff[1] = ff[1].Trim();
+                        switch (ff[0].Trim())
+                        {
+                            case _Version_:
+                                version = ff[1];
+                                break;
+                            case _DocNo_:
+                                DocID = ff[1].Replace("\"", "").Trim();
+                                break;
+                            case _DocTitle_:
+                                DocTitle = ff[1].Replace("\"", "").Trim();
+                                break;
+                            case _StartPage_:
+                                startPage = int.Parse(ff[1]);
+                                break;
+                            case _EndPage_:
+                                endPage = int.Parse(ff[1]);
+                                break;
+                            case _SourceFile_:
+                                sourcePDFfile = ff[1].Replace("\"", "").Trim();
+                                break;
+                        }
+                    }
+                }
+                fileContent = fileContent.Substring(pos + 3);
+            }
+        }
+        char[] recMarkers = new char[] { '*', '!', '‼' };
+        char[] nisMarkers = new char[] { '*', '^', '@' };
+        const string paraFootnote = "@-";
+        const char tempFootnote = '‼';
+        const char tab = '→';
+        const string paraNewLine = "\n\n";
+
+        private void parseIntoPages2()
+        {
+            //const char nisFootnote = '@';
+            string pg = "", fContent = "";//, rec = "", pgno = "", ;
+                                          //int p1, srno = 0;
+                                          //string paraNewLine = "\n\n";
+            List<string> listErrPageNos = new List<string>();
+            string key = "";
+            List<string> paraPages = new List<string>();
+            //int prevPage = 0, curPage = 0;
+            int lastPage = 0;
+            int end = fileContent.IndexOf(paraNewLine);
+
+            fContent = fileContent.Replace(paraFootnote, tempFootnote.ToString());
+            paraPages = fContent.Split('#').ToList();
+
+            List<string> listParaPages = new List<string>();
+            try
+            {
+                foreach (string s in paraPages)
+                {
+                    string s1 = s.Trim();
+                    if (s1.Length > 0)
+                    {
+                        listParaPages.Add(s1);
+                        //end = s1.IndexOf('*');
+                        end = s1.IndexOfAny(recMarkers);
+                        // 2022-05-29 v1.0.3
+                        if (end == -1)
+                        {
+                            key = s1;
+                            lastPage = int.Parse(key);
+                            s1 = "";
+                        }
+                        else
+                        {
+                            key = s1.Substring(0, end).Trim();
+                            //s1 = "#" + s1;
+                            s1 = s1.Substring(end);
+                            // set startPage and endPage
+                            if (startPage == 0) startPage = int.Parse(key);
+                            lastPage = int.Parse(key); // assume current page is last page
+                        }
+                        //if (key[0] == '#') key = key.Substring(1);
+                        key = key.Trim();
+                        // key cannot have spaces, so use the first non-space contiguous chars
+                        //int n = key.IndexOf(' ');
+                        //if (n != -1) key = key.Substring(0, n);
+                        //KeyMapper.Add(new KeyMap(key, key));
+                        //s1 = ParseRecords(s1);
+                        // restore paragraph footnote marker by replacing "‼" with "@-"
+                        if (s1.Length > 0 && s1.Contains('‼'))
+                        {
+                            s1 = s1.Replace("‼", "@-");
+                        }
+                        //Pages.Add(key, s1);
+                    }
+                }
+                if (lastPage != endPage)
+                {
+                    //UpdateFileContent = true;
+                    endPage = lastPage;
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrMsg = String.Format("Page number {0} was not in the correct format.", key);
+            }
+        }
+        private List<NIS> ParseRecords(string pageContent)
+        {
+            int start = 0, end = 0;
+            string marker = "";
+            string page = "", rec = "", pali = "", plain = "", footnote = "", remark = "";
+            string t = "", pattern = String.Format("{0}$|{0}\n", endOfParagraphMarker);
+            
+            int p, recno = 0;
+            List<NIS> nisRecords = new List<NIS>();
+            NIS nisRec;
+            if (pageContent.Length == 0) return nisRecords;
+            try
+            {
+                end = pageContent.IndexOfAny(recMarkers);
+                if (end == 0) end = pageContent.IndexOfAny(recMarkers, 1);
+                if (end != -1) rec = pageContent.Substring(start, end - start).Trim(' ');
+                else rec = pageContent.Substring(start).Trim(' ');
+
+                while (rec.Length > 0)
+                {
+                    //rec = pageContent.Substring(start, end - start).Trim(' ');
+                    marker = pageContent[start].ToString();
+                    if (marker == "‼") marker = "@-";
+                    //GetRecord(codeView, dview, marker, s);
+                    switch (marker)
+                    {
+                        case "*":
+                        //case '^':
+                        //case '@':
+                            parseNissayaDataRecord(rec, out pali, out plain, out footnote);
+                            plain = NormalizeEndOfParaMarkers(plain);
+                            t = footnote = NormalizeEndOfParaMarkers(footnote);
+                            remark = "";
+                            p = t.IndexOf("?");
+                            if (p != -1)
+                            {
+                                footnote = t.Substring(0, p);
+                                remark = t.Substring(++p);
+                            }
+                            page += String.Format(" *{0} ^{1}", pali, plain);
+                            if (footnote.Length > 0) page += " @" + footnote;
+                            break;
+                        default:    // ! and ‼
+                            pali = plain = remark = "-";
+                            footnote = NormalizeEndOfParaMarkers(rec.Substring(1));
+                            page += " " + footnote;
+                            break;
+                    }
+                    nisRec = new NIS();
+                    nisRec.RecNo = ++recno;
+                    nisRec.RecType = marker;
+                    nisRec.Pali = pali.Replace("↵", "\n");
+                    nisRec.Trans = plain.Replace("↵", "\n");
+                    nisRec.Footnote = footnote.Replace("↵", "\n");
+                    nisRec.Remarks = remark.Replace("↵", "\n");
+                    // chek for end of paragraph marker
+                    //Match match = Regex.Match(nisRec.Trans, pattern);
+                    //if (match.Success) nisRec.Trans += "\n";
+                    //match = Regex.Match(nisRec.Footnote, pattern);
+                    //if (match.Success) nisRec.Footnote += "\n";
+                    //match = Regex.Match(nisRec.Remarks, pattern);
+                    //if (match.Success) nisRec.Remarks += "\n";
+
+                    nisRecords.Add(nisRec);
+                    if (end != -1)
+                    {
+                        start = end;
+                        end = pageContent.IndexOfAny(recMarkers, start + 1);
+                        if (end == -1)
+                        {
+                            if (start + 1 >= pageContent.Length) rec = "";
+                            else rec = pageContent.Substring(start);
+                        }
+                        else
+                            rec = pageContent.Substring(start, end - start).Trim(' ');
+                    }
+                    else rec = "";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrMsg = ex.Message;
+            }
+            return nisRecords;
+        }
+        private string NormalizeEndOfParaMarkers(string text)
+        {
+            String pattern = @"။[ ]+။$";
+            MatchCollection matches = Regex.Matches(text, pattern);
+            foreach (Match match in matches)
+            {
+                text = text.Replace(match.Value, endOfParagraphMarker);
+            }
+            return text;
+        }
+        private void parseNissayaDataRecord(string s, out string pali, out string plain, out string footnote)
+        {
+            // all parsed strings are returned with a trailing blank
+            pali = plain = footnote = string.Empty;
+            if (s[0] == '#')
+            {
+                // comment record. no need to parse anything
+                pali = s.Substring(1).Trim(' ');
+                return;
+            }
+
+            int n = s.IndexOf('^');
+            if (n != -1)
+            {
+                pali = s.Substring(1, n - 1).Trim(' ');
+                int n1 = s.IndexOf('@', n + 1);
+                if (n1 == -1) plain = s.Substring(n + 1).Trim(' ');
+                else
+                {
+                    plain = s.Substring(n + 1, n1 - n - 1).Trim(' ');
+                    footnote = s.Substring(n1 + 1).Trim(' ');
+                }
+            }
+            else pali = s.Substring(1);
+            return;
+        }
         public Dictionary<string, List<NIS>> GetInvalidNISRecords() { return dictInvalidNISRecords; }
-        private void parseIntoPages()
+        private void parseIntoPages ()
         {
             ErrMsg = string.Empty;
             if (fname.EndsWith(".txt")) parseTXTIntoPages();
@@ -213,12 +473,19 @@ namespace NissayaEditor_Web.Data
         private void parseTXTIntoPages()
         {
             dictInvalidNISRecords = new Dictionary<string, List<NIS>>();
+            string pg = "", fContent = "";
             // split data by page#
-            List<string> paraPages = GetPageData();
-            //List<string> paraPages = fileContent.Split('\n').ToList();
+            List<string> paraPages = new List<string>();
             pageNos = new List<string>();
-            int recno = 0;
+            //int lastPage = 0;
+            int end = fileContent.IndexOf(paraNewLine);
+            //int recno = 0;
             string pgno = string.Empty, nextpgno = "";
+            fContent = fileContent.Replace(paraFootnote, tempFootnote.ToString());
+            paraPages = fContent.Split('#').ToList();
+            //string key = "";
+            List<string> listParaPages = new List<string>();
+
             try
             {
                 List<NIS> listNISRecords = new List<NIS>();
@@ -228,69 +495,68 @@ namespace NissayaEditor_Web.Data
                     string s1 = s.Trim();
                     if (s1.Length > 0)
                     {
-                        if (s1[0] == '{' && s1[s1.Length - 1] == '}') continue;
-                        // find page #
-                        if (s1[0] == '#')
+                        listParaPages.Add(s1);
+                        end = s1.IndexOfAny(recMarkers);
+                        if (end == -1)
                         {
-                            listNISRecords = new List<NIS>();
-                            int p = s1.IndexOf('*');
-                            if (p > -1)
-                            {
-                                pgno = s1.Substring(1, p - 1).Trim();
-                                s1 = s1.Substring(p);
-                                p = pgno.IndexOf(" ");
-                                if (p > -1) { pgno = pgno.Substring(0, p).Trim(); }
-                            }
+                            pgno = s1.Trim();
+                            //    //key = s1;
+                            //    //lastPage = int.Parse(key);
+                            s1 = "";
                         }
-                        string[] nisRecords = s1.Split(new char[] { '*' });
-                        recno = 0;
-                        foreach (string nisRecord in nisRecords)
+                        else
                         {
-                            if (nisRecord.Trim().Length > 0)
-                            {
-                                string[] f = nisRecord.Trim().Split(new char[] { '^', '@' });
-                                if (f.Length > 0)
-                                {
-                                    NIS nis = new NIS();
-                                    nis.RecNo = ++recno;
-                                    nis.Pali = f[0].Trim();
-                                    if (f.Length > 1) nis.Trans = f[1].Trim();
-                                    else nis.Trans = "";
-                                    nis.Footnote = "";
-                                    if (f.Length == 3)
-                                    {
-                                        string[] ff = f[2].Trim().Split(new char[] { '?', '!' });
-                                        nis.Footnote = ff[0].Trim();
-                                        if (ff.Length > 1) nis.Remarks = ff[1].Trim();
-                                    }
-                                    listNISRecords.Add(nis);
+                            pgno = s1.Substring(0, end).Trim();
+                            s1 = s1.Substring(end).Trim();
+                            //    // set startPage and endPage
+                            //    if (startPage == 0) startPage = int.Parse(key);
+                            //    lastPage = int.Parse(key); // assume current page is last page
+                        }
+                        listNISRecords = ParseRecords(s1);
+                        //string[] nisRecords = s1.Split(new char[] { '*' });
+                        //recno = 0;
+                        //foreach (string nisRecord in nisRecords)
+                        //{
+                        //    if (nisRecord.Trim().Length > 0)
+                        //    {
+                        //        string[] f = nisRecord.Trim().Split(new char[] { '^', '@' });
+                        //        if (f.Length > 0)
+                        //        {
+                        //            //NIS nis = new NIS();
+                        //            nis.RecNo = ++recno;
+                        //            nis.Pali = f[0].Trim();
+                        //            if (f.Length > 1) nis.Trans = f[1].Trim();
+                        //            else nis.Trans = "";
+                        //            nis.Footnote = "";
+                        //            if (f.Length == 3)
+                        //            {
+                        //                string[] ff = f[2].Trim().Split(new char[] { '?', '!' });
+                        //                nis.Footnote = ff[0].Trim();
+                        //                if (ff.Length > 1) nis.Remark = ff[1].Trim();
+                        //            }
+                        //            listNISRecords.Add(nis);
 
-                                    if (nis.Pali.Length == 0 || nis.Trans.Length == 0 || 
-                                        (nis.Pali == "-" && nis.Trans == "-" && nis.Footnote.Length < 50))
-                                    {
-                                        string key = String.Format("{0}-{1}", pgno, nis.RecNo);
-                                        if (dictInvalidNISRecords.ContainsKey(key))
-                                        {
-                                            dictInvalidNISRecords[key].Add(nis);
-                                        }
-                                        else
-                                        {
-                                            dictInvalidNISRecords.Add(key, new List<NIS>() { nis });
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        //            if (nis.Pali.Length == 0 || nis.Trans.Length == 0 ||
+                        //                (nis.Pali == "-" && nis.Trans == "-" && nis.Footnote.Length < 50))
+                        //            {
+                        //                string key = String.Format("{0}-{1}", pgno, nis.RecNo);
+                        //                if (dictInvalidNISRecords.ContainsKey(key))
+                        //                {
+                        //                    dictInvalidNISRecords[key].Add(nis);
+                        //                }
+                        //                else
+                        //                {
+                        //                    dictInvalidNISRecords.Add(key, new List<NIS>() { nis });
+                        //                }
+                        //            }
+                        //        }
+                        //    }
+                        //}
                         if (nextpgno.Length > 0 && nextpgno != pgno)
                         {
                             ErrMsg = String.Format("Page numbering out of sequence. Page #{0} expected but #{1} found.", nextpgno, pgno);
                             return;
                         }
-                        //if (pageNos.Contains(pgno))
-                        //{
-                        //    ErrMsg = "Duplicate page number found.";
-                        //    return;
-                        //}
                         // store pgno and NIS recrods
                         Pages[pgno] = listNISRecords;
                         pageNos.Add(pgno);
@@ -300,7 +566,7 @@ namespace NissayaEditor_Web.Data
             }
             catch (Exception ex)
             {
-                ErrMsg = string.Format("{0} after page {1} NIS rec {2}.", ex.Message, pgno, recno);
+                ErrMsg = string.Format("{0} after page {1}.", ex.Message, pgno);
             }
         }
         private void parseCSVIntoPages()
@@ -388,21 +654,21 @@ namespace NissayaEditor_Web.Data
             }
             return new List<NIS>();
         }
-        public List<string> GetPageData()
-        {
-            List<string> result = new List<string>();
-            if (fileContent.Length == 0) return result;
-            List<string> pageData = fileContent.Split('#').ToList();
-            string pg;
-            for (int i = 0; i < pageData.Count; i++)
-            {
-                pg = pageData[i].Trim();
-                if (pg.Length == 0) { continue; }
-                pg = "#" + pg.Replace("\n", "").Replace("\r", "");
-                result.Add(pg);
-            }
-            return result;
-        }
+        //public List<string> GetPageData()
+        //{
+        //    List<string> result = new List<string>();
+        //    if (fileContent.Length == 0) return result;
+        //    List<string> pageData = fileContent.Split('#').ToList();
+        //    string pg;
+        //    for (int i = 0; i < pageData.Count; i++)
+        //    {
+        //        pg = pageData[i].Trim();
+        //        if (pg.Length == 0) { continue; }
+        //        pg = "#" + pg.Replace("\n", "").Replace("\r", "");
+        //        result.Add(pg);
+        //    }
+        //    return result;
+        //}
         public void SetPageData(string pgno, List<NIS> listNISRecords)
         {
             Pages[pgno].Clear(); Pages[pgno] = new List<NIS>(listNISRecords);
@@ -501,24 +767,34 @@ namespace NissayaEditor_Web.Data
                     foreach (NIS nis in kv.Value)
                     {
                         ++n;
-                        if (nis.Pali!.Length == 0 || nis.Trans!.Length == 0)
+                        switch(nis.RecType)
                         {
-                            ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. Upload aborted.", kv.Key, n);
-                            return pageData;
-                        }
-                        if (nis.Pali!.Length > 0)
-                        {
-                            if (page_data.Length > 0) page_data += " *" + nis.Pali;
-                            else page_data += "*" + nis.Pali;
-                            if (nis.Trans != null && nis.Trans.Length > 0) { page_data += " ^" + nis.Trans; }
-                            if (nis.Footnote != null && nis.Footnote.Length > 0) { page_data += " @" + nis.Footnote; }
-                            if (nis.Remarks != null && nis.Remarks.Length > 0) 
-                            {
-                                if (nis.Footnote == null || nis.Footnote.Length == 0)
-                                    // this is the case where no Footnote but Remarks exist
-                                    page_data += " @"; // preceded with footnote symbol first
-                                page_data += "?" + nis.Remarks; 
-                            }
+                            case "*":
+                                if (nis.Pali!.Length == 0 || nis.Trans!.Length == 0)
+                                {
+                                    ErrMsg = string.Format("Empty Pali or Trans text found in Page {0} Sr No #{1}. Upload aborted.", kv.Key, n);
+                                    return pageData;
+                                }
+                                if (nis.Pali!.Length > 0)
+                                {
+                                    if (page_data.Length > 0) page_data += " ";
+                                    page_data += "*" + nis.Pali;
+                                    if (nis.Trans != null && nis.Trans.Length > 0) { page_data += " ^" + nis.Trans; }
+                                    if (nis.Footnote != null && nis.Footnote.Length > 0) { page_data += " @" + nis.Footnote; }
+                                    if (nis.Remarks != null && nis.Remarks.Length > 0) 
+                                    {
+                                        if (nis.Footnote == null || nis.Footnote.Length == 0)
+                                            // this is the case where no Footnote but Remarks exist
+                                            page_data += " @"; // preceded with footnote symbol first
+                                        page_data += "?" + nis.Remarks; 
+                                    }
+                                }
+                                break;
+                            case "!":
+                            case "@-":
+                                if (page_data.Length > 0) page_data += " ";
+                                page_data += nis.RecType + nis.Footnote;
+                                break;
                         }
                     }
                     pageData[kv.Key] = page_data;
@@ -1074,6 +1350,11 @@ namespace NissayaEditor_Web.Data
                     }
                 }
             }
+            else
+            {
+                // updating existing page
+                Pages[pgno] = nisRecords;
+            }
             suttaPageData!.PageData = NISPageDataToServerData(Pages[pgno]);
             int statusCode;
             if (newInsert)
@@ -1081,7 +1362,10 @@ namespace NissayaEditor_Web.Data
                 clientSuttaPageData!.InsertTableRec(suttaPageData).Wait();
                 statusCode = clientSuttaPageData.StatusCode;
             }
-            else statusCode = clientSuttaPageData.UpdateSuttaPageData(suttaPageData);
+            else 
+            {
+                statusCode = clientSuttaPageData.UpdateSuttaPageData(suttaPageData); 
+            }
             if (statusCode != 204)
             {
                 ErrMsg = "Page data update error."; return;
@@ -1095,23 +1379,33 @@ namespace NissayaEditor_Web.Data
         {
             string rec = "";
             int n = 0;
-            string space = " ";
+            bool footnoteExists = false;
             foreach (NIS page in pageData)
             {
-                if (includeRemarks)
+                footnoteExists = false;
+                ++n;
+                switch (page.RecType)
                 {
-                    ++n;
-                    space = (n == 1) ? "" : " ";
-                }
-                rec += space + "*" + page.Pali;
-                rec += " ^" + page.Trans;
-                if (page.Footnote != null && page.Footnote.Length > 0) rec += " @" + page.Footnote;
-                if (includeRemarks && page.Remarks != null && page.Remarks.Length > 0)
-                {
-                    if (page.Footnote == null || page.Footnote.Length == 0) rec += " @";
-                    rec += "?" + page.Remarks;
+                    case "*":
+                        if (n > 1) rec += " ";
+                        rec += "*" + page.Pali;
+                        rec += " ^" + page.Trans;
+                        if (page.Footnote != null && page.Footnote.Length > 0) 
+                        {
+                            footnoteExists = true;
+                            rec += " @" + page.Footnote; 
+                        }
+                        if (page.Remarks != null && page.Remarks.Length > 0) 
+                            rec += (!footnoteExists ? "@" : "") + "?" + page.Remarks;
+                        break;
+                    case "!":
+                    case "@-":
+                        if (n > 1) rec += " ";
+                        rec += page.RecType + page.Footnote;
+                        break;
                 }
             }
+            rec = rec.Replace("\n", "↵");
             return rec;
         }
         public string PagesToFileContent()
@@ -1120,13 +1414,15 @@ namespace NissayaEditor_Web.Data
             {
                 ErrMsg = "";
                 // header
-                //  {"Version":"2.0","DocNo":"MN-001","Title":"မူလပရိယာယသုတ္တံ"}
-                //fileContent = String.Format("{2}Version=2.0; DocNo=\"{0}\"; Title=\"{1}\"; NewParaMarker=\"။ ။\"{3}\r\n", DocID, DocTitle, "{", "}");
-                fileContent = "";
+                //Dictionary<string, string> dictHeader = new Dictionary<string, string>()
+                //{ {"Version":"1.5"},{"DocNo":"MN-001"},{"Title":"မူလပရိယာယသုတ္တံ"}};
+                string s = String.Format("Version:1.5; DocNo:\"{0}\"; Title:\"{1}\"; " +
+                    "StartPage:{2};EndPage:{3};SourceFile:\"{4}\"", DocID, DocTitle, startPage, endPage, sourcePDFfile);
+                fileContent = "{" + s + "}\n";
                 int line = 0;
                 foreach (KeyValuePair<string, List<NIS>> kv in Pages)
                 {
-                    if (line++ > 0) fileContent += "\r\n\r\n";
+                    if (++line > 1) fileContent += "\n\n";
                     fileContent += String.Format("#{0} ", kv.Key);
                     fileContent += NISPageDataToServerData(kv.Value);
                 }
@@ -1372,6 +1668,16 @@ namespace NissayaEditor_Web.Data
                 return;
             }
             DocTitle = suttaInfo.Title;
+            startPage = suttaInfo.StartPage;
+            endPage = suttaInfo.EndPage;
+            if (clientSourceBookInfo != null)
+            {
+                SourceBookInfo srcPDFfile = clientSourceBookInfo.GetSourceBookInfo(suttaInfo.BookID)!;
+                if (srcPDFfile != null)
+                {
+                    sourcePDFfile = srcPDFfile.BookFilename;
+                }
+            }
             clientSuttaPageData!.SetSubPartitionKey(docID);
             var objResult = await clientSuttaPageData!.QueryTableRec(docID);
             //clientSuttaPageData!.QueryTableRec(docID).Wait();
@@ -1391,6 +1697,9 @@ namespace NissayaEditor_Web.Data
         public List<NIS> GetNISDataFromPage(string page)
         {
             List<NIS> listNIS = new List<NIS>();
+            listNIS = ParseRecords(page.Replace("@-", "‼"));
+            if (listNIS.Count > 0) { return listNIS; }
+
             string[] f = page.Split("*");
             // ဧဝံမေသုတန္တိ ^ဧဝံ မေ သုတံ အစရှိသောသုတ်သည် @?Remarks 
             // ရထဝိနီတသုတ္တံ ^ရထဝီနိတသုတ်တည်း @Footnote?Remarks 

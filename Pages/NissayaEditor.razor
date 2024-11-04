@@ -82,7 +82,7 @@
         </div>
         <div id="ControlRegion" class="column right" style="background-color:#bdbcbb;">
             <SfGrid ID="Grid" DataSource="@NISRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
-                AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" Height="378" Width="800">
+                AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" Height="400" Width="800">
                 <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                               NewRowPosition="NewRowPosition.Bottom" Mode="@EditMode.Dialog" Dialog="DialogParams">
                     <Template>
@@ -91,11 +91,16 @@
                         }
                         <div>
                             <div class="form-row">
-                                <div class="form-group col-md-12">
+                                <div class="form-group column1" style="width:50%">
                                     <label class="col-form-label">Sr. No.</label>
                                     <SfNumericTextBox ID="srno" @bind-Value="@(NISRec.RecNo)" ShowSpinButton="false" Enabled="false" TValue="int?"></SfNumericTextBox>
                                 </div>
+                                <div class="form-group column2" style="width:50%">
+                                    <label class="col-form-label">Data Type</label>
+                                    <SfTextBox ID="datatype" @bind-Value="@(NISRec.RecType)" Enabled="false" ></SfTextBox>
+                                </div>
                             </div>
+                            <br/>
                             <div class="form-row multiline">
                                 <label for="pali-text" class="col-form-label">Pali</label>
                                 <SfTextBox ID="pali-text" Multiline=true @bind-Value="@(NISRec.Pali)" CssClass="e-custom-height e-outline"></SfTextBox>
@@ -107,7 +112,7 @@
                             <div class="form-row">
                                 <div class="form-group col-md-12">
                                     <label for="footnote" class="col-form-label">Footnote</label>
-                                    <SfTextBox id="footnote" @bind-Value="@(NISRec.Footnote)"></SfTextBox>
+                                    <SfTextBox id="footnote" Multiline=true @bind-Value="@(NISRec.Footnote)" CssClass="e-custom-height2 e-outline"></SfTextBox>
                                 </div>
                             </div>
                             <div class="form-row">
@@ -124,11 +129,12 @@
                 <GridEvents QueryCellInfo="CustomizeCell" OnToolbarClick="ToolbarClick" RowSelected="RowSelectHandler" OnCellEdit="CellEditHandler"
                 OnActionBegin="ActionBegin" OnActionComplete="ActionComplete" TValue="NIS"></GridEvents>
                 <GridColumns>
-                    <GridColumn Field=@nameof(NIS.RecNo) HeaderText="Sr No" IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.RecNo) HeaderText="Sr No" IsPrimaryKey="true" AllowEditing="false" Width="50px" Type="ColumnType.Integer" TextAlign="TextAlign.Center" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.RecType) HeaderText="Rec" TextAlign="TextAlign.Center" Width="40px" EditType="EditType.DropDownEdit" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                     <GridColumn Field=@nameof(NIS.Pali) HeaderText="Pāḷi" TextAlign="TextAlign.Left" Width="25%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                     <GridColumn Field=@nameof(NIS.Trans) HeaderText="Translation" TextAlign="TextAlign.Left" Width="35%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                     <GridColumn Field=@nameof(NIS.Footnote) HeaderText="Footnote" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
-                    <GridColumn Field=@nameof(NIS.Remarks) HeaderText="Remarks" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                    <GridColumn Field=@nameof(NIS.Remarks) HeaderText="Remark" TextAlign="TextAlign.Left" Width="15%" Type="ColumnType.String" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                 </GridColumns>
             </SfGrid>
         </div>
@@ -147,7 +153,7 @@
         @***************************@
         @* Nissaya data entry form *@
         @***************************@
-        <SfDialog Width="800px" MinHeight="600px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+        <SfDialog Width="800px" MinHeight="640px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
             <DialogTemplates>
                 <Header> Add Nissaya Record </Header>
                 <Content>
@@ -170,11 +176,19 @@
                     </div>
                     <div class="column-dialog right-dialog">
                         <div class="form-row">
-                            <div class="form-group col-md-12">
+                            <div class="form-group column1" style="width:50%">
                                 <label class="col-form-label">Sr. No.</label>
                                 <SfNumericTextBox ID="srno" @bind-Value="@(NISRec.RecNo)" ShowSpinButton="false" Enabled="false"></SfNumericTextBox>
                             </div>
+                            <div class="form-group column2" style="width:50%">
+                                <label class="col-form-label">Data Type</label>
+                                <SfDropDownList ID="datatype" TValue="string" TItem="DocType" @ref="recTypeDropdownList" DataSource="@recTypeList" >
+                                    <DropDownListFieldSettings Text="Text" Value="Id"></DropDownListFieldSettings>
+                                    <DropDownListEvents TValue="string" TItem="DocType" OnValueSelect="@OnValueSelecthandler"></DropDownListEvents>
+                                </SfDropDownList>
+                            </div>
                         </div>
+                        <br/><br/><br/>
                         <div class="form-row multiline">
                             <label for="pali-text" class="col-form-label">Pali</label>
                             <SfTextBox ID="pali-text" Multiline=true Focus="@FocusHandler_Pali" @bind-Value="@(NISRec.Pali)" CssClass="e-custom-height e-outline"></SfTextBox>
@@ -186,7 +200,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12">
                                 <label for="footnote" class="col-form-label">Footnote</label>
-                                <SfTextBox ID="footnote" Focus="@FocusHandler_Footnote" @bind-Value="@(NISRec.Footnote)"></SfTextBox>
+                                <SfTextBox ID="footnote" Multiline=true Focus="@FocusHandler_Footnote" @bind-Value="@(NISRec.Footnote)" CssClass="e-custom-height2 e-outline"></SfTextBox>
                             </div>
                         </div>
                         <div class="form-row">
@@ -279,7 +293,7 @@
                             <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
                             <GridPageSettings PageSize="12"></GridPageSettings>
                             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>       
-                            <GridEvents OnRecordClick="DocRecordClickHandler" DataBound="DocDataBoundHandler" TValue="DocSelectInfo"></GridEvents>
+                            <GridEvents OnRecordClick="DocRecordClickHandler" OnRecordDoubleClick="DocRecordDoubleClickHandler" DataBound="DocDataBoundHandler" TValue="DocSelectInfo"></GridEvents>
                             <GridColumns>
                                 <GridColumn Field=@nameof(DocSelectInfo.DocNo) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="30%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
                                 <GridColumn Field=@nameof(DocSelectInfo.Title) HeaderText="Title" TextAlign="TextAlign.Left" Width="58%" Type="ColumnType.String"></GridColumn>
@@ -316,6 +330,8 @@
     NIS NISRec = new NIS();
     SfGrid<NIS>? sfgrid;
     SfGrid<DocSelectInfo>? sfgridDocList;
+    SfDropDownList<string, DocType>? recTypeDropdownList;
+    string[] RecTypeList = { "*", "!", "@-" };
     //private string DocTypeValue;
     public NIS nisDetails = new NIS();
     private bool IsVisible { get; set; } = false;
@@ -382,13 +398,18 @@
         public string Text { get; set; } = "";
         public string Id { get; set; } = "";
     }
-
+    List<DocType> recTypeList = new List<DocType>()
+    {
+        new DocType() { Id = "*", Text = "* (Nissaya data)" },
+        new DocType() { Id = "!", Text = "! (Non-Nissaya data in the main section)" },
+        new DocType() { Id = "@-", Text = "@- (Non-Nissaya data in the footnote section)" }
+    };
     // User Profile Dialog
     // bool IsUserProfileVisible = false;
     // string userName_E = "", userName_M = "";
     // string UserProfileErrMsg = "";
 
-    private DialogSettings DialogParams = new DialogSettings { Width = "400px", Height = "600px" };
+    private DialogSettings DialogParams = new DialogSettings { Width = "400px", Height = "610px" };
 
     protected override void OnInitialized()
     {
@@ -406,7 +427,6 @@
             hide_file_browser = true;
             LoadServerData();
         }
-        // FillBookIDs(); // for Doc Selection menu
     }
 
     public int GetSrNo() 
@@ -498,7 +518,8 @@
         VisibleSpinner = false;
         // if (DocGridList.Count == 0) 
         //     AlertBtn("No documents found for this source book.", "Not Found");
-    }
+    }    
+
     private void doneClick()
     {
         // this.ClickStatus = "you have clicked Cancel";
@@ -506,10 +527,12 @@
     }
     private void addClick()
     {
-        // this.ClickStatus = "you have clicked Ok";
-        if (NISRec.Pali.Trim().Length == 0 || NISRec.Trans.Trim().Length == 0)
+        // this.ClickStatus = "you have clicked Ok";       
+        if (NISRec.RecType == null || NISRec.RecType.Length == 0 ||  
+            NISRec.Pali == null || NISRec.Pali.Trim().Length == 0 || 
+            NISRec.Trans == null || NISRec.Trans.Trim().Length == 0)
         {
-            ErrMsgDataEntry = "Pali or Translation field is empty.";
+            ErrMsgDataEntry = "DataType or Pali or Translation field is empty.";
             return;
         }
         ErrMsgDataEntry = string.Empty;
@@ -517,6 +540,8 @@
         AddNewRecord(NISRec);
         //dataFile.AddNISRecord(page_No, NISRec);
         NISRec = new NIS();
+        if (recTypeDropdownList != null && recTypeDropdownList.Value != null) 
+            recTypeDropdownList.Value = "";
         NISRec.RecNo = NISRecords.Count + 1;
         currentPageDirty = true;
     }
@@ -553,37 +578,49 @@
     private void onDocSelOKClick()
     {
         string docNo = string.Empty;
-        if (sfgridDocList.SelectedRowIndex == -1)
+        if (docNo.Length == 0 )
         {
-            if (DocGridList != null && DocGridList.Count > 0) 
+            if (sfgridDocList!.SelectedRowIndex == -1)
             {
-                sfgridDocList.SelectedRowIndex = 0;
-                docNo = DocGridList[0].DocNo;
+                if (DocGridList != null && DocGridList.Count > 0) 
+                {
+                    sfgridDocList.SelectedRowIndex = 0;
+                    docNo = DocGridList[0].DocNo;
+                }
+                else
+                {
+                #pragma warning disable 4014
+                    AlertBtn("No document selected.", "Error");
+                #pragma warning restore                                   
+                    // AfterServerDataLoaded(docNo);
+                    return;
+                }
             }
             else
             {
-                AlertBtn("No document selected.", "Error");
-                return;
+                var item = sfgridDocList.SelectedRecords[0];
+                docNo = item.DocNo;
             }
         }
-        else
-        {
-            var item = sfgridDocList.SelectedRecords[0];
-            docNo = item.DocNo;
-        }
         //VisibleSpinner = true;
+        GetTheDoc(docNo);
+    }
+    void GetTheDoc(string docNo)
+    {
         IsVisible_DocSelection = false;
         VisibleSpinner = false;
-        sfgrid.ShowSpinnerAsync();
+        sfgrid!.ShowSpinnerAsync();
         if (docNo.Length > 0) 
         {
             doc_ID = docNo;
             //nissayaEditPage = this;
             //Object mainObj = (Object)this;
+            #pragma warning disable 4014
             dataFile.GetServerSuttaData(docNo, AfterServerDataLoaded);//, mainObj);
-                                                                      // AfterServerDataLoaded(docNo);
-                                                                      // VisibleSpinner = false;
+            #pragma warning restore                                   // AfterServerDataLoaded(docNo);
+            // VisibleSpinner = false;
         }
+
     }
     //NissayaEditor_Web.Data.NissayaEditor? nissayaEditPage = null;
     //**************************************************************************************/
@@ -633,7 +670,9 @@
         else
         {
             //nissayaEditPage.VisibleSpinner = false;
+            #pragma warning disable 4014
             AlertBtn(String.Format("{0} has no data.", doc_ID), "Alert" );
+            #pragma warning restore
         }
         //LoadFirstPage();
         //UpdateRecentlyUsedFileList(doc_ID);
@@ -680,6 +719,22 @@
     {
         InsertSpeciaStr("ဍ္ဎ");
     }
+    // public void OnRecTypeValueChange(ChangeEventArgs<string, DocType> args)
+    // {
+    //     DocType docType = args.ItemData;
+    //     if (docType.Id == "!" || docType.Id == "@-") 
+    //     { NISRec.Pali = NISRec.Trans = "-"; NISRec.Footnote = NISRec.Remarks = ""; }
+    //     else NISRec.Pali = NISRec.Trans = NISRec.Footnote = NISRec.Remarks = "";
+    // }
+    private void OnValueSelecthandler(SelectEventArgs<DocType> args)
+    {
+        // Here, you can customize your code.
+        DocType docType = args.ItemData;
+        NISRec.RecType = docType.Id;
+        if (docType.Id == "!" || docType.Id == "@-") 
+        { NISRec.Pali = NISRec.Trans = "-"; NISRec.Footnote = NISRec.Remarks = ""; }
+        else NISRec.Pali = NISRec.Trans = NISRec.Footnote = NISRec.Remarks = "";
+    }
     private void FocusHandler_Pali(FocusInEventArgs args) { add_dialog_field_no = 1; }
 
     private void FocusHandler_Trans(FocusInEventArgs args) { add_dialog_field_no = 2; }
@@ -720,7 +775,7 @@
             string msg = ex.Message;
         }
     }
-    private List<int> currentSelectedRowIndex { get; set; }
+    private List<int> currentSelectedRowIndex { get; set; } = new List<int>();
     private int deletedRecNo { get; set; } = -1;
 
     // https://www.syncfusion.com/forums/165107/is-it-possible-to-add-new-row-to-the-bottom-of-the-grid
@@ -746,6 +801,7 @@
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Add"))
         {
             args.Index = NISRecords.Count();
+            currentPageDirty = true;
             //sfgrid.PageSettings.CurrentPage = (sfgrid.TotalItemCount / sfgrid.PageSettings.PageSize) + 1;
             //args.Index = (Grid.PageSettings.CurrentPage * Grid.PageSettings.PageSize) - 1;
         }
@@ -753,6 +809,7 @@
         {
             NIS nis = args.Data;
             int n = NISRecords.Count();
+            currentPageDirty = true;
             //dataFile.DelNISRecord(page_No, nis);
         }
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Edit"))
@@ -771,7 +828,8 @@
     private void change(ListBoxChangeEventArgs<string[], PageData> args)
     {
         //Triggers when value changed
-        if (currentPageDirty) UpdateCurrentPage();
+        if (currentPageDirty) 
+            UpdateCurrentPage();
         pali_field = trans_field = footnote_field = remarks_field = string.Empty;
         List<PageData> vdata = (List<PageData>)args.Items;
         if (args.Value == null && vdata != null && vdata.Count > 0)
@@ -795,7 +853,9 @@
     {
         dataFile.UpdateCurrentPage(doc_ID, page_No, NISRecords);
         if (dataFile.ErrMsg.Length > 0)
+        #pragma warning disable 4014
             AlertBtn(dataFile.ErrMsg, "Error");
+        #pragma warning restore
         currentPageDirty = false;
     }
     private async void HandleFileSelection(InputFileChangeEventArgs e)
@@ -804,14 +864,16 @@
         if (State.clientTipitakaDB != null) dataFile = new DataFile(State.clientTipitakaDB, email, userName);
         await ReadFile();
         // if file has BOM remove '\ufeff'
-        if (fileContent != null && fileContent.Length > 0 && fileContent[0] == '\ufeff') 
-            fileContent = fileContent.Substring(1);
+        if (fileContent == null || fileContent.Length == 0) return;
+        if (fileContent[0] == '\ufeff') fileContent = fileContent.Substring(1);
         ServerUploadRequired = true;
         hide_file_browser = true;
         dataFile.SetFileContent(file.Name, fileContent);
         if (dataFile.ErrMsg.Length > 0)
         {
+        #pragma warning disable 4014
             AlertBtn(dataFile.ErrMsg, "Error");
+        #pragma warning restore
             return;
         }
         // AlertBtn(dataFile.GetNoPages().ToString(), "No. of Pages");
@@ -819,8 +881,8 @@
         Value = new string[] { Pages[0].Id };
         LoadPageData(Pages[0].Text);
         InvalidNISRecordErrMsg = dataFile.GetFootnoteRemarkCountWarning();
-        var dict = dataFile.GetInvalidNISRecords();
-        if (dict.Count > 0 || InvalidNISRecordErrMsg.Length > 0) ShowInvalidNISDial(dict);
+        // var dict = dataFile.GetInvalidNISRecords();
+        // if (dict.Count > 0 && InvalidNISRecordErrMsg.Length > 0) ShowInvalidNISDial(dict);
         // doc_ID = dataFile.GetDocID();
         // doc_Title = dataFile.GetDocTitle();
         // newParaMarker = dataFile.GetNewParaMarker();
@@ -870,13 +932,15 @@
     private void LoadFirstPage()
     {
         currentPageDirty = false;
+        #pragma warning disable 4014
         if (Pages.Count > 0)
         {
             page_No = Pages[0].Text;
             LoadPageData(page_No);
         }
-        else AlertBtn("No pages loaded yet.", "Error");
-        //Value = new string[] { vdata[0].Id };
+        else 
+            AlertBtn("No pages loaded yet.", "Error");
+        #pragma warning restore
     }
     private void LoadPageData(string pgno)
     {
@@ -892,6 +956,7 @@
     {
         try
         {
+            if (ListBoxObj == null) return;
             ListBoxObj.RemoveItemAsync(Pages);
             Pages.Clear();
             List<string> pglist = dataFile.GetPageNo();
@@ -992,6 +1057,11 @@
     public void DocRecordClickHandler(RecordClickEventArgs<DocSelectInfo> args)
     {
         var row = args.RowIndex;
+    }
+    public void DocRecordDoubleClickHandler(RecordClickEventArgs<DocSelectInfo> args)
+    {
+        DocSelectInfo docSelectInfo = args.RowData;
+        GetTheDoc(docSelectInfo.DocNo);
     }
     public void DocDataBoundHandler()
     {
@@ -1355,7 +1425,10 @@
             else
                 msg = String.Format("File pages {0}-{1} are outside of doc pages {2}-{3}.", fileFirstPage, 
                         fileLastPage, bookDocStartPage, bookDocEndPage);
+
+            #pragma warning disable 4014
             AlertBtn(msg, "Error");
+            #pragma warning restore
         }
     }
     private void UploadToServer()
@@ -1393,7 +1466,9 @@
         stopWatch.Start();
         if (userTask == "DataEntry" || userTask == "Edit-Upload")
         {
+            #pragma warning disable 4014
             dataFile.UploadDocument(submitStartPage.ToString(), submitEndPage.ToString());
+            #pragma warning restore
         }
         else
         {
@@ -1474,9 +1549,11 @@
 @code {
     public void TaskComplete(string errmsg)
     {
+        #pragma warning disable 4014
         if (errmsg.Length == 0) 
             AlertBtn(String.Format("Document uploaded successfully. ({0})", uploadServerTime), "Upload Status");
         else AlertBtn(errmsg, "Upload Status");
+        #pragma warning restore
     }
     private void CreateTXT()
     {
@@ -1494,7 +1571,9 @@
         }
         catch (Exception ex)
         {
+        #pragma warning disable 4014
             AlertBtn(ex.Message, "Error");
+        #pragma warning restore
         }
     }
     private void DeleteTempFiles(string rootDir)
@@ -1619,7 +1698,10 @@
         font-size: 14px;
     }
     .e-custom-height {
-        height: 80px;
+        height: 60px;
+    }
+    .e-custom-height2 {
+        height: 100px;
     }
     .data-entry {
         border-width: 0.25px;
@@ -1631,7 +1713,16 @@
         padding: 9px;
         /*height: 530px; Should be removed. Only for demonstration */
     }
-
+    .column1 {
+        float: left;
+        padding: 0px;
+        /*height: 530px; Should be removed. Only for demonstration */
+    }
+    .column2 {
+        float: left;
+        padding-left: 10px;
+        /*height: 530px; Should be removed. Only for demonstration */
+    }
     .column-dialog {
         float: left;
         padding: 9px;

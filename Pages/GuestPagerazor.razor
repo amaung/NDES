@@ -35,11 +35,11 @@
         <label style="font-size:18px">Select the document you want to read and click View:</label>
         <br/><br/>
         <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
-                AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="503" Width="700">
+                AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="360" Width="700">
             <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
-            <GridPageSettings PageSize="14"></GridPageSettings>
+            <GridPageSettings PageSize="10"></GridPageSettings>
             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-            <GridEvents OnRecordClick="DocRecordClickHandler" TValue="DocSelectInfo"></GridEvents>
+            <GridEvents OnRecordClick="DocRecordClickHandler" OnRecordDoubleClick="RecordDoubleClickHandler" TValue="DocSelectInfo"></GridEvents>
             <GridColumns>
                 <GridColumn Field=@nameof(DocSelectInfo.DocNo) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="25%" Type="ColumnType.String"
                             TextAlign="TextAlign.Left" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
@@ -50,7 +50,6 @@
             </GridColumns>
         </SfGrid>
     </div>
-    <br/>
     <div style="margin-left:340px; margin-top:20px">
         <SfButton IsPrimary="true" CssClass="e-custom" OnClick="@OnViewClick">View</SfButton>
     </div>
@@ -143,7 +142,6 @@
             {
                 //var result = await clientSuttaPageData.GetSutta(docNo);
                 await dataFile.GetServerSuttaData(docNo, DocRetrieved);
-
             }
         }
     }
@@ -152,6 +150,13 @@
         DocSelectInfo docSelectInfo = args.RowData;
         docNo = docSelectInfo.DocNo;
         docTitle = docSelectInfo.Title;
+    }
+    public async Task RecordDoubleClickHandler(RecordDoubleClickEventArgs<DocSelectInfo> args)
+    {
+        DocSelectInfo docSelectInfo = args.RowData;
+        docNo = docSelectInfo.DocNo;
+        docTitle = docSelectInfo.Title;
+        await OnViewClick();
     }
     private void DocRetrieved(Object docNo)
     {
