@@ -17,11 +17,13 @@
 @inject NavigationManager NavManager
 @inject State State
 
+@using DocSelectInfo = NissayaEditor.DocSelectInfo;
+
 <body style="background-color:#f7f0df;">
     <div style="margin-left:50px">
-        <h2>Welcome to Suttaṃ Nissaya Reader!</h2>
+        <h4>ဓမ္မစာဖတ်ပရိသတ်များကို ကြိုဆိုပါသည်။</h4>
         <br/>
-        <p style="font-size:20px">This page contains @DocGridList!.Count() suttas available for your reading.</p>
+        <p style="font-size:18px">ဤစာမျက်နှာတွင် စာဖတ်သူများဖတ်ရန် သုတ္တံပေါင်း (@completedDocCount) အဆင်သင့်ရှိနေပါပြီ။</p>
     </div>
     <hr />
     @* <div id="ControlRegion" style="background-color: #f7f0df; width: 100%;">
@@ -32,58 +34,84 @@
         </div>
     </div> *@
     <div style="margin-left:50px">
-        <label style="font-size:18px">Select the document you want to read and click View:</label>
+        <label style="font-size:18px">မိမိရှာလိုသော သုတ္တံအမှတ်(Doc No) (သို့) အမည်(Title) ကို ရေးသွင်းပြီး Search နှိပ်ပါ။</label>
+        <br/>
+        <label style="font-size:18px; padding-top:9px">မိမိဖတ်လိုသော သုတ္တံကိုရွေးပြီး Double-click (သို့) View နှိပ်ပါ။</label>
+        <br /><br />
+        <div class="form-group col-md-2 column">
+            <SfTextBox TValue="string" @bind-Value="@pattern" Placeholder="Enter Doc No/Title/Blank for all"></SfTextBox>
+        </div>
+        <div style="margin-left:20px" class="form-group col-md-2 column2">
+            <SfButton IsPrimary="true" CssClass="e-custom" OnClick="@OnSearchClick">Search</SfButton>
+        </div>
+        <div style="margin-left:20px; width=100%" class="form-group col-md-2 column2">
+            <SfButton IsPrimary="true" CssClass="e-custom" OnClick="@OnViewClick">View</SfButton>
+        </div>
         <br/><br/>
-        <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="false"
-                AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="360" Width="700">
+        <SfGrid ID="selDocGrid" DataSource="@DocGridList" @ref="sfgridDocList" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="false"
+        AllowExcelExport="false" AllowSelection="true" AllowSorting="false" Height="360" Width="700">
             <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
             <GridPageSettings PageSize="10"></GridPageSettings>
             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
             <GridEvents OnRecordClick="DocRecordClickHandler" OnRecordDoubleClick="RecordDoubleClickHandler" TValue="DocSelectInfo"></GridEvents>
             <GridColumns>
                 <GridColumn Field=@nameof(DocSelectInfo.DocNo) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="25%" Type="ColumnType.String"
-                            TextAlign="TextAlign.Left" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                TextAlign="TextAlign.Left" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                 <GridColumn Field=@nameof(DocSelectInfo.Title) HeaderText="Title" TextAlign="TextAlign.Left" Width="65%" Type="ColumnType.String"
-                            CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
                 <GridColumn Field=@nameof(DocSelectInfo.Pages) HeaderText="Pages" TextAlign="TextAlign.Center" Width="10%" Type="ColumnType.Integer"
-                            CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
+                CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
             </GridColumns>
         </SfGrid>
     </div>
-    <div style="margin-left:340px; margin-top:20px">
-        <SfButton IsPrimary="true" CssClass="e-custom" OnClick="@OnViewClick">View</SfButton>
-    </div>
+
 </body>
 <style>
     .e-custom {
-        width: 120px;
+    width: 120px;
+    }
+
+    .column {
+    float: left;
+    padding: 0px;
+    width: 250px;
+    /* height: 530px; /* should be removed. only for demonstration */
+    }
+
+    .column2 {
+    float: left;
+    padding: 0px;
+    width: 150px;
+    /* height: 530px; /* should be removed. only for demonstration */
     }
 </style>
 <style>
     .e-grid {
-        line-height: 20px;
+    line-height: 20px;
     }
 
     .e-grid .e-altrow {
-        /* background-color: #f2f2f2; */
-        /* background-color: #d8e1f2; */
-        /* background-color: #f7f8fa; */
-        background-color: #F3F2F1;
+    /* background-color: #f2f2f2; */
+    /* background-color: #d8e1f2; */
+    /* background-color: #f7f8fa; */
+    background-color: #F3F2F1;
     }
 
     .e-grid .e-rowcell.e-selectionbackground {
-        background-color: lightsteelblue !important;
+    background-color: lightsteelblue !important;
     }
 
     .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
-        border-block-color: black;
-        border-block-start-color: black;
-        /* border-bottom-color: black; */
+    border-block-color: black;
+    border-block-start-color: black;
+    /* border-bottom-color: black; */
     }
 
     .e-headercell.e-attr1 {
-        background: #cfcfcf;
+    background: #cfcfcf;
     }
+
+
 </style>
 @code {
     public List<DocSelectInfo>? DocGridList { get; set; } = new List<DocSelectInfo>();
@@ -91,16 +119,18 @@
     ClientTipitakaDB_w? clientTipitakaDB = null;
     public List<NIS>? NISRecords { get; set; }
     DataFile? dataFile = null;
-    string docNo = "", docTitle = "";
+    string docNo = "", docTitle = "", pattern = "";
+    int completedDocCount = 0;
 
-    public class DocSelectInfo
-    {
-        public string DocNo { get; set; } = "";
-        public string Title { get; set; } = "";
-        public int Pages { get; set; } = 0;
-    }
+    // public class DocSelectInfo
+    // {
+    //     public string DocNo { get; set; } = "";
+    //     public string Title { get; set; } = "";
+    //     public int Pages { get; set; } = 0;
+    // }
 
     protected override async Task OnInitializedAsync()
+    // protected override void OnInitialized()
     {
         if (State.clientTipitakaDB == null) return;
         clientTipitakaDB = State.clientTipitakaDB;
@@ -110,15 +140,36 @@
             dataFile = new DataFile(clientTipitakaDB, "guest@gmail.com", "Guest");
             State.dataFile = dataFile;
         }
-        await LoadData();
+        if (State != null)
+        {
+            pattern = State.ReadDocSearchPattern;
+            DocGridList = State.ReadDocGridList;
+        }
+        if (dataFile != null && clientTipitakaDB != null)
+        {
+            ClientSuttaInfo? clientSuttaInfo = clientTipitakaDB.GetClientSuttaInfo();
+            if (clientSuttaInfo != null)
+            {
+                //var result = await clientSuttaPageData.GetSutta(docNo);
+                completedDocCount = await clientSuttaInfo.CompletedDocCount();
+            }
+        }
+        //await LoadData();
     }
     private async Task LoadData()
     {
         int pages = 0;
         DocGridList = new List<DocSelectInfo>();
+
         if (dataFile != null)
         {
-            var allDocList = dataFile.GetAllSuttaList();
+            string query = "";
+            if (pattern.Length > 0)
+            {
+                string pattern2 = pattern + "\u200B";
+                query = String.Format("((RowKey ge '{0}' and RowKey lt '{1}') or (Title ge '{0}' and Title lt '{1}')) and Status eq 'Completed'", pattern, pattern2);
+            }
+            var allDocList = dataFile.GetAllSuttaList(query);
             if (allDocList != null)
             {
                 foreach (KeyValuePair<string, string> kv in allDocList)
@@ -128,17 +179,29 @@
                     DocSelectInfo d = new DocSelectInfo() { DocNo = kv.Key, Title = f[0], Pages = pages };
                     DocGridList.Add(d);
                 }
+                if (State != null)
+                {
+                    State.ReadDocSearchPattern = pattern;
+                    State.ReadDocGridList = DocGridList;
+                }
             }
         }
         return;
     }
+    private async Task OnSearchClick()
+    {
+        await LoadData();
+    }
     private async Task OnViewClick()
     {
-        //
+        await OnView();
+    }
+    private async Task OnView()
+    {
         if (dataFile != null && clientTipitakaDB != null)
         {
             ClientSuttaPageData? clientSuttaPageData = clientTipitakaDB.GetClientSuttaPageData();
-            if (clientSuttaPageData!= null)
+            if (clientSuttaPageData != null)
             {
                 //var result = await clientSuttaPageData.GetSutta(docNo);
                 await dataFile.GetServerSuttaData(docNo, DocRetrieved);
@@ -156,7 +219,7 @@
         DocSelectInfo docSelectInfo = args.RowData;
         docNo = docSelectInfo.DocNo;
         docTitle = docSelectInfo.Title;
-        await OnViewClick();
+        await OnView();
     }
     private void DocRetrieved(Object docNo)
     {

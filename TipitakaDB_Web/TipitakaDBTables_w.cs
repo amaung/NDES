@@ -195,6 +195,10 @@ namespace Tipitaka_DBTables
         // user tasks
         public const string _DataEntry_ = "DataEntry";
         public const string _Review_ = "Review";
+        public const string _Review1_ = "Review1";
+        public const string _Review2_ = "Review2";
+        public const string _Review3_ = "Review3";
+        public const string _Review4_ = "Review4";
         public const string _Edit_ = "Edit";
         public const string _EditUpload_ = "Edit-Upload";
         public const string _HTML_ = "HTML";

@@ -24,6 +24,8 @@ using Syncfusion.Blazor;
 using System;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using static NissayaEditor_Web.Data.NissayaEditor;
+using Syncfusion.Blazor.Grids;
+using static NissayaEditor_Web.Data.TaskAssignment;
 
 
 // https://stackoverflow.com/questions/25391244/how-to-create-and-save-a-temporary-file-on-microsoft-azure-virtual-server
@@ -81,7 +83,8 @@ namespace NissayaEditor_Web.Data
         public string DocID { get; set; } = string.Empty;
         public string DocTitle { get; set; } = string.Empty;
         public Dictionary<string, List<NIS>> Pages = new Dictionary<string, List<NIS>>();
-        public List<UserProfile> UserProfiles = new List<UserProfile>();
+        public List<UserProfile> UserProfilesActive = new List<UserProfile>();
+        public List<UserProfile> UserProfilesAll = new List<UserProfile>();
         public List<string> pageNos = new List<string>();
         public Dictionary<string, List<NIS>> dictInvalidNISRecords = new Dictionary<string, List<NIS>>();
         public char[] fieldSeparators = { ',', '\t' };
@@ -500,8 +503,8 @@ namespace NissayaEditor_Web.Data
                         if (end == -1)
                         {
                             pgno = s1.Trim();
-                            //    //key = s1;
-                            //    //lastPage = int.Parse(key);
+                            //key = s1;
+                            //lastPage = int.Parse(key);
                             s1 = "";
                         }
                         else
@@ -1246,6 +1249,7 @@ namespace NissayaEditor_Web.Data
                     Dictionary<string, string> dict = GetUserTaskProgressInfo(task, taskAssignmentInfo.AssigneeProgress);
                     if (dict.ContainsKey("PagesSubmitted")) dictServerDocInfo["PagesSubmitted"] = dict["PagesSubmitted"];
                     if (dict.ContainsKey("Status")) dictServerDocInfo["Status"] = dict["Status"];
+                    if (dict.ContainsKey("StartDate")) dictServerDocInfo["StartDate"] = dict["StartDate"];
                     dictServerDocInfo["ImportedStartPage"] = Pages.First().Key;
                     dictServerDocInfo["ImportedEndPage"] = Pages.Last().Key;
                     dictServerDocInfo["ImportedNoPages"] = Pages.Count().ToString();
@@ -1279,6 +1283,7 @@ namespace NissayaEditor_Web.Data
             {
                 dict["PagesSubmitted"] = taskList[0].submitted.ToString();
                 dict["Status"] = taskList[0].status;
+                dict["StartDate"] = taskList[0].startDate;
             }
             return dict;
         }
@@ -1622,10 +1627,22 @@ namespace NissayaEditor_Web.Data
             }
             return suttaList;
         }
-        public SortedDictionary<string, string>? GetAllSuttaList()
+        public SortedDictionary<string, string>? GetAllSuttaList(string query = "")
         {
+            if (clientSuttaInfo == null) return null;
+            if (query.Length > 0)
+            {
+                var list = clientSuttaInfo.QuerySuttaInfo(query);
+                if (list == null) return null;
+                SortedDictionary<string, string> sortedDict = new SortedDictionary<string, string>();
+                foreach (var suttaInfo in list)
+                {
+                    sortedDict.Add(suttaInfo.RowKey, suttaInfo.Title + "|" + suttaInfo.NoPages.ToString());
+                }
+                return sortedDict;
+            }
             if (clientSuttaInfo != null)
-                return clientSuttaInfo.GetAllSuttaInfo();
+                return clientSuttaInfo.GetCompletedSuttaInfo();
             return null;
         }
         public List<SuttaInfo> GetPDFSuttaList(string pdfNo)
@@ -1801,8 +1818,8 @@ namespace NissayaEditor_Web.Data
         //***************************************************************************************
         public List<string> UserTasks = new List<string> 
         {
-            TaskCategories._DataEntry_, TaskCategories._Review_, TaskCategories._Edit_, 
-            TaskCategories._EditUpload_, TaskCategories._HTML_ 
+            TaskCategories._DataEntry_, TaskCategories._Review1_, TaskCategories._Review2_, 
+            TaskCategories._Review3_, TaskCategories._Review4_
         };
         public void AddTaskAssignmentInfo(TaskAssignmentInfo taskAssignmentInfo)
         {
@@ -1953,27 +1970,40 @@ namespace NissayaEditor_Web.Data
         //*** UserProfile functions
         //***************************************************************************************
         //public List<UserProfile> AllUserProfiles = new List<UserProfile>();
-        public void ClearLoadedUserProfiles() { UserProfiles = new List<UserProfile>(); }
+        public void ClearLoadedUserProfiles() 
+        { 
+            UserProfilesAll = new List<UserProfile>();
+            UserProfilesActive = new List<UserProfile>();
+        }
         public List<UserProfile> GetActiveUserProfiles()
         {
-            return GetAllUserProfiles(true);
+            if (UserProfilesActive.Count == 0) GetUserProfiles();
+            return UserProfilesActive;
         }
-        public List<UserProfile> GetAllUserProfiles(bool active = false)
+        public List<UserProfile> GetAllUserProfiles()
+        {
+            if (UserProfilesAll.Count == 0) GetUserProfiles();
+            return UserProfilesAll;
+        }
+        public void GetUserProfiles()
         {
             bool inclDev = false;
-            if (UserProfiles != null && UserProfiles.Count == 0)
+            if (UserProfilesAll != null && UserProfilesAll.Count == 0)
             {
                 if (clientUserProfile != null)
                 {
-                    UserProfiles = clientUserProfile.GetAllUsers(inclDev, active);
-                    foreach (UserProfile user in UserProfiles)
+                    UserProfilesAll = clientUserProfile.GetAllUsers(inclDev, false);
+                    foreach (UserProfile user in UserProfilesAll)
                     {
                         if (user.LastLogin != null) user.LastLogin = user.LastLogin.Value.ToLocalTime();
+                        if (user.LastDate!= null && user.LastDate.Length == 0)
+                        {
+                            UserProfilesActive.Add(user);
+                        }
                     }
-
                 }
             }
-            return UserProfiles!;
+            return;
         }
         public void AddUserProfile(string email, string name, string nameM = "", string userClass = "U", int loginCount = 1)
         {
@@ -2017,10 +2047,10 @@ namespace NissayaEditor_Web.Data
                 ErrMsg = clientUserProfile.ErrMsg;
             }
         }
+        List<UserProfile> AllUserProfiles = new List<UserProfile>();
         public string GetUserName(string email)
         {
             if (email == "dhammayaungchi2011@gmail.com") return "System Admin";
-            List<UserProfile> AllUserProfiles = new List<UserProfile>();
             if (AllUserProfiles.Count == 0) AllUserProfiles = GetAllUserProfiles();
             var userName = (from user in AllUserProfiles
                               where user.RowKey == email select user.Name_E).ToList();
@@ -2304,6 +2334,56 @@ namespace NissayaEditor_Web.Data
                     //clientKeyValueData.RemoveKeyValueData4Task(userID, docNo);
                 }
             }
+        }
+        public string GetLastStatus(List<UserTaskProgressInfo> listUserTaskInfo)
+        {
+            string status = "";
+            List<AssignedTaskData> listAssignedTaskData = new List<AssignedTaskData>();
+            if (listUserTaskInfo != null)
+            {
+                //foreach (UserTaskProgressInfo userTaskProgressInfo in listUserTaskInfo)
+                //{
+                //    AssignedTaskData assignedTaskData = new AssignedTaskData();
+                //    assignedTaskData.userTaskProgressInfo = userTaskProgressInfo;
+                //    if (userTaskProgressInfo.startDate.Length > 0)
+                //    {
+                //        string[] dd = userTaskProgressInfo.startDate.Split('/');
+                //        if (dd.Length == 3)
+                //        {
+                //            assignedTaskData.dateTime = new DateTime(int.Parse(dd[2]), int.Parse(dd[1]), int.Parse(dd[0]));
+                //        }
+                //    }
+                //    listAssignedTaskData.Add(assignedTaskData);
+                //}
+                //listAssignedTaskData = listAssignedTaskData.OrderBy(o => o.dateTime).ToList();
+
+                if (listAssignedTaskData == null || listAssignedTaskData.Count == 0) return status;
+                if (listAssignedTaskData.Count == 1)
+                    return listAssignedTaskData[0].userTaskProgressInfo!.status;
+
+                listAssignedTaskData.Reverse();
+                // if all tasks are completed return Completed
+                if (listAssignedTaskData != null && listAssignedTaskData.Count > 0)
+                {
+                    var t = listAssignedTaskData[0];
+                    if (t != null && t.userTaskProgressInfo != null)
+                    {
+                        if (t.userTaskProgressInfo.status == "Completed") return "Completed";
+                    }
+                }
+                status = "Assigned";
+                foreach (AssignedTaskData assignedTaskData in listAssignedTaskData!)
+                {
+                    if (assignedTaskData.userTaskProgressInfo == null) continue;
+                    status = assignedTaskData.userTaskProgressInfo.status;
+                    if (status != "Assigned")
+                    {
+                        status = assignedTaskData.userTaskProgressInfo.task;
+                        break;
+                    }
+                }
+            }
+            return status;
         }
         public void AddDocNoToRecent()
         {

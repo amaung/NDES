@@ -1,3 +1,22 @@
+Beta 0.19 (2024-12-06)
+- User Assigned Tasks also showing completed tasks, Should be showing the assigned tasks only.
+- Clean up assigned tasks from non-active users
+- Task assignment should be sorted by date
+- Task assignment top table does not show status correctly (done)
+- Tasks in Task Assignment will be added with Review1, Review2, Review3, Review4 (done)
+- Task assignment does not have start date.(done)
+- In Task Assignments page, after entering Search Text and pressing Enter will show tasks.(done)
+- User Task Report should have Corrections and other data in the first table (done)
+- To reduce steps when user imports file (done)
+- Guest page should show the completed docs and messages in Burmese (done)
+- Guest page View button should be moved to the top (done)
+- When going back to guest page from Book View Page, the searched data should be restored. (done)
+- Guest page now has search and view separately. Double-click also works. (done)
+- If there was an assignee who was no longer active the assignee's name was empty. It is fixed now.
+
+Beta 0.18 (2024-10-28?)
+
+
 Beta 0.17a (2024-09-24)
 - Public readers can now double-click select and read documents
 - Space and button size adjusted

@@ -140,6 +140,18 @@ namespace NissayaEditor_Web.Data
             }
             return dict;
         }
+        public async Task<Dictionary<string, string>> GetUserTasksAsync()
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            string rowKey = "User-Tasks";
+            await RetrieveTableRec(rowKey);
+            if (StatusCode == 200 || StatusCode == 204)
+            {
+                KeyValueData keyValueData = (KeyValueData)objResult;
+                dict = GetUserTaskList(keyValueData.Value);
+            }
+            return dict;
+        }
         public void RemoveUserTask(string userID, string docNo)
         {
             string rowKey = "User-Tasks";

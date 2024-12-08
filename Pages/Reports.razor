@@ -71,7 +71,7 @@
 	<div class=" column control-section">
         <div id="wrapper" class="daterangepicker-section">
             <div id="daterangepicker-control">
-                <Label>Select Dates :</label>
+                <label>Select Dates :</label>
                 <SfDateRangePicker TValue="DateTime?" @ref="sfDateRange" Width="200px" Placeholder="Choose a Range" Format="d/M/yyyy" @bind-StartDate="@StartValue" EndDate="@EndValue">			
 			    <DateRangePickerEvents  TValue="DateTime?" ValueChange="DateRangePickerValueChangeHandler"></DateRangePickerEvents>
                 </SfDateRangePicker>			
@@ -103,41 +103,42 @@
 @***************************** Task Assignment Report Grid *****************************@
 @***************************************************************************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@TaskInfoRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
-            AllowSorting="true" AllowTextWrap="false" Height="300" Width="1000" Toolbar="@(new List<string>() { "ExcelExport" })">
-            @* Toolbar="@(new List<string>() { "ExcelExport" })" AllowTextWrap="false" Height="380" Width="1000"> *@
-            @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000">*@
-
+    <SfGrid ID="GridReport" DataSource="@TaskInfoReportRecords" @ref="sfgridReport" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" 
+    AllowExcelExport="true" AllowSelection="true" AllowSorting="true" AllowTextWrap="false" Height="300" Width="1000" Toolbar="@(new List<string>() { "ExcelExport" })">
         <GridPageSettings PageSize="15"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-        <GridEvents TValue="TaskInfo" RowSelected="RowSelectHandler" OnToolbarClick="ToolbarClick"></GridEvents> 
+        <GridEvents TValue="TaskInfoReport" RowSelected="ReportRowSelectHandler" OnToolbarClick="ToolbarClick"></GridEvents>
 
-        @* <GridEvents RowSelected="RowSelectHandler" DataBound="TaskDataBound OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DocInfo"></GridEvents> *@
         <GridColumns>
-            <GridColumn Field=@nameof(TaskInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.UserName) HeaderText="User" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Left" AllowEditing="false" Width="15%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.UserName) HeaderText="User" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            TextAlign="TextAlign.Left" AllowEditing="false" Width="15%" Type="ColumnType.String"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.LastUpdate) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            AllowEditing="false" Width="15%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.DocNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        AllowEditing="false" Width="15%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.Task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            TextAlign="TextAlign.Center" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.PagesSubmitted) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        AllowEditing="false" Width="10%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.CorrectionCount) HeaderText="Corrections" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.Integer"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.StartDate) HeaderText="Start Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
 
-            <GridColumn Field=@nameof(TaskInfo.Team) HeaderText="Team" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                        TextAlign="TextAlign.Left" AllowEditing="false" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(TaskInfoReport.LastUpdate) HeaderText="Last Update" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
+
+            <GridColumn Field=@nameof(TaskInfoReport.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
+            TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
+
         </GridColumns>
+
     </SfGrid>
 </div>
 @***************************************************************************************@
@@ -156,40 +157,40 @@
     <br /><br/>
     <div id="ControlRegion">
         <SfGrid ID="Grid" DataSource="@TaskDetailedInfoRecords" @ref="sfgrid1" @attributes="@TaskDetailsGridAttributes" AllowPaging="true" 
-                AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
-                AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
+        AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
+        AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
             <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" ShowDeleteConfirmDialog='true'
-                              NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+            NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
             </GridEditSettings>
             <GridPageSettings PageSize="5"></GridPageSettings>
             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
             <GridColumns>
                 <GridColumn Field=@nameof(TaskDetailedInfo.SrNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+                IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskDetailedInfo.UserName) HeaderText="User Name" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            AllowEditing="false" Width="18%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                AllowEditing="false" Width="18%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskDetailedInfo.NoPages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.String"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskDetailedInfo.PagesSubmitted) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.Integer"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="10%" Type="ColumnType.Integer"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskDetailedInfo.CorrectionCount) HeaderText="Corrections" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            IsPrimaryKey="true" AllowEditing="false" Width="11%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+                IsPrimaryKey="true" AllowEditing="false" Width="11%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskDetailedInfo.Task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            AllowEditing="false" Width="11%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+                AllowEditing="false" Width="11%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskInfo.StartDate) HeaderText="StartDate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskInfo.LastUpdate) HeaderText="LastUpdate" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
 
                 <GridColumn Field=@nameof(TaskDetailedInfo.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="11%" Type="ColumnType.String"></GridColumn>
             </GridColumns>
         </SfGrid>
     </div>
@@ -209,8 +210,8 @@
         @* https://www.geeksforgeeks.org/how-to-add-icons-in-the-button-in-html/ *@
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css" crossorigin="anonymous">
         @* <SfTooltip ID="Tooltip" Target="#btn" Content="Save"> *@
-                <SfButton class="fas fa-save" ID="btn" @onclick="OnSaveTimesheet" style="padding:0px; font-size:18px; height:26px; width:26px;"></SfButton>
-            @* <button id="btn">
+        <SfButton class="fas fa-save" ID="btn" @onclick="OnSaveTimesheet" style="padding:0px; font-size:18px; height:26px; width:26px;"></SfButton>
+        @* <button id="btn">
                 <i class="fas fa-save" style="height:18px;" @onclick="OnSaveTimesheet"></i>
             </button> *@
         @* </SfTooltip> *@
@@ -225,10 +226,10 @@
     @***************************************************************************************@
     <div id="ControlRegion">
         <SfGrid ID="Grid" DataSource="@TimesheetInfoRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" 
-                Toolbar="@(new List<string>() { "ExcelExport" })" AllowExcelExport="true" AllowSelection="true" AllowSorting="true" AllowTextWrap="false" Height="250" Width="1000">
-                @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
+        Toolbar="@(new List<string>() { "ExcelExport" })" AllowExcelExport="true" AllowSelection="true" AllowSorting="true" AllowTextWrap="false" Height="250" Width="1000">
+            @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
             <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='false'
-                             Mode="@EditMode.Normal">
+            Mode="@EditMode.Normal">
             </GridEditSettings>
             <GridPageSettings PageSize="10"></GridPageSettings>
             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
@@ -236,19 +237,19 @@
             @* <GridEvents RowSelected="RowSelectHandler" OnActionBegin="ActionBegin" OnActionComplete="ActionComplete" OnToolbarClick="ToolbarClick" TValue="TimesheetInfo"></GridEvents> *@
             <GridColumns>
                 <GridColumn Field=@nameof(TimesheetInfo.date) HeaderText="Date" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+                IsPrimaryKey="true" AllowEditing="false" Width="10%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
                 <GridColumn Field=@nameof(TimesheetInfo.hours) HeaderText="Hours" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            IsPrimaryKey="true" AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                IsPrimaryKey="true" AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
                 <GridColumn Field=@nameof(TimesheetInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                AllowEditing="false" Width="12%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
                 <GridColumn Field=@nameof(TimesheetInfo.task) HeaderText="Task" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Left" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Left" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
                 <GridColumn Field=@nameof(TimesheetInfo.description) HeaderText="Description" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Left" AllowEditing="false" Width="36%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Left" AllowEditing="false" Width="36%" Type="ColumnType.String"></GridColumn>
                 <GridColumn Field=@nameof(TimesheetInfo.pageNos) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="12%" Type="ColumnType.String"></GridColumn>
                 <GridColumn Field=@nameof(TimesheetInfo.status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"
-                            TextAlign="TextAlign.Center" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
+                TextAlign="TextAlign.Center" AllowEditing="false" Width="9%" Type="ColumnType.String"></GridColumn>
             </GridColumns>
         </SfGrid>
     </div>
@@ -267,161 +268,180 @@
     var i;
 
     for (i = 0; i < coll.length; i++) {
-      coll[i].addEventListener("click", function() {
-        this.classList.toggle("active");
-        var content = this.nextElementSibling;
-        if (content.style.display === "block") {
-          content.style.display = "none";
-        } else {
-          content.style.display = "block";
-        }
-      });
+    coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+    content.style.display = "none";
+    } else {
+    content.style.display = "block";
+    }
+    });
     }
 
     function TaskDetailsButton()
     {
-        var btn = document.getElementById("btn-taskdetails");
-        if (btn.innerText == "Open Task Details") btn.innerText = "Close Task Details";
-        else btn.innerText = "Open Task Details";
+    var btn = document.getElementById("btn-taskdetails");
+    if (btn.innerText == "Open Task Details") btn.innerText = "Close Task Details";
+    else btn.innerText = "Open Task Details";
     }
 </script>
 <style>
-.collapsible {
-  background-color: #ded8ca;
-  color: black;
-  cursor: pointer;
-  padding: 18px;
-  width: 100%;
-  border: none;
-  text-align: left;
-  outline: none;
-  font-size: 20px;
-}
+    .collapsible {
+    background-color: #ded8ca;
+    color: black;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 20px;
+    }
 
-.active, .collapsible:hover {
-  background-color: Gainsboro;
-.collapsible:after {
-	content: '\02795';
-	/* Unicode character for "plus" sign (+) */
-	font-size: 10px;
-	color: grey;
-	padding: 8px;
-	float: right;
-	margin-left: 5px;
-}
+    .active, .collapsible:hover {
+    background-color: Gainsboro;
+    .collapsible:after {
+    content: '\02795';
+    /* Unicode character for "plus" sign (+) */
+    font-size: 10px;
+    color: grey;
+    padding: 8px;
+    float: right;
+    margin-left: 5px;
+    }
 
-.active:after {
-	content: "\2796";
-	/* Unicode character for "minus" sign (-) */
-}
-		
-.content {
-  padding: 0 18px;
-  display: none;
-  overflow: hidden;
-  background-color: #f1f1f1;
-}
+    .active:after {
+    content: "\2796";
+    /* Unicode character for "minus" sign (-) */
+    }
+
+    .content {
+    padding: 0 18px;
+    display: none;
+    overflow: hidden;
+    background-color: #f1f1f1;
+    }
 </style>
 <style>
     .btn {
-        width: 140px; 
+    width: 140px; 
     }
     .column {
-        float: left;
-        padding: 0px;
-        width:250px;
-        /* height: 530px; /* Should be removed. Only for demonstration */
+    float: left;
+    padding: 0px;
+    width:250px;
+    /* height: 530px; /* Should be removed. Only for demonstration */
     }
 
     .column2 {
-        float: left;
-        padding: 0px;
-        width:250px;
-        /* height: 530px; /* Should be removed. Only for demonstration */
+    float: left;
+    padding: 0px;
+    width:250px;
+    /* height: 530px; /* Should be removed. Only for demonstration */
     }
 </style>
 @********************************** Grid styles **********************************@
 <style>
     .e-grid {
-        line-height: 20px;
+    line-height: 20px;
     }
 
     .e-headercell.e-attr1 {
-        background: #cfcfcf;
+    background: #cfcfcf;
     }
 
     .e-grid .e-altrow {
-        background-color: #F3F2F1;
+    background-color: #F3F2F1;
     }
 
     .e-grid .e-rowcell.e-selectionbackground {
-        background-color: lightsteelblue !important;
+    background-color: lightsteelblue !important;
     }
 
     .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
-        border-block-color: black;
-        border-block-start-color: black;
-        /* border-bottom-color: black; */
+    border-block-color: black;
+    border-block-start-color: black;
+    /* border-bottom-color: black; */
     }
     .payroll-display {
-        display: @payrollDisplay;
+    display: @payrollDisplay;
     }
 </style>
 
 @code {
+
+
+
     /************************************************************************************/
     //******** Classes and variables
     /************************************************************************************/
     public class TaskInfo()
     {
         public int SrNo { get; set; }
-        public string DocNo { get; set; }
-        public string UserName { get; set; }
-        public string UserID { get; set; }
-        public string Task { get; set; }
-        public string Pages { get; set; }
+
+        public string DocNo { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string UserID { get; set; } = "";
+        public string Task { get; set; } = "";
+        public string Pages { get; set; } = "";
         public int PagesSubmitted { get; set; }
-        public string StartDate { get; set; }
-        public string LastUpdate { get; set; }
+        public string StartDate { get; set; } = "";
+        public string LastUpdate { get; set; } = "";
         public int CorrectionCount { get; set; }
-        public string Status { get; set; }
-        public string Team { get; set; }
-        public string TaskProgress { get; set; }
-        public string PDF_ID { get; set; }
-        public string PDF_File { get; set; }
+        public string Status { get; set; } = "";
+        public string Team { get; set; } = "";
+        public string TaskProgress { get; set; } = "";
+        public string PDF_ID { get; set; } = "";
+        public string PDF_File { get; set; } = "";
+    };
+    public class TaskInfoReport()
+    {
+        public int SrNo { get; set; }
+        public string DocNo { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string Task { get; set; } = "";
+        public string Pages { get; set; } = "";
+        public string StartDate { get; set; } = "";
+        public string LastUpdate { get; set; } = "";
+        public int CorrectionCount { get; set; }
+        public string Status { get; set; } = "";
+        public string TaskProgress { get; set; } = "";
+        public string PDF_ID { get; set; } = "";
+        public string PDF_File { get; set; } = "";
     };
     public class TaskDetailedInfo()
     {
         public int SrNo { get; set; }
-        public string DocNo { get; set; }
-        public string UserName { get; set; }
-        public string UserID { get; set; }
-        public string NoPages { get; set; }
+        public string DocNo { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string UserID { get; set; } = "";
+        public string NoPages { get; set; } = "";
         public int? PagesSubmitted { get; set; }
-        public string Task { get; set; }
-        public string StartDate { get; set; }
-        public string LastUpdate { get; set; }
+        public string Task { get; set; } = "";
+        public string StartDate { get; set; } = "";
+        public string LastUpdate { get; set; } = "";
         public int? CorrectionCount { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = "";
     };
     public class TimesheetInfo()
     {
-        public string rowKey { get; set; }
-        public string date { get; set; }
-        public string userID { get; set; }
-        public string userName { get; set; }
+        public string rowKey { get; set; } = "";
+        public string date { get; set; } = "";
+        public string userID { get; set; } = "";
+        public string userName { get; set; } = "";
         public int? dayOfMonth { get; set; }
-        public string hours { get; set; }
+        public string hours { get; set; } = "";
         public DateTime? startTime { get; set; }
         public DateTime? endTime { get; set; }
-        public string docNo { get; set; }
-        public string task { get; set; }
-        public string description { get; set; }
+        public string docNo { get; set; } = "";
+        public string task { get; set; } = "";
+        public string description { get; set; } = "";
         public int? startPage { get; set; }
         public int? endPage { get; set; }
         public int pages { get; set; }
-        public string pageNos { get; set; }
-        public string status { get; set; }
+        public string pageNos { get; set; } = "";
+        public string status { get; set; } = "";
 
         public TimesheetInfo(TimesheetInfo timesheetInfo) : this()
         {
@@ -446,7 +466,9 @@
     SortedDictionary<string, List<TaskInfo>> dictUserTasks = new SortedDictionary<string, List<TaskInfo>>();
     Dictionary<string, string> dictUserNameID = new Dictionary<string, string>();
     List<TaskInfo> TaskInfoRecords = new List<TaskInfo>();
+    List<TaskInfoReport> TaskInfoReportRecords = new List<TaskInfoReport>();
     List<TaskInfo> SelectedTaskInfoRecords = new List<TaskInfo>();
+    List<TaskInfoReport> SelectedTaskInfoReportRecords = new List<TaskInfoReport>();
     List<TaskDetailedInfo> TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
     List<TimesheetInfo> TimesheetInfoRecords = new List<TimesheetInfo>();
     List<Timesheet> listTimesheet = new List<Timesheet>();
@@ -457,9 +479,10 @@
     string selectedStatus = "", DocNoTitle = "Task in Details";
     TimesheetInfo? selectedTimesheetInfo = null;
     TaskInfo? selectedTaskInfo = null;
-    SfGrid<TaskInfo> sfgrid;
-    SfGrid<TaskDetailedInfo> sfgrid1;
-    SfGrid<TimesheetInfo> sfgrid2;
+    SfGrid<TaskInfo>? sfgrid;
+    SfGrid<TaskInfoReport>? sfgridReport;
+    SfGrid<TaskDetailedInfo>? sfgrid1;
+    SfGrid<TimesheetInfo>? sfgrid2;
     SfDateRangePicker<DateTime?> sfDateRange;
     private Dictionary<string, object> TaskDetailsGridAttributes { get; set; } = new Dictionary<string, object>();
 
@@ -553,13 +576,13 @@
         {
             if (listTimesheet[i].Date == selectedDate &&
                 listTimesheet[i].UserID == selectedTimesheetInfo.userID ) 
+            {
+                listTimesheet[i].Status = timesheetStatus;
+                if (clientTimesheet != null) 
                 {
-                    listTimesheet[i].Status = timesheetStatus;
-                    if (clientTimesheet != null) 
-                    {
-                        clientTimesheet.UpdateTimesheetStatus(listTimesheet[i]);
-                    }
+                    clientTimesheet.UpdateTimesheetStatus(listTimesheet[i]);
                 }
+            }
         }
         selectedStatus = "";
         TimesheetInfoRecords = newTimesheetInfoList;
@@ -589,6 +612,7 @@
             if (clientTimesheet != null) listTimesheet = clientTimesheet.GetTimesheetRange((DateTime)StartValue, (DateTime)EndValue);
             TaskInfoRecords.Clear();
             List<TaskInfo> listTaskRecords = new List<TaskInfo>();
+            List<TaskInfoReport> listTaskReportRecords = new List<TaskInfoReport>();
             ClientTaskActivityLog clientTaskActivityLog = State.dataFile.GetClientTaskActivityLog();
             if (clientTaskActivityLog == null) return;
             // VisibleSpinner = true;
@@ -638,24 +662,41 @@
                         }
                     }
                     TaskInfo taskInfo = new TaskInfo()
+                        {
+                            SrNo = ++n,
+                            DocNo = f[0],
+                            UserName = userName,
+                            UserID = userID,
+                            Task = f[2],
+                            Pages = taskActivityLog.Pages.ToString(),
+                            PagesSubmitted = taskActivityLog.SubmittedPages,
+                            StartDate = sDate,
+                            LastUpdate = ts,
+                            CorrectionCount = correctionCount,
+                            Status = status,
+                            Team = team,
+                            TaskProgress = taskProgress,
+                            PDF_ID = pdfID,
+                            PDF_File = pdfFile,
+                        };
+                    TaskInfoReport taskInfoReport = new TaskInfoReport()
                     {
-                        SrNo = ++n,
-                        DocNo = f[0],
-                        UserName = userName,
-                        UserID = userID,
-                        Task = f[2],
-                        Pages = taskActivityLog.Pages.ToString(),
-                        PagesSubmitted = taskActivityLog.SubmittedPages,
-                        StartDate = sDate,
-                        LastUpdate = ts,
-                        CorrectionCount = correctionCount,
-                        Status = status,
-                        Team = team,
-                        TaskProgress = taskProgress,
-                        PDF_ID = pdfID,
-                        PDF_File = pdfFile,
-                    };
+                            SrNo = listTaskReportRecords.Count + 1,
+                            DocNo = f[0],
+                            UserName = userName,
+                            Task = f[2],
+                            Pages = String.Format("{0}/{1}", taskActivityLog.SubmittedPages, taskActivityLog.Pages),
+                            StartDate = sDate,
+                            LastUpdate = ts,
+                            CorrectionCount = correctionCount,
+                            Status = status,
+                            TaskProgress = taskProgress,
+                            PDF_ID = pdfID,
+                            PDF_File = pdfFile,
+                        };
+
                     listTaskRecords.Add(taskInfo);
+                    listTaskReportRecords.Add(taskInfoReport);
                     if (!dictUserTasks.ContainsKey(userName))
                         dictUserTasks.Add(userName, new List<TaskInfo>() { taskInfo });
                     else
@@ -681,6 +722,7 @@
                 if (item != null) selectUserName = ((DataItem)item.First()).Text;
             }
             SelectedTaskInfoRecords = new List<TaskInfo>();
+            SelectedTaskInfoReportRecords = new List<TaskInfoReport>();
             foreach(KeyValuePair<string, List<TaskInfo>> kv in dictUserTasks)
             {
                 string uid = "";
@@ -690,23 +732,38 @@
                     {
                         uid = item.UserID;
                         SelectedTaskInfoRecords.Add(new TaskInfo()
-                        {
-                            SrNo = SelectedTaskInfoRecords.Count + 1,
-                            DocNo = item.DocNo,
-                            UserName = item.UserName,
-                            UserID = item.UserID,
-                            Task = item.Task,
-                            Pages = item.Pages,
-                            PagesSubmitted = item.PagesSubmitted,
-                            StartDate = item.StartDate,
-                            LastUpdate = item.LastUpdate,
-                            CorrectionCount = item.CorrectionCount,
-                            Status = item.Status,
-                            Team = item.Team,
-                            TaskProgress = item.TaskProgress,
-                            PDF_ID = item.PDF_ID,
-                            PDF_File = item.PDF_File,
-                        });
+                            {
+                                SrNo = SelectedTaskInfoRecords.Count + 1,
+                                DocNo = item.DocNo,
+                                UserName = item.UserName,
+                                UserID = item.UserID,
+                                Task = item.Task,
+                                Pages = item.Pages,
+                                PagesSubmitted = item.PagesSubmitted,
+                                StartDate = item.StartDate,
+                                LastUpdate = item.LastUpdate,
+                                CorrectionCount = item.CorrectionCount,
+                                Status = item.Status,
+                                Team = item.Team,
+                                TaskProgress = item.TaskProgress,
+                                PDF_ID = item.PDF_ID,
+                                PDF_File = item.PDF_File,
+                            });
+                        SelectedTaskInfoReportRecords.Add(new TaskInfoReport()
+                            {
+                                SrNo = SelectedTaskInfoReportRecords.Count + 1,
+                                DocNo = item.DocNo,
+                                UserName = item.UserName,
+                                Task = item.Task,
+                                Pages = String.Format("{0}/{1}", item.PagesSubmitted, item.Pages),
+                                StartDate = item.StartDate,
+                                LastUpdate = item.LastUpdate,
+                                CorrectionCount = item.CorrectionCount,
+                                Status = item.Status,
+                                TaskProgress = item.TaskProgress,
+                                PDF_ID = item.PDF_ID,
+                                PDF_File = item.PDF_File,
+                            });
                     }
                 }
                 if (addUserIDs) userIDs.Add(new DataItem() { ID = uid, Text = kv.Key } );
@@ -717,6 +774,8 @@
         prevSelectUserID = selectUserID;
         prevSelectUserName = selectUserName;
         TaskInfoRecords = SelectedTaskInfoRecords;
+        TaskInfoReportRecords = SelectedTaskInfoReportRecords;
+
 
         // do Timesheet display
         if (listTimesheet.Count > 0)
@@ -825,6 +884,47 @@
         TaskDetailedInfoRecords = taskDetailedInfo;
     }
     //**********************************************************/
+    //******** ReportRowSelectHandler()
+    //**********************************************************/
+    public void ReportRowSelectHandler(RowSelectEventArgs<TaskInfoReport> args)
+    {
+        if (State.dataFile == null) return;
+        TaskInfoReport taskInfoReport = args.Data;
+        DocNoTitle = taskInfoReport.DocNo;
+        List<TaskDetailedInfo> taskDetailedInfo = new List<TaskDetailedInfo>();
+        // //**********************************************************/
+        // //**** Parse Assignee Progress using Json Method ***********/
+        var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskInfoReport.TaskProgress);
+        if (listUserTaskInfo == null) return;
+        // //**********************************************************/
+        int reviewNo = 0; string status = "";
+        foreach (UserTaskProgressInfo t in listUserTaskInfo)
+        {
+            status = t.status;
+            if (status == "Review")
+            {
+                status = String.Format("Review{0}", ++reviewNo);
+            }
+            taskDetailedInfo.Add(new TaskDetailedInfo()
+                {
+                    SrNo = taskDetailedInfo.Count + 1,
+                    DocNo = taskInfoReport.DocNo,
+                    UserID = t.userID,
+                    UserName = State.dataFile.GetUserName(t.userID),
+                    NoPages = taskInfoReport.Pages,
+                    Task = t.task,
+                    StartDate = t.startDate,
+                    LastUpdate = t.lastDate,
+                    PagesSubmitted = t.submitted,
+                    CorrectionCount = t.corrections,
+                    Status = status
+                });
+        }
+        SourceBookLabel = "Source Book : ";
+        sourcePDF = String.Format("{1} ({0})", taskInfoReport.PDF_ID, taskInfoReport.PDF_File);
+        TaskDetailedInfoRecords = taskDetailedInfo;
+    }
+    //**********************************************************/
     //******** RowSelectHandler_Timesheet()
     //**********************************************************/
     public void RowSelectHandler_Timesheet(RowSelectEventArgs<TimesheetInfo> args)
@@ -840,26 +940,26 @@
     {
         if (args != null)
         {
-            if (args.Item.Id == "Grid_excelexport")
+            if (args.Item.Id == "GridReport_excelexport")
             {
                 ExcelExportProperties ExcelProperties = new ExcelExportProperties();
                 ExcelProperties.FileName = "TasksReport.xlsx";
-                ExcelProperties.DataSource = TaskInfoRecords;
-                await this.sfgrid.ExcelExport(ExcelProperties);
+                ExcelProperties.DataSource = TaskInfoReportRecords;
+                await this.sfgridReport.ExcelExport(ExcelProperties);
             }
-        }
+        }//TaskInfoReport> TaskInfoReportRecords
     }
     public async Task ToolbarClick_Timesheet(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        if (args != null)
-        {
-            if (args.Item.Id == "Grid_excelexport")
-            {
-                ExcelExportProperties ExcelProperties = new ExcelExportProperties();
-                ExcelProperties.FileName = "TimesheetReport.xlsx";
-                ExcelProperties.DataSource = TimesheetInfoRecords;
-                await this.sfgrid2.ExcelExport(ExcelProperties);
-            }
-        }
+        // if (args != null)
+        // {
+        //     if (args.Item.Id == "Grid_excelexport")
+        //     {
+        //         ExcelExportProperties ExcelProperties = new ExcelExportProperties();
+        //         ExcelProperties.FileName = "TimesheetReport.xlsx";
+        //         ExcelProperties.DataSource = TimesheetInfoRecords;
+        //         await this.sfgrid2.ExcelExport(ExcelProperties);
+        //     }
+        // }
     }
 }

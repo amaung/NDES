@@ -36,6 +36,16 @@
         public string ID { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;
     }
+    public class AssignedTaskData
+    {
+        public DateTime dateTime;
+        public UserTaskProgressInfo? userTaskProgressInfo;
+
+        public AssignedTaskData()
+        {
+            dateTime = DateTime.MaxValue;
+        }
+    }
     /************************************************************************************/
     //***********************************************************************
     //***************************** Initialize ******************************
@@ -72,8 +82,12 @@
                     });
             }
         }
+        while (State == null || State.clientTipitakaDB == null) await Task.Delay(100);
+        if (State != null && State.clientTipitakaDB != null)
+            clientTaskAssignmentInfo = State.clientTipitakaDB.GetClientTaskAssignmentInfo();
         await Task.Delay(300);
-        taskInfoPageSize = sfgrid.PageSettings.PageSize;
+        taskInfoPageSize = sfgrid!.PageSettings.PageSize;
+        //await SysAdminWork2();
     }
 }
 
@@ -102,7 +116,7 @@
     </div>
     <div style="width:200px" class="form-group col-md-2 column">
         <label class="col-form-label">Search Text</label>
-        <SfTextBox TValue="string" @bind-Value="@pattern"></SfTextBox>
+        <SfTextBox TValue="string" @bind-Value="@pattern" @onkeypress="@OnKeyDown" @oninput="@OnTyping"></SfTextBox>
     </div>
 </div>
 <br />
@@ -407,42 +421,44 @@
     public class TaskInfo()
     {
         public int SrNo { get; set; }
-        public string DocNo { get; set; }
-        public string DocTitle { get; set; }
-        public string Task { get; set; }
-        public string Pages { get; set; }
+        public string DocNo { get; set; } = "";
+        public string DocTitle { get; set; } = "";
+        public string Task { get; set; } = "";
+        public string Pages { get; set; } = "";
         public int PagesSubmitted { get; set; }
-        public string StartDate { get; set; }
-        public string LastUpdate { get; set; }
+        public DateTime? DateForSorting { get; set; }
+        public string StartDate { get; set; } = "";
+        public string LastUpdate { get; set; } = "";
         public int CorrectionCount { get; set; }
-        public string Status { get; set; }
-        public string Team { get; set; }
+        public string Status { get; set; } = "";
+        public string Team { get; set; } = "";
     };
     public class TaskDetailedInfo()
     {
         public int SrNo { get; set; }
-        public string DocNo { get; set; }
-        public string UserName { get; set; }
-        public string UserID { get; set; }
-        public string NoPages { get; set; }
+        public string DocNo { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string UserID { get; set; } = "";
+        public string NoPages { get; set; } = "";
         public int? PagesSubmitted { get; set; }
-        public string Task { get; set; }
-        public string StartDate { get; set; }
-        public string LastUpdate { get; set; }
+        public string Task { get; set; } = "";
+        public string StartDate { get; set; } = "";
+        public DateTime? StartDateForSorting { get; set; }
+        public string LastUpdate { get; set; } = "";
         public int? CorrectionCount { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = "";
     };
     public class CorrectionInfo()
     {
         public int SrNo { get; set; }
-        public string DocNo { get; set; }
-        public string AssignedTo { get; set; }
-        public string Task { get; set; }
+        public string DocNo { get; set; } = "";
+        public string AssignedTo { get; set; } = "";
+        public string Task { get; set; } = "";
         public int PageNo { get; set; }
-        public string NISField { get; set; }
-        public string BeforeEdit { get; set; }
-        public string AfterEdit { get; set; }
-        public string Date { get; set; }
+        public string NISField { get; set; } = "";
+        public string BeforeEdit { get; set; } = "";
+        public string AfterEdit { get; set; } = "";
+        public string Date { get; set; } = "";
     }
     public DateTime? DateValue { get; set; }
     private List<DataItem> docSearchTypes = new List<DataItem>();
@@ -450,13 +466,14 @@
     List<TaskInfo> listSelectedTaskInfo = new List<TaskInfo>();
     List<TaskDetailedInfo> TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
     List<CorrectionInfo> CorrectionInfoRecords = new List<CorrectionInfo>();
+    ClientTaskAssignmentInfo? clientTaskAssignmentInfo = null;
     TaskInfo? selectedTaskInfo = null;
-    SfGrid<TaskInfo> sfgrid;
-    SfGrid<TaskDetailedInfo> sfgrid1;
-    SfGrid<CorrectionInfo> sfgrid2;
-    SfDatePicker<DateTime?> sfdatepicker;
-    SfDropDownList<string, DataItem> userDropdown;
-    SfDropDownList<string, DataItem> taskDropdown;
+    SfGrid<TaskInfo>? sfgrid;
+    SfGrid<TaskDetailedInfo>? sfgrid1;
+    SfGrid<CorrectionInfo>? sfgrid2;
+    SfDatePicker<DateTime?>? sfdatepicker;
+    SfDropDownList<string, DataItem>? userDropdown;
+    SfDropDownList<string, DataItem>? taskDropdown;
     bool VisibleSpinner = false;
 
     /************************************************************************************/
@@ -466,22 +483,22 @@
     string userDropDownValue = "", taskDropDownValue = "";
     string showNextButton = "none";
 
-    List<string> docTypes, docSubTypes;
+    List<string>? docTypes, docSubTypes;
     List<DataItem> listDocs = new List<DataItem>();
     List<DataItem> listPDFItems = new List<DataItem>();
     List<DataItem> listUsers = new List<DataItem>();
     List<DataItem> listTasks = new List<DataItem>();
     List<SuttaInfo> newSuttaList = new List<SuttaInfo>();
-    List<int> SelectedRowIndexes { get; set; }
+    List<int>? SelectedRowIndexes { get; set; }
     List<string> listDeleteTaskDetailedInfo = new List<string>();
     TaskDetailedInfo? selectedTaskDetailedInfo = null;
     int taskInfoCurrentPage { get; set; } = 0;
     int taskInfoPageSize { get; set; } = 0;
 
     Dictionary<string, int> dictPDFPageCount = new Dictionary<string, int>();
-    public SfDropDownList<string, DataItem> docDropdown;
-    public SfDropDownList<string, DataItem> srcPDFDropdown;
-    public SfComboBox<string, DataItem> docSubTypeCombo;
+    public SfDropDownList<string, DataItem>? docDropdown;
+    public SfDropDownList<string, DataItem>? srcPDFDropdown;
+    public SfComboBox<string, DataItem>? docSubTypeCombo;
 
     string ErrMsgNewDocInfo = "";
     string formattedDocNo = "";
@@ -499,6 +516,24 @@
     int nCorrections = 0;
     bool IsVisible_NewDocInfo = false;
 
+
+    //************************************************************************************/
+    //******** OnKeyDown & OnTyping
+    /************************************************************************************/
+    private void OnTyping(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        if (args != null && args.Value != null)
+        {
+            this.pattern = args.Value.ToString();
+        }
+    }
+    public async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Code == "Enter" && pattern.Length != 0 && searchType.Length != 0)
+        {
+            await ShowTasks();
+        }
+    }
     private void InputHandler_NewDocInfo(InputEventArgs args)
     {
         ErrMsgNewDocInfo = String.Empty;
@@ -522,22 +557,34 @@
     /************************************************************************************/
     //******** ShowTasks
     /************************************************************************************/
-    private void ShowTasks()
+    private async Task ShowTasks()
     {
+        VisibleSpinner = true; 
+        await Task.Delay(100);
+        await ShowTasksServer();
+        VisibleSpinner = false;
+    }
+    private async Task ShowTasksServer()
+    {
+        // to do clean up work
+        if (pattern == "$" && email == "dhammayaungchi2011@gmail.com") 
+        { 
+            SysAdminWork(); return; 
+        }
         selectedTaskInfo = null;
         if (searchTypeValue == null || searchTypeValue.Length == 0)
         {
-            AlertBtn("Please select search type first.", "Warning");
+            await AlertBtn("Please select search type first.", "Warning");
             return;
         }
+        // VisibleSpinner = true; await Task.Delay(500);
         // retrieve
         List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass);
         totalCount = State.dataFile.GetSearchResultCount();
         TaskInfoRecords = new List<TaskInfo>();
         if (totalCount == 0)
-            AlertBtn("No tasks found.", "Alert");
+            await AlertBtn("No tasks found.", "Alert");
 
-        int n = 0;
         List<TaskInfo> listTaskInfo = new List<TaskInfo>();
         foreach (SuttaInfo suttaInfo in listSuttaInfo)
         {
@@ -548,10 +595,18 @@
                     DocTitle = suttaInfo.Title,
                     Pages = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.EndPage - suttaInfo.StartPage + 1),
                     //Pages = suttaInfo.EndPage - suttaInfo.StartPage + 1,
+                    DateForSorting = GetLastUpdated(suttaInfo.RowKey),
                     PagesSubmitted = suttaInfo.PagesSubmitted,
                     Status = suttaInfo.Status,
                     Team = suttaInfo.Team
                 });
+        }
+        listTaskInfo = listTaskInfo.OrderByDescending(o => o.DateForSorting).ToList();
+        // redo serial nos
+        int n = 0;
+        foreach(TaskInfo taskInfo in listTaskInfo)
+        {
+            taskInfo.SrNo = ++n;
         }
         idxTaskRowSelect = -1;
         idxTaskAssignmentRowSelect = -1;
@@ -566,10 +621,25 @@
             showNextButton = "block";
         }
         else showNextButton = "none";
+        // VisibleSpinner = false; await Task.Delay(100);
+    }
+    private DateTime? GetLastUpdated(string docNo)
+    {
+        if (clientTaskAssignmentInfo == null) return null;
+        TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(docNo);
+        DateTime dateTime = DateTime.Now;
+        if (taskAssignmentInfo != null && taskAssignmentInfo.Timestamp != null)
+        {
+            int y = taskAssignmentInfo.Timestamp.Value.Year;
+            int m = taskAssignmentInfo.Timestamp.Value.Month;
+            int d = taskAssignmentInfo.Timestamp.Value.Day;
+            dateTime = new DateTime(y, m, d);
+        }
+        return dateTime;
     }
     private void ShowNextTasks()
     {
-        List<SuttaInfo> listSuttaInfo = State.dataFile.GetNextBatchSearchedSuttas();
+        List<SuttaInfo> listSuttaInfo = State.dataFile!.GetNextBatchSearchedSuttas();
         List<TaskInfo> listTaskInfo = TaskInfoRecords.ToList();
 
         foreach (SuttaInfo suttaInfo in listSuttaInfo)
@@ -607,7 +677,7 @@
             var curPage = (int)((listTask[0].SrNo - 1) / 5) + 1;
             int rowIdx = (listTask[0].SrNo % 5);
             rowIdx = (rowIdx == 0) ? 4 : rowIdx - 1; 
-            await sfgrid.GoToPageAsync(curPage);
+            await sfgrid!.GoToPageAsync(curPage);
             await sfgrid.SelectRowAsync(rowIdx);
             selectedTaskInfo = null;
         }
@@ -796,13 +866,13 @@
     //******** SaveTaskClick()
     //*** https://www.newtonsoft.com/json/help/html/DeserializeObject.htm*/
     //************************************************************************************************
-    private void SaveTaskClick()
+    private async Task SaveTaskClick()
     {
-        string docNo = "";
-        if (SelectedRowIndexes.Count == 0) return;
+        //string docNo = "";
+        if (SelectedRowIndexes == null || SelectedRowIndexes.Count == 0) return;
         VisibleSpinner = true;
         // if there are rows deleted, process them first
-        if (listDeleteTaskDetailedInfo.Count > 0)
+        if (listDeleteTaskDetailedInfo.Count > 0 && State != null && State.dataFile != null)
         {
             // remove user from task
             foreach (string item in listDeleteTaskDetailedInfo)
@@ -820,19 +890,7 @@
         {
             if (!SaveTask(taskInfo.DocNo)) break;
         }
-        //int rowInList = 0;
-        // foreach(int rowIdx in SelectedRowIndexes)
-        // {
-        //     // get the actual SrNo
-        //     if (taskInfoCurrentPage <= 0) rowInList = rowIdx;
-        //     else rowInList = rowIdx + (taskInfoCurrentPage - 1) * taskInfoPageSize;
-        //     if (rowInList >= 0 && rowInList < TaskInfoRecords.Count)
-        //     {
-        //         if (!SaveTask(TaskInfoRecords[rowInList].DocNo)) break;
-        //     }
-        // }
-        //searchTypeValue = TaskCategories._Assigned_;
-        ShowTasks();
+        await ShowTasks();
         VisibleSpinner = false;
     }
     private bool SaveTask(string docNo)
@@ -841,6 +899,7 @@
         // save task assignment info
         string userTaskAssignments = "";
         //string docNo = TaskDetailedInfoRecords[0].DocNo;
+        DateValue = null;
         if (DateValue == null)
         {
             AlertBtn("Please select the estimated completion date before contuning.", "Error");
@@ -852,7 +911,7 @@
         string key, userName;
         foreach (var item in TaskDetailedInfoRecords)
         {
-            userName = State.dataFile.GetUserName(item.UserID);
+            userName = State.dataFile!.GetUserName(item.UserID);
             // continue only if the userID is valid
             if (userName.Length == 0) continue; // skip if the userID is not valid
             if (item.Status.Length == 0) item.Status = TaskCategories._Assigned_; 
@@ -895,7 +954,7 @@
             newlist[idxTaskRowSelect].Status = lastStatus;
             newlist[idxTaskRowSelect].Team = team;
             TaskInfoRecords = newlist;
-            sfgrid.SelectRow(idxTaskRowSelect);
+            sfgrid.SelectRowAsync(idxTaskRowSelect);
         }
         if (State.dataFile != null)
         {
@@ -913,7 +972,7 @@
                     0, 0, "Team = " + team);
             var userList = dictUserTaskProgressInfo.Select(r=>r.userID).ToList();
             userList.RemoveAt(0);
-            ClientKeyValueData clientKeyValueData = State.dataFile.GetClientKeyValueData();
+            ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
             if (clientKeyValueData != null) 
             {
                 clientKeyValueData.AddUserTask(userList.ToArray(), docNo);
@@ -928,8 +987,12 @@
         string lastStatus = "";
         if (userTaskAssignments.Length == 0) return lastStatus;
         var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(userTaskAssignments);
-        if (listUserTaskInfo.Count > 0)
-            lastStatus = listUserTaskInfo[listUserTaskInfo.Count - 1].status;
+        if (listUserTaskInfo != null && listUserTaskInfo.Count > 0)
+        {
+            if (listUserTaskInfo[listUserTaskInfo.Count - 1].status == "Completed" &&
+            listUserTaskInfo[listUserTaskInfo.Count - 1].task == "Review4") lastStatus = "Done";
+            else lastStatus = listUserTaskInfo[listUserTaskInfo.Count - 1].status;
+        }
         return lastStatus;
     }
     /************************************************************************************/
@@ -972,13 +1035,13 @@
                     string st = selectedTaskDetailedInfo.Status;
                     if (st == "Created")
                     {
-                        AlertBtn("You cannot remove the doc owner.", "Error");
+                        await AlertBtn("You cannot remove the doc owner.", "Error");
                         args.Cancel = true;
                     }
                     // if (st != "Assigned" && st != "Created" || selectedTaskDetailedInfo.PagesSubmitted > 0)
                     if (selectedTaskDetailedInfo.PagesSubmitted > 0)
                     {
-                        AlertBtn("This user has already started the job and cannot be removed anymore.", "Error");
+                        await AlertBtn("This user has already started or completed the task and cannot be removed anymore.", "Error");
                         args.Cancel = true;
                     }
                 }
@@ -990,53 +1053,84 @@
     //****************************************************************
     public async Task RowSelectHandler(RowSelectEventArgs<TaskInfo> args)
     {
-        if (State.dataFile == null) return;
-        SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexes();
+        if (State.dataFile == null || sfgrid == null) return;
+        SelectedRowIndexes = await this.sfgrid.GetSelectedRowIndexesAsync();
         listSelectedTaskInfo = await this.sfgrid.GetSelectedRecordsAsync();
         TaskInfo taskInfo = args.Data;
         selectedTaskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;
 
+        if (taskInfo == null) return;
         //TaskInfo taskInfo = listTaskInfo[taskInfo.SrNo];
-        TaskAssignmentInfo taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(taskInfo.DocNo);
-        if (taskAssignmentInfo.LastDate.Length > 0) 
+        TaskAssignmentInfo? taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(taskInfo.DocNo);
+        if (taskAssignmentInfo == null) return;
+        if (taskAssignmentInfo.LastDate.Length > 0)
         {
             string[] dd = taskAssignmentInfo.LastDate.Split('/');
             DateValue = new DateTime(Int32.Parse(dd[2]), Int32.Parse(dd[1]), Int32.Parse(dd[0]));
         }
-        List<TaskDetailedInfo> taskDetailedInfo = new List<TaskDetailedInfo>();
         //**********************************************************/
         //**** Parse Assignee Progress using Json Method ***********/
         var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
         //**********************************************************/
+        string taskLastStatus = State.dataFile.GetLastStatus(listUserTaskInfo!);
+        if (taskLastStatus != taskInfo.Status)
+        {
+            // need to update the doc latest status
+            TaskInfoRecords[args.RowIndex].Status = taskLastStatus;
+            await sfgrid.Refresh();
+            State.dataFile.UpdateSuttaInfo(taskInfo.DocNo, taskLastStatus, taskInfo.Team);
+        }
+        List<TaskDetailedInfo> taskDetailedInfo = new List<TaskDetailedInfo>();
         int reviewNo = 0; string status = "";
         int correctionCount = 0;
-        bool dataComplete = false;
         overdueLabel = "";
         overdueDay = "";
-        foreach (UserTaskProgressInfo t in listUserTaskInfo)
+        int stDay, stMon, stYear;
+        DateTime? stDateTime = null;
+        if (listUserTaskInfo != null && listUserTaskInfo.Count > 0)
         {
-            status = State.dataFile.GetTaskStatus(taskAssignmentInfo, t);
-            if (status == "Review")
+            foreach (UserTaskProgressInfo t in listUserTaskInfo)
             {
-                status = String.Format("Review{0}", ++reviewNo);
-            }
-            taskDetailedInfo.Add(new TaskDetailedInfo()
+                status = State.dataFile.GetTaskStatus(taskAssignmentInfo, t);
+                if (status == "Review")
                 {
-                    SrNo = taskDetailedInfo.Count + 1,
-                    DocNo = taskInfo.DocNo,
-                    UserID = t.userID,
-                    UserName = State.dataFile.GetUserName(t.userID),
-                    NoPages = taskInfo.Pages,
-                    Task = t.task,
-                    StartDate = t.startDate, //DateTime.Now.ToString("d/M/yyyy"),
-                    LastUpdate = t.lastDate,
-                    PagesSubmitted = t.submitted,
-                    CorrectionCount = t.corrections,
-                    Status = status
-                });
-            correctionCount += t.corrections;
+                    status = String.Format("Review{0}", ++reviewNo);
+                }
+                string[] sdt = t.startDate.Split('/');
+                if (sdt.Length == 3)
+                {
+                    stDay = int.Parse(sdt[0]);
+                    stMon = int.Parse(sdt[1]);
+                    stYear = int.Parse(sdt[2]);
+                    stDateTime = new DateTime(stYear, stMon, stDay);
+                }
+                else
+                {
+                    // tasks that have not been started yet are set a max date so that they
+                    // are listed at the end
+                    stDateTime = new DateTime();
+                    stDateTime = DateTime.MaxValue;
+                }
+                taskDetailedInfo.Add(new TaskDetailedInfo()
+                    {
+                        SrNo = taskDetailedInfo.Count + 1,
+                        DocNo = taskInfo.DocNo,
+                        UserID = t.userID,
+                        UserName = State.dataFile.GetUserName(t.userID),
+                        NoPages = taskInfo.Pages,
+                        Task = t.task,
+                        StartDate = t.startDate, //DateTime.Now.ToString("d/M/yyyy"),
+                        StartDateForSorting = stDateTime,
+                        LastUpdate = t.lastDate,
+                        PagesSubmitted = t.submitted,
+                        CorrectionCount = t.corrections,
+                        Status = status
+                    });
+                correctionCount += t.corrections;
+            }
         }
+        taskDetailedInfo = taskDetailedInfo.OrderBy(o => o.StartDateForSorting).ToList();
         SourceBookLabel = "Source Book : ";
         sourcePDF = State.dataFile.GetSourceBook(taskInfo.DocNo);
         taskDetailedInfo[0].LastUpdate = taskAssignmentInfo.LastDate;
@@ -1045,7 +1139,7 @@
         TaskDetailedInfoRecords = taskDetailedInfo;
         CalculateDaysFromDueDate();
 
-        ClientCorrectionLog clientCorrectionLog = State.dataFile.GetClientCorrectionLog();
+        ClientCorrectionLog? clientCorrectionLog = State.dataFile.GetClientCorrectionLog();
         List<CorrectionInfo> corrections = new List<CorrectionInfo>();
         List<CorrectionLog> correctionLog = new List<CorrectionLog>();
         CorrectionInfoRecords.Clear();
@@ -1128,6 +1222,8 @@
         if (State.dataFile == null) return;
         selectedTaskDetailedInfo = args.Data;
         idxTaskAssignmentRowSelect = args.RowIndex;
+        // userDropDownValue = args.Data.UserID;
+        // taskDropDownValue = args.Data.Task;
     }
     private void ActionBeginUser(ActionEventArgs<TaskDetailedInfo> args)
     {
@@ -1180,5 +1276,199 @@
         beforeEdit = correctionInfo.BeforeEdit;
         afterEdit = correctionInfo.AfterEdit;
     }
+    private void SysAdminWork()
+    {
+        // This is routine is only for the SysAdmin. No one else is allowed to use this function.
+        if (State.dataFile == null && email != "dhammayaungchi2011@gamil.com") return;
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile!.GetClientSuttaInfo();
+        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList("Assigned", "", userClass);
+        int n = listSuttaInfo.Count;
+        string docNo;
+        foreach (SuttaInfo suttaInfo in listSuttaInfo)
+        {
+            List<AssignedTaskData> listAssignedTaskData = new List<AssignedTaskData>();
+            docNo = suttaInfo.RowKey;
+            string status;
+            if (docNo == null || docNo.Length == 0) continue;
+            TaskAssignmentInfo? taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(docNo);
+            if (taskAssignmentInfo != null)
+            {
+                //**********************************************************/
+                //**** Parse Assignee Progress using Json Method ***********/
+                var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                //**********************************************************/
+                if (listUserTaskInfo != null)
+                {
+                    // foreach (UserTaskProgressInfo userTaskProgressInfo in listUserTaskInfo)
+                    // {
+                    //     AssignedTaskData assignedTaskData = new AssignedTaskData();
+                    //     assignedTaskData.userTaskProgressInfo = userTaskProgressInfo;
+                    //     if (userTaskProgressInfo.startDate.Length > 0) 
+                    //     {
+                    //         string[] dd = userTaskProgressInfo.startDate.Split('/');
+                    //         if (dd.Length == 3)
+                    //         {
+                    //             assignedTaskData.dateTime = new DateTime(int.Parse(dd[2]), int.Parse(dd[1]), int.Parse(dd[0]));
+                    //         }
+                    //     }
+                    //     listAssignedTaskData.Add(assignedTaskData);
+                    // }
+                    // listAssignedTaskData = listAssignedTaskData.OrderBy(o => o.dateTime).ToList();
+                    status = State.dataFile.GetLastStatus(listUserTaskInfo);
+                    if (suttaInfo.Status != status)
+                    {
+                        // update SuttaInfo status
+                        suttaInfo.Status = status;
+                        if (clientSuttaInfo != null)
+                            clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+                    }
+                }
+                break;
+            }
+        }
+    }
+    private async Task SysAdminWork2()
+    {
+        if (State.dataFile == null && email != "dhammayaungchi2011@gamil.com") return;
+        ClientKeyValueData? clientKeyValueData = State.dataFile!.GetClientKeyValueData();
+        if (clientKeyValueData == null) return;
+        Dictionary<string, string> dictUserTasks = await clientKeyValueData.GetUserTasksAsync();
+        string[] userTasks = { };
+        string userID = "burmese1851999@gmail.com";
+        //string docNo = "";
+        if (dictUserTasks.ContainsKey(userID))
+        {
+            userTasks = dictUserTasks[userID].Split(';');
+            //await SysAdminWork3(userID, userTasks[0]);
+            foreach (string docNo in userTasks)
+            {
+                await SysAdminWork3(userID, docNo);
+            }
+        }
+    }
+    private async Task SysAdminWork3(string userID, string docNo)
+    {
+        if (State.dataFile == null && email != "dhammayaungchi2011@gamil.com") return;
+        ClientKeyValueData? clientKeyValueData = State.dataFile!.GetClientKeyValueData();
+        if (clientKeyValueData == null) return;
+        // string userID = "lwinmarmar55@gmail.com";
+        // string docNo = "";// "DN.Tika-01.18+.04";
+        Dictionary<string, string> dictUserTasks = await clientKeyValueData.GetUserTasksAsync();
+        string[] userTasks = { };
+        if (dictUserTasks.ContainsKey(userID))
+        {
+            userTasks = dictUserTasks[userID].Split(';');
+            if (userTasks.Length > 0) docNo = userTasks[0];
+        }
+        if (docNo.Length == 0) return;
+        TaskAssignmentInfo? taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(docNo);
+        if (taskAssignmentInfo != null)
+        {
+            //**********************************************************/
+            //**** Parse Assignee Progress using Json Method ***********/
+            var listUserTaskInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+            //**********************************************************/
+            if (listUserTaskInfo != null) 
+            {
+                var itemToRemove = listUserTaskInfo.FirstOrDefault(r => r.userID == userID);
+                if (itemToRemove != null)
+                {
+                    listUserTaskInfo.Remove(itemToRemove);
+                    List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>();
+                    foreach (UserTaskProgressInfo userTaskProgress in listUserTaskInfo)
+                    {
+                        dictUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                            {
+                                userID = userTaskProgress.userID,
+                                task = userTaskProgress.task,
+                                startDate = userTaskProgress.startDate,
+                                lastDate = userTaskProgress.lastDate,
+                                submitted = userTaskProgress.submitted,
+                                corrections = userTaskProgress.corrections,
+                                status = userTaskProgress.status
+                            });
+                    }
+                    taskAssignmentInfo.AssigneeProgress = JsonConvert.SerializeObject(dictUserTaskProgressInfo);
+                    // update TaskAssignmentInfo
+                    ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+                    if (clientTaskAssignmentInfo != null)
+                    {
+                        clientTaskAssignmentInfo.UpdateTaskAssignmentInfo(taskAssignmentInfo);
+                    }
+                }
+            }
+            // remove user name from SuttaInfo
+            ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+            if (clientSuttaInfo != null)
+            {
+                SuttaInfo? suttaInfo = clientSuttaInfo.GetSuttaInfo(docNo);
+                if (suttaInfo != null)
+                {
+                    string team = suttaInfo.Team;
+                    string userName = State.dataFile.GetUserName(userID);
+                    string userName_delm = ", " + userName;
+                    if (team.Contains(userName_delm)) team = team.Replace(userName_delm, "");
+                    else team = team.Replace(userName, "");
+                    suttaInfo.Team = team;
+                    clientSuttaInfo.UpdateSuttaInfo(suttaInfo);
+                }
+            }
+        }
+        if (clientKeyValueData != null)
+        {
+            clientKeyValueData.RemoveUserTask(userID, docNo);
+            clientKeyValueData.RemoveUserDocByCategory(userID, "Assigned", docNo);
+            //clientKeyValueData.AddUserDocByCategory(userID, "Data Completed", docNo);
+        }
+    }
+    // string GetLastStatus(List<UserTaskProgressInfo> listUserTaskInfo)
+    // {
+    //     string status = "";
+    //     List<AssignedTaskData> listAssignedTaskData = new List<AssignedTaskData>();
+    //     if (listUserTaskInfo != null)
+    //     {
+    //         foreach (UserTaskProgressInfo userTaskProgressInfo in listUserTaskInfo)
+    //         {
+    //             AssignedTaskData assignedTaskData = new AssignedTaskData();
+    //             assignedTaskData.userTaskProgressInfo = userTaskProgressInfo;
+    //             if (userTaskProgressInfo.startDate.Length > 0)
+    //             {
+    //                 string[] dd = userTaskProgressInfo.startDate.Split('/');
+    //                 if (dd.Length == 3)
+    //                 {
+    //                     assignedTaskData.dateTime = new DateTime(int.Parse(dd[2]), int.Parse(dd[1]), int.Parse(dd[0]));
+    //                 }
+    //             }
+    //             listAssignedTaskData.Add(assignedTaskData);
+    //         }
+    //         listAssignedTaskData = listAssignedTaskData.OrderBy(o => o.dateTime).ToList();
 
+    //         if (listAssignedTaskData == null || listAssignedTaskData.Count == 0) return status;
+    //         if (listAssignedTaskData.Count == 1) 
+    //             return listAssignedTaskData[0].userTaskProgressInfo!.status;
+
+    //         listAssignedTaskData.Reverse();
+    //         // if all tasks are completed return Completed
+    //         if (listAssignedTaskData != null && listAssignedTaskData.Count > 0)
+    //         {
+    //             var t = listAssignedTaskData[0];
+    //             if (t != null && t.userTaskProgressInfo != null)
+    //             {
+    //                 if (t.userTaskProgressInfo.status == "Completed") return "Completed";
+    //             }
+    //         }
+    //         status = "Assigned";
+    //         foreach (AssignedTaskData assignedTaskData in listAssignedTaskData!)
+    //         {
+    //             if (assignedTaskData.userTaskProgressInfo == null) continue;
+    //             status = assignedTaskData.userTaskProgressInfo.status;
+    //             if (status != "Assigned")
+    //             {
+    //                 status = assignedTaskData.userTaskProgressInfo.task;
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     return status;
+    // }
 }

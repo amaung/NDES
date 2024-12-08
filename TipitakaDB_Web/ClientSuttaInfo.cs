@@ -1,4 +1,5 @@
-﻿using Tipitaka_DBTables;
+﻿using System.Collections.Generic;
+using Tipitaka_DBTables;
 
 namespace Tipitaka_DB
 {
@@ -65,6 +66,23 @@ namespace Tipitaka_DB
             foreach(var suttaInfo in list)
                 sortedSuttaList.Add(suttaInfo.RowKey, suttaInfo.Title + "|" + suttaInfo.NoPages.ToString());
             return sortedSuttaList;
+        }
+        public SortedDictionary<string, string> GetCompletedSuttaInfo()
+        {
+            SortedDictionary<string, string> sortedSuttaList = new SortedDictionary<string, string>();
+            List<SuttaInfo> list = new List<SuttaInfo>();
+            string query = "Status eq 'Completed' or Status eq 'Done'";
+            QueryTableRec(query).Wait();
+            list = (List<SuttaInfo>)objResult;
+            foreach (var suttaInfo in list)
+                sortedSuttaList.Add(suttaInfo.RowKey, suttaInfo.Title + "|" + suttaInfo.NoPages.ToString());
+            return sortedSuttaList;
+        }
+        public async Task<int> CompletedDocCount()
+        {
+            string query = "Status eq 'Completed'";
+            await QueryTableRec(query);
+            return ((List<SuttaInfo>)objResult).Count;
         }
         public void DeleteAll(string userID)
         {

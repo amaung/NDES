@@ -40,8 +40,8 @@
     //***********************************************************************
     //***************************** Initialize ******************************
     //***********************************************************************
-    protected override async Task OnInitializedAsync()
-    // protected override void OnInitialized()
+    // protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         State.screenID = 4; // UserTaskAssignment screen
         if (State.dataFile != null)
@@ -102,7 +102,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             case "DataPage":
                 State.screenID = 4;
                 NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass)); 
-            break;
+                break;
         }
     }
 }
@@ -120,7 +120,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     </div>
     <div style="width:200px" class="form-group col-md-2 column">
         <label class="col-form-label">Search Text</label>
-        <SfTextBox TValue="string" @bind-Value="@pattern"></SfTextBox>
+        <SfTextBox TValue="string" @bind-Value="@pattern" @onkeypress="@OnKeyDown" @oninput="@OnTyping"></SfTextBox>
     </div>
 </div>
 <br />
@@ -219,7 +219,11 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
 <div id="ControlRegion">
     <div class="form-row">
         <div style="width:200px;height:32px; padding-top:0px; padding-bottom:15px; margin-left:200px" class="column-dialog left-dialog" hidden="@hideButton">
-            <SfButton OnClick="@OnImportData" Disabled="@disableOnClick"> Import Data From File </SfButton>
+            @* <SfButton OnClick="ImportFileClick()" Disabled="@disableOnClick"> Import Data From File </SfButton> *@
+            <button Disabled="@disableOnClick" onclick="document.getElementById('fileInput').click();">Import Data From File</button>
+            @* <input type="file" id="fileInput" style="display: none;" onchange="@OnImportData" /> *@
+            <InputFile id="fileInput" style="display: none;" OnChange="@OnImportData" />
+
         </div>
         <div style="width:200px;height:32px; padding-top:0px; padding-bottom:15px;margin-left:150px" class="column-dialog right-dialog" hidden="@hideButton">
             <SfButton OnClick="@OnRetrieveData"> Retrieve Data From Server </SfButton>
@@ -270,6 +274,9 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         </GridColumns>
     </SfGrid>
 </div>
+@* <span>@checking</span> *@
+<SfSpinner Type=SpinnerType.Bootstrap4 @bind-Visible="@VisibleSpinner">
+</SfSpinner>
 <br />
 <label style="width:100px;"><strong>Before Edit</strong></label>
 <label><strong>:&nbsp&nbsp&nbsp</strong>@beforeEdit</label>
@@ -277,6 +284,14 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
 <label style="width:100px;"><strong>After Edit</strong></label>
 <label><strong>:&nbsp&nbsp&nbsp</strong>@afterEdit</label>
 <br/><br/>
+@* *************************************************************************** *@
+@* ******************************** JS Script ******************************** *@
+@* *************************************************************************** *@
+<script>
+    function ImportFileClick(parm) {
+        document.getElementById('fileInput').click();
+    }
+</script>
 @* *************************************************************************** *@
 @* ************************ New doc info dialog Style ************************ *@
 @* *************************************************************************** *@
@@ -404,6 +419,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         public int? PagesSubmitted { get; set; }
         public string Task { get; set; }
         public string StartDate { get; set; }
+        public DateTime? StartDateForSorting { get; set; }
         public string LastUpdate { get; set; }
         public int? CorrectionCount { get; set; }
         public string Status { get; set; }
@@ -431,6 +447,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     SfGrid<CorrectionInfo> sfgrid2;
 
     bool hideButton = true;
+    bool VisibleSpinner = false;
     // SfDropDownList<string, DataItem> taskDropdown;
 
     /************************************************************************************/
@@ -468,6 +485,20 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     int nCorrections = 0;
 
     //************************************************************************************/
+    //******** OnKeyDown & OnTyping
+    /************************************************************************************/
+    private void OnTyping(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        this.pattern = args.Value.ToString();
+    }
+    public async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Code == "Enter" && pattern.Length != 0 && searchType.Length != 0)
+        {
+            await ShowTasks();
+        }
+    }
+    //************************************************************************************/
     //******** AlertBtn
     /************************************************************************************/
     public async Task AlertBtn(string msg, string warn)
@@ -489,7 +520,14 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     /************************************************************************************/
     //******** ShowTasks
     /************************************************************************************/
-    private void ShowTasks()
+    private async Task ShowTasks()
+    {
+        VisibleSpinner = true;
+        await Task.Delay(100);
+        await ShowTasksServer();
+        VisibleSpinner = false;
+    }
+    private async Task ShowTasksServer()
     {
         if (searchTypeValue == null || searchTypeValue.Length == 0)
         {
@@ -565,8 +603,11 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         else showNextButton = "none";
     }
-    private void OnImportData()
+    private async void OnImportData(InputFileChangeEventArgs e) // ) InputFileChangeEventArgs e System.EventArgs args
     {
+        if (State == null) return;
+        State.importFile = e.File;
+        State.inputFileChangeEvent = e;
         if (idxTaskRowSelect == -1 || TaskDetailedInfoRecords.Count == 0)
         {
             AlertBtn("No task has been selected.", "Error");
@@ -603,7 +644,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
         State.page_No = GetTaskStartPageNo();
-        AlertBtn("Click \"Choose File\" and import data.", "Alert");
+        //AlertBtn("Click \"Choose File\" and import data.", "Alert");
         State.screenID = 5; // screenID to Open file for import on MainPage.
         SaveUserTaskInfoInState();
         NavManager.NavigateTo(String.Format("/nissayaeditor/{0}/{1}/{2}", email, userName, userClass));
@@ -722,6 +763,8 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         int n = 0;
         string prevStatus = "";
         int correctionCount = 0;
+        int stDay, stMon, stYear;
+        DateTime? stDateTime = null;
         overdueLabel = "";
         overdueDay = "";
         foreach (UserTaskProgressInfo t in listUserTaskInfo)
@@ -739,6 +782,21 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                 }
                 else status = "Not Ready";
             }
+            string[] sdt = t.startDate.Split('/');
+            if (sdt.Length == 3)
+            {
+                stDay = int.Parse(sdt[0]);
+                stMon = int.Parse(sdt[1]);
+                stYear = int.Parse(sdt[2]);
+                stDateTime = new DateTime(stYear, stMon, stDay);
+            }
+            else
+            {
+                // tasks that have not been started yet are set a max date so that they
+                // are listed at the end
+                stDateTime = new DateTime();
+                stDateTime = DateTime.MaxValue;
+            }
             taskDetailedInfo.Add(new TaskDetailedInfo()
                 {
                     SrNo = taskDetailedInfo.Count + 1,
@@ -748,6 +806,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                     NoPages = taskAssignmentInfo.PageNos,
                     Task = t.task,
                     StartDate = t.startDate,
+                    StartDateForSorting = stDateTime,
                     LastUpdate = t.lastDate,
                     PagesSubmitted = t.submitted,
                     CorrectionCount = t.corrections,
@@ -756,6 +815,8 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
             correctionCount += t.corrections;
             prevStatus = status;
         }
+        // List<TaskDetailedInfo> sortedTaskDetailedInfo = taskDetailedInfo.OrderBy(o => o.StartDateForSorting).ToList();
+        taskDetailedInfo = taskDetailedInfo.OrderBy(o => o.StartDateForSorting).ToList();
         // retrieve SuttaInfo to get page numbers
         SourceBookLabel = "Source Book : ";
         sourcePDF = State.dataFile.GetSourceBook(taskInfo.DocNo);

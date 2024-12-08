@@ -1,4 +1,5 @@
-﻿using Tipitaka_DB;
+﻿using Microsoft.AspNetCore.Components.Forms;
+using Tipitaka_DB;
 using Tipitaka_DBTables;
 using static NissayaEditor_Web.Data.NissayaEditor;
 
@@ -21,5 +22,9 @@ namespace NissayaEditor_Web.Data
         public string userName_M = string.Empty;
         public Dictionary<string, string> UserTaskInfo = new Dictionary<string, string>();
         public List<DocReportInfo> listDocReportInfo = new List<DocReportInfo>();
+        public List<DocSelectInfo>? ReadDocGridList = new List<DocSelectInfo>();
+        public string ReadDocSearchPattern = string.Empty;
+        public IBrowserFile? importFile = null;
+        public InputFileChangeEventArgs? inputFileChangeEvent = null;
     }
 }
