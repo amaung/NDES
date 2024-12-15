@@ -1,3 +1,8 @@
+Beta 0.20 (2024-12-15)
+- Assigning a task to a user was failing as it was seeing empty date errorneously. Problem fixed now.
+- Task status not evaluates correctly.
+- Docs that were created with TaskAssignments are not corrected.
+
 Beta 0.19 (2024-12-06)
 - User Assigned Tasks also showing completed tasks, Should be showing the assigned tasks only.
 - Clean up assigned tasks from non-active users

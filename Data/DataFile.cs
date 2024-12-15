@@ -2338,47 +2338,29 @@ namespace NissayaEditor_Web.Data
         public string GetLastStatus(List<UserTaskProgressInfo> listUserTaskInfo)
         {
             string status = "";
-            List<AssignedTaskData> listAssignedTaskData = new List<AssignedTaskData>();
+                if (listUserTaskInfo == null || listUserTaskInfo.Count == 0) return status;
+                if (listUserTaskInfo.Count == 1) return listUserTaskInfo[0]!.status;
+
+            List<UserTaskProgressInfo> listUserTaskProgressInfo = new List<UserTaskProgressInfo>();
             if (listUserTaskInfo != null)
             {
-                //foreach (UserTaskProgressInfo userTaskProgressInfo in listUserTaskInfo)
-                //{
-                //    AssignedTaskData assignedTaskData = new AssignedTaskData();
-                //    assignedTaskData.userTaskProgressInfo = userTaskProgressInfo;
-                //    if (userTaskProgressInfo.startDate.Length > 0)
-                //    {
-                //        string[] dd = userTaskProgressInfo.startDate.Split('/');
-                //        if (dd.Length == 3)
-                //        {
-                //            assignedTaskData.dateTime = new DateTime(int.Parse(dd[2]), int.Parse(dd[1]), int.Parse(dd[0]));
-                //        }
-                //    }
-                //    listAssignedTaskData.Add(assignedTaskData);
-                //}
-                //listAssignedTaskData = listAssignedTaskData.OrderBy(o => o.dateTime).ToList();
-
-                if (listAssignedTaskData == null || listAssignedTaskData.Count == 0) return status;
-                if (listAssignedTaskData.Count == 1)
-                    return listAssignedTaskData[0].userTaskProgressInfo!.status;
-
-                listAssignedTaskData.Reverse();
-                // if all tasks are completed return Completed
-                if (listAssignedTaskData != null && listAssignedTaskData.Count > 0)
+                foreach (UserTaskProgressInfo userTaskProgressInfo in listUserTaskInfo)
                 {
-                    var t = listAssignedTaskData[0];
-                    if (t != null && t.userTaskProgressInfo != null)
-                    {
-                        if (t.userTaskProgressInfo.status == "Completed") return "Completed";
-                    }
+                    listUserTaskProgressInfo.Add(new UserTaskProgressInfo(userTaskProgressInfo));
+                }
+                int n = listUserTaskProgressInfo.Count;
+                if (n > 0)
+                {
+                    if (listUserTaskProgressInfo[n - 1].status == "Completed") return "Completed";
                 }
                 status = "Assigned";
-                foreach (AssignedTaskData assignedTaskData in listAssignedTaskData!)
+                UserTaskProgressInfo uTaskProgressInfo;
+                while (--n >= 0)
                 {
-                    if (assignedTaskData.userTaskProgressInfo == null) continue;
-                    status = assignedTaskData.userTaskProgressInfo.status;
-                    if (status != "Assigned")
+                    uTaskProgressInfo = listUserTaskProgressInfo[n];
+                    if (uTaskProgressInfo.status == "Completed")
                     {
-                        status = assignedTaskData.userTaskProgressInfo.task;
+                        status = uTaskProgressInfo.task;
                         break;
                     }
                 }

@@ -55,6 +55,13 @@ namespace Tipitaka_DB
             list = (List<SuttaInfo>)objResult;
             return list;
         }
+        public async Task<List<SuttaInfo>> QuerySuttaInfoAsync(string query)
+        {
+            List<SuttaInfo> list = new List<SuttaInfo>();
+            await QueryTableRec(query);
+            list = (List<SuttaInfo>)objResult;
+            return list;
+        }
         public SortedDictionary<string, string> GetAllSuttaInfo(bool withData = true)
         {
             SortedDictionary<string, string> sortedSuttaList = new SortedDictionary<string, string>();

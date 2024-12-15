@@ -31,10 +31,12 @@
     [Parameter]
     public string userClass { get; set; } = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        while (State.dataFile == null) await Task.Delay(100);
         State.dataFile.GetSourceBookInfo();
         LoadRequiredData();
+        //await AdminWork();
     }
 }
 
@@ -330,17 +332,17 @@
     public class DocInfo()
     {
         public int srNo { get; set; }
-        public string docNo { get; set; }
-        public string docTitle { get; set; }
-        public string sourceFileCode { get; set; }
+        public string docNo { get; set; } = "";
+        public string docTitle { get; set; } = "";
+        public string sourceFileCode { get; set; } = "";
         public int startPage { get; set; }
         public int endPage { get; set; }
         public string pages { get; set; }
         public int pageCount { get; set; }
         public int pagesSubmitted { get; set; }
-        public string lastUpdate { get; set; }
-        public string status { get; set; }
-        public string team { get; set; }
+        public string lastUpdate { get; set; } = "";
+        public string status { get; set; } = "";
+        public string team { get; set; } = "";
 
         public void Init(int n, SuttaInfo suttaInfo)
         {
@@ -538,7 +540,7 @@
                 pagesSubmitted = 0,
                 lastUpdate = "",
                 status = "Created",
-                team = "",
+                team = userName,
             };
         listDocInfoTmp.Add(docInfo);            
 
@@ -584,7 +586,7 @@
                 NoPages = (int)nPage,
                 PagesSubmitted = 0,
                 Status = "Created",
-                Team = "",
+                Team = userName,
             };
         State.dataFile.AddNewSuttaInfo(new List<SuttaInfo>() { suttaInfo });
         if (State.dataFile.ErrMsg.Length > 0)
@@ -1507,7 +1509,7 @@
         }
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Edit"))
         {
-            
+
             doc_No = (docNo.Contains("-")) ? docNo.Split("-")[1] : docNo;
             doc_Type = doc_TypeID;
             docType_DropDownValue = doc_TypeID;
@@ -1519,13 +1521,15 @@
             string title = doc_Title;
             if (doc_SubTitle.Length > 0) title += "/" + doc_SubTitle;
             // PDF_DropDownValue
+            int sPg = (int)(startPage == null ? 0 : startPage);
+            int ePg = (int)(endPage == null ? 0 : endPage);
             SuttaInfo suttaInfo = new SuttaInfo()
             {
                 RowKey = formattedDocNo,
                 Title = title,
-                StartPage = (int)startPage,
-                EndPage = (int)endPage,
-                NoPages = (int)(endPage - startPage + 1),
+                StartPage = sPg,
+                EndPage = ePg,
+                NoPages = ePg - sPg + 1,
                 PagesSubmitted = 0,
                 Status = "",
                 Team = "",
@@ -1539,7 +1543,7 @@
         DocInfo docInfo = new DocInfo();
         docInfo.srNo = 1;
         docInfo.docNo = "DN-1.1";
-        docInfo.docTitle = "သုတ္တပိဋက နိဿယများ/ဗြဟ္မဇာသုတ္တ";
+        docInfo.docTitle = "သုတ္တပိဋက နိဿယများ/ဗြဟ္မဇာလသုတ္တ";
         docInfo.pages = "185-300";
         docInfo.pageCount = 115;
         docInfo.pagesSubmitted = 85;
@@ -1547,5 +1551,73 @@
         docInfo.status = "DataEntry";
         docInfo.team = "Aung Chan Min, Poe Ei San, Tun Lin, Kaung Si Thar";
         DocDisplayRecords.Add(docInfo);
+    }
+    private async Task AdminWork()
+    {
+        if (email != "dhammayaungchi2011@gmail.com") return;
+        if (State.dataFile == null) await Task.Delay(50);
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile!.GetClientSuttaInfo();
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile!.GetClientTaskAssignmentInfo();
+        if (clientSuttaInfo == null || clientTaskAssignmentInfo == null) return;
+        string query = "Status eq 'Created'";
+        List<SuttaInfo> listSuttaInfo = await clientSuttaInfo.QuerySuttaInfoAsync(query);
+        if (listSuttaInfo.Count == 0) return;
+        FileStream fs = new FileStream(@"C:\Users\auzma\AppData\Local\Temp\NDES_out.txt", FileMode.Create, FileAccess.Write);
+        StreamWriter sw = new StreamWriter(fs);
+        await sw.WriteLineAsync("DocIDs with no task assignment info created.");
+        await sw.FlushAsync();
+        int nPages;
+        string startDate = "";
+        string ownerName = "Hein Si Thu Win";
+        TaskAssignmentInfo? taskAssignmentInfo = null;
+        foreach(SuttaInfo suttaInfo in listSuttaInfo)
+        {
+            if (suttaInfo == null || suttaInfo.Team.Length > 0) continue;
+            if (suttaInfo != null && suttaInfo.Timestamp != null)
+            {
+                startDate = suttaInfo.Timestamp.Value.ToString("d/M/yyyy");
+                taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(suttaInfo.RowKey);
+            }
+            if (taskAssignmentInfo == null) 
+            {
+                // create a new TaskAssignmentInfo
+                // sw.WriteLine(String.Format("{0}", suttaInfo.RowKey));
+                UserTaskProgressInfo userTaskProgressInfo = new UserTaskProgressInfo()
+                    {
+                        userID = "heinsithuwin95@gmail.com",
+                        task = "NewDoc",
+                        startDate = startDate,
+                        lastDate = "",
+                        submitted = 0,
+                        corrections = 0,
+                        status = "Created",
+                    };
+                nPages = suttaInfo!.EndPage - suttaInfo.StartPage + 1;
+                List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>()
+                {
+                    userTaskProgressInfo
+                };
+                string assigneeProgress = JsonConvert.SerializeObject(dictUserTaskProgressInfo);
+                taskAssignmentInfo = new TaskAssignmentInfo()
+                    {
+                        RowKey = suttaInfo.RowKey,
+                        DocTitle = suttaInfo.Title,
+                        PageNos = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, nPages),
+                        PagesSubmitted = 0,
+                        AssigneeProgress = assigneeProgress,
+                        StartDate = startDate,
+                        LastDate = "",
+                        CorrectionCount = 0,
+                        Status = "Created",
+                    };
+                suttaInfo.Team = ownerName;
+                await clientSuttaInfo.UpdateTableRec(suttaInfo);
+                await clientTaskAssignmentInfo.InsertTableRec(taskAssignmentInfo);
+                await sw.WriteLineAsync(String.Format("TaskAssignment writtent to {0}.", taskAssignmentInfo.RowKey));
+                await sw.FlushAsync();
+                //break;
+            }
+        }
+        fs.Close();
     }
 }

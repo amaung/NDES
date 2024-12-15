@@ -169,12 +169,11 @@ namespace Tipitaka_DBTables
         public int corrections = 0;
         public string status = "";
         public UserTaskProgressInfo() { }
-        public UserTaskProgressInfo(string userID, string task, string startDate, string lastDate, int submitted, int corrections, string status)
+        public UserTaskProgressInfo(UserTaskProgressInfo u)
         {
-            this.userID = userID; this.task = task; this.startDate = startDate;
-            this.lastDate = lastDate; this.submitted = submitted;
-            this.corrections = corrections;
-            this.status = status;
+            this.userID = u.userID; this.task = u.task; this.startDate = u.startDate;
+            this.lastDate = u.lastDate; this.submitted = u.submitted;
+            this.corrections = u.corrections; this.status = u.status;
         }
     }
     public static class TaskCategories
