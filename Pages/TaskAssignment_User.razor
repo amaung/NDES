@@ -11,6 +11,7 @@
 @using Syncfusion.Blazor.Calendars
 @using Newtonsoft.Json;
 @using Newtonsoft.Json.Linq;
+@using System.Text.RegularExpressions
 
 @inject SfDialogService DialogService
 @inject NavigationManager NavManager
@@ -79,6 +80,12 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         background-color: #ded8ca;
         font-size: 18px;
     }
+    .label_class
+    {
+        padding: 0px;
+        width:490px;
+        text-align:right;
+    }
 </style>
 @code{
     #pragma warning disable
@@ -120,7 +127,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     </div>
     <div style="width:200px" class="form-group col-md-2 column">
         <label class="col-form-label">Search Text</label>
-        <SfTextBox TValue="string" @bind-Value="@pattern" @onkeypress="@OnKeyDown" @oninput="@OnTyping"></SfTextBox>
+        <SfTextBox TValue="string" @bind-Value="@pattern" spellcheck="false" @onkeypress="@OnKeyDown" @oninput="@OnTyping"></SfTextBox>
     </div>
 </div>
 <br />
@@ -141,8 +148,8 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     <SfGrid ID="Grid" DataSource="@TaskInfoRecords" @ref="sfgrid" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
             AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
             @* Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Search" })" AllowTextWrap="false" Height="380" Width="1000"> *@
-        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
-                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='false'
+                          NewRowPosition="NewRowPosition.Bottom"> @* Mode="Syncfusion.Blazor.Grids.EditMode.Normal"> *@
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
@@ -170,14 +177,21 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
 @************************** Task Assignment Detailed DataGrid **************************@
 @***************************************************************************************@
 <hr style="width:1000px" />
-<label style="font-size:21px"><strong>Task Details</strong></label>
-<label style="margin-left:160px;width:700px;text-align: right;"><strong>@SourceBookLabel</strong>@sourcePDF</label>
-<label style="margin-left:285px;width:700px;text-align: right;"><strong>@overdueLabel</strong>@overdueDay</label>
+@* <label style="font-size:21px"><strong>Task Details</strong></label>
+<label style="margin-left:160px;width:700px;text-align: right;"><strong>@SourceBookLabel</strong>@sourcePDF</label> *@
+
+<div>
+    <label style="font-size:21px;width:150px"><strong>Task Details</strong></Label>
+    <label style="font-size:17px;width:350px">@taskDetails_DocNo&nbsp;&nbsp;@taskDetails_Pages</Label>
+    <label Class="label_class"><strong>@SourceBookLabel</strong>@sourcePDF</label>
+</div>
+
+@* <label style="margin-left:285px;width:700px;text-align: right;"><strong>@overdueLabel</strong>@overdueDay</label> *@
 <br />
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@TaskDetailedInfoRecords" @ref="sfgrid1" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
             AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
-        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='false'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
@@ -243,7 +257,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@CorrectionInfoRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="false" AllowReordering="true" AllowResizing="true" AllowExcelExport="false" AllowSelection="true"
             AllowSorting="true" AllowTextWrap="false" Height="180" Width="1000">
-        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
+        <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='false'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="5"></GridPageSettings>
@@ -455,6 +469,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     /************************************************************************************/
     string searchTypeValue = "", searchType = "", pattern = "";
     string userDropDownValue = "", taskDropDownValue = "";
+    string taskDetails_DocNo = "", taskDetails_Pages = "";
 
     List<string> docTypes, docSubTypes;
     List<DataItem> listDocs = new List<DataItem>();
@@ -468,6 +483,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     public SfDropDownList<string, DataItem> srcPDFDropdown;
     public SfComboBox<string, DataItem> docSubTypeCombo;
     private TaskInfo? rowSelectedTaskInfo = null;
+    TaskDetailedInfo? selectedTaskDetailedInfo = null;
     string formattedDocNo = "";
     string doc_No = "", doc_Title = "", doc_SubTitle = "", pages_Count = "";
     string sourcePDF = "", SourceBookLabel = "";
@@ -523,9 +539,56 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     private async Task ShowTasks()
     {
         VisibleSpinner = true;
-        await Task.Delay(100);
-        await ShowTasksServer();
+        await Task.Delay(50);
+        //await ShowTasksServer();
+        await ShowUserTasksFromServer();
         VisibleSpinner = false;
+    }
+    private async Task ShowUserTasksFromServer()
+    {
+        if (State.dataFile == null) return;
+        if (searchTypeValue == null || searchTypeValue.Length == 0)
+        {
+            AlertBtn("Please select search type first.", "Warning");
+            return;
+        }
+        List<SuttaInfo> listSuttaInfo = await State.dataFile.GetSuttaListAsync(searchTypeValue, pattern, userClass);
+        totalCount = State.dataFile.GetSearchResultCount();
+
+        TaskInfoRecords = new List<TaskInfo>();
+        //showNextButton = "none";
+        if (totalCount == 0)
+            AlertBtn(String.Format("No tasks found for {0}.", userName), "Alert");
+
+        int n = 0;
+        List<TaskInfo> listTaskInfo = new List<TaskInfo>();
+        foreach (SuttaInfo suttaInfo in listSuttaInfo)
+        {
+            listTaskInfo.Add(new TaskInfo()
+                {
+                    SrNo = listTaskInfo.Count + 1,
+                    DocNo = suttaInfo.RowKey,
+                    DocTitle = suttaInfo.Title,
+                    Pages = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.EndPage - suttaInfo.StartPage + 1),
+                    PagesSubmitted = suttaInfo.PagesSubmitted,
+                    Status = suttaInfo.Status,
+                    Team = suttaInfo.Team
+                });
+        }
+
+        TaskInfoRecords = listTaskInfo;
+        idxTaskRowSelect = -1;
+        idxTaskAssignmentRowSelect = -1;
+        hideButton = true;
+        TaskDetailedInfoRecords = new List<TaskDetailedInfo>();
+        if (TaskInfoRecords.Count < totalCount)
+        {
+            int remainingCount = totalCount - TaskDetailedInfoRecords.Count;
+            if (remainingCount >= 10) nextCount = 10;
+            else nextCount = remainingCount;
+            showNextButton = "block";
+        }
+        else showNextButton = "none";
     }
     private async Task ShowTasksServer()
     {
@@ -587,7 +650,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                     DocNo = suttaInfo.RowKey,
                     DocTitle = suttaInfo.Title,
                     Pages = String.Format("{0}-{1} ({2})", suttaInfo.StartPage, suttaInfo.EndPage, suttaInfo.EndPage - suttaInfo.StartPage + 1),
-                    //Pages = suttaInfo.EndPage - suttaInfo.StartPage + 1,
+                //Pages = suttaInfo.EndPage - suttaInfo.StartPage + 1,
                     PagesSubmitted = suttaInfo.PagesSubmitted,
                     Status = suttaInfo.Status,
                     Team = suttaInfo.Team
@@ -616,7 +679,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         string errMsg = "";
         // check if the user is allowed to import data at this point
         var taskList = (from item in TaskDetailedInfoRecords
-                        where item.UserID == email
+                        where item.UserID == email && item.Status != "Created"
                         select item).ToList();
         if (taskList.Count > 0)
         {
@@ -682,9 +745,9 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         State.dataFile.AddDocNoToRecent();
         State.screenID = 6; // screenID to Retrieve doc from server on MainPage.
-                            //State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
-                            //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
-                            // the following data will be used in DataFile::LogTaskStartDate()
+        //State.doc_ID = TaskInfoRecords[idxTaskRowSelect].DocNo;
+        //State.doc_Title = TaskInfoRecords[idxTaskRowSelect].DocTitle;
+        // the following data will be used in DataFile::LogTaskStartDate()
         State.UserTaskInfo.Add(email + "-Task", taskList[0].Task);
         string pages = "0";
         string[] f = taskList[0].NoPages.Split(' ');
@@ -727,13 +790,13 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         // idxTaskAssignmentRowSelect = -1;
         // pass user task info via State.UserTaskInfo dictionary
         // find the user in the list
-        var userTaskList = (from item in TaskDetailedInfoRecords
-                            where item.UserName == userName
-                            select item).ToList();
-        if (userTaskList.Count > 0)
+        // var userTaskList = (from item in TaskDetailedInfoRecords
+        //                     where item.UserName == userName
+        //                     select item).ToList();
+        if (selectedTaskDetailedInfo != null)
         {
-            State.UserTaskInfo[email + "-UserName"] = userTaskList[0].UserName;
-            State.UserTaskInfo[email + "-Task"] = userTaskList[0].Task;
+            State.UserTaskInfo[email + "-UserName"] = selectedTaskDetailedInfo.UserName;
+            State.UserTaskInfo[email + "-Task"] = selectedTaskDetailedInfo.Task;
         }
 
     }
@@ -746,6 +809,16 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         rowSelectedTaskInfo = args.Data;
         TaskInfo taskInfo = args.Data;
         idxTaskRowSelect = args.RowIndex;
+        taskDetails_DocNo = taskInfo.DocNo + ":";
+        taskDetails_Pages = taskInfo.Pages;        
+
+        string pattern = @"\((.*?)\)";
+        string extractedPages;
+        Regex regex = new Regex(pattern);
+        Match match = regex.Match(taskInfo.Pages);
+        if (match.Success) extractedPages = match.Groups[1].Value;
+        else extractedPages = taskInfo.Pages;
+
         //TaskInfo taskInfo = listTaskInfo[taskInfo.SrNo];
         TaskAssignmentInfo taskAssignmentInfo = State.dataFile.GetTaskAssignmentInfo(taskInfo.DocNo);
         if (taskAssignmentInfo.LastDate.Length > 0) 
@@ -803,7 +876,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
                     DocNo = taskInfo.DocNo,
                     UserID = t.userID,
                     UserName = State.dataFile.GetUserName(t.userID),
-                    NoPages = taskAssignmentInfo.PageNos,
+                    NoPages = extractedPages, //taskAssignmentInfo.PageNos,
                     Task = t.task,
                     StartDate = t.startDate,
                     StartDateForSorting = stDateTime,
@@ -824,7 +897,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         taskDetailedInfo[0].PagesSubmitted = null;
         taskDetailedInfo[0].CorrectionCount = (correctionCount > 0) ? correctionCount : null;
         TaskDetailedInfoRecords = taskDetailedInfo;
-        CalculateDaysFromDueDate();
+        //CalculateDaysFromDueDate();
         hideButton = false;
 
         ClientCorrectionLog clientCorrectionLog = State.dataFile.GetClientCorrectionLog();
@@ -902,9 +975,11 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     public void RowSelectHandlerTaskAssignment(RowSelectEventArgs<TaskDetailedInfo> args)
     {
         if (State.dataFile == null) return;
-        TaskDetailedInfo taskDetailedInfo = args.Data;
+        selectedTaskDetailedInfo = args.Data;
         idxTaskAssignmentRowSelect = args.RowIndex;
-        disableOnClick = taskDetailedInfo.Status == "Created";
+        disableOnClick = selectedTaskDetailedInfo.Status == "Created" ||
+                         selectedTaskDetailedInfo.UserID != email ||
+                         selectedTaskDetailedInfo.Status == "Not Ready";
     }
     public void RowSelectHandlerCorrectionGrid(RowSelectEventArgs<CorrectionInfo> args)
     {

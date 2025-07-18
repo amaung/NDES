@@ -28,6 +28,20 @@ namespace Tipitaka_DB
             };
             InsertTableRec(activityLog).Wait();
         }
+        public async Task AddActivityLogAsync(string userID, string activity, string desc)
+        {
+            string rowKey = DateTime.UtcNow.ToString(_timeFormat_);
+
+            ActivityLog activityLog = new ActivityLog()
+            {
+                PartitionKey = "ActivityLog",
+                RowKey = rowKey,
+                UserID = userID,
+                Activity = activity,
+                Description = desc,
+            };
+            await InsertTableRec(activityLog);
+        }
         //*******************************************************************
         //*** GetActivities
         //*******************************************************************
@@ -41,6 +55,17 @@ namespace Tipitaka_DB
             query += String.Format("(RowKey ge '{0}') and (RowKey lt '{1}')", d1, d2);
 
             QueryTableRec(query).Wait();
+            activities = (List<ActivityLog>)objResult;
+            activities.Reverse();
+            return activities;
+        }
+        public async Task<List<ActivityLog>> GetActivitiesByDocNoAsync(string docNo)
+        {
+            List<ActivityLog> activities = new List<ActivityLog>();
+            string query = string.Empty;
+
+            query += String.Format("DocNo eq '{0}", docNo);
+            await QueryTableRec(query);
             activities = (List<ActivityLog>)objResult;
             activities.Reverse();
             return activities;

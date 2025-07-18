@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Formats.Asn1;
+using System.Runtime.CompilerServices;
 using Tipitaka_DBTables;
 
 namespace Tipitaka_DB
@@ -12,6 +14,10 @@ namespace Tipitaka_DB
         {
             InsertTableRec(suttaInfo).Wait();
         }
+        public async Task AddSuttaInfoAsync(SuttaInfo suttaInfo)
+        {
+            await InsertTableRec(suttaInfo);
+        }
         public void UpdateSuttaInfo(SuttaInfo suttaInfo)
         {
             RetrieveTableRec(suttaInfo.RowKey).Wait();
@@ -20,6 +26,16 @@ namespace Tipitaka_DB
                 SuttaInfo newSuttaInfo = (SuttaInfo)objResult;
                 newSuttaInfo.Copy(suttaInfo);
                 UpdateTableRec(newSuttaInfo).Wait();
+            }
+        }
+        public async Task UpdateSuttaInfoAsync(SuttaInfo suttaInfo)
+        {
+            await RetrieveTableRec(suttaInfo.RowKey);
+            if (StatusCode == 200)
+            {
+                SuttaInfo newSuttaInfo = (SuttaInfo)objResult;
+                newSuttaInfo.Copy(suttaInfo);
+                await UpdateTableRec(newSuttaInfo);
             }
         }
         public void UpdateSuttaInfo(string docNo, string status, string team)
@@ -33,6 +49,17 @@ namespace Tipitaka_DB
                 UpdateTableRec(newSuttaInfo).Wait();
             }
         }
+        public async Task UpdateSuttaInfoAsync(string docNo, string status, string team)
+        {
+            RetrieveTableRec(docNo).Wait();
+            if (StatusCode == 200)
+            {
+                SuttaInfo newSuttaInfo = (SuttaInfo)objResult;
+                newSuttaInfo.Status = status;
+                newSuttaInfo.Team = team;
+                await UpdateTableRec(newSuttaInfo);
+            }
+        }
         public SuttaInfo? GetSuttaInfo(string rowKey)
         {
             SuttaInfo? newSuttaInfo = null;
@@ -43,9 +70,35 @@ namespace Tipitaka_DB
             }
             return newSuttaInfo;
         }
+        public async Task<SuttaInfo?> GetSuttaInfoAsync(string rowKey)
+        {
+            SuttaInfo? newSuttaInfo = null;
+            await RetrieveTableRec(rowKey);
+            if (StatusCode == 200)
+            {
+                newSuttaInfo = (SuttaInfo)objResult;
+            }
+            return newSuttaInfo;
+        }
         public void DeleteSuttaInfo(SuttaInfo suttaInfo) 
         {
             DeleteTableRec(suttaInfo).Wait();
+        }
+        public async Task DeleteSuttaInfoAsync(SuttaInfo suttaInfo)
+        {
+            await DeleteTableRec(suttaInfo);
+        }
+        public async Task ResetSuttaInfoAsync(string docNo, string userName)
+        {
+            SuttaInfo suttaInfo = (SuttaInfo) await RetrieveTableRec(docNo);
+            if (StatusCode == 200)
+            {
+                // update SuttaInfo
+                suttaInfo.PagesSubmitted = 0;
+                suttaInfo.Status = "Created";
+                suttaInfo.Team = userName;
+                await UpdateTableRec(suttaInfo);
+            }
         }
         public List<SuttaInfo> QuerySuttaInfo(string query)
         {

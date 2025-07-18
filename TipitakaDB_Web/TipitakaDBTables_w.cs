@@ -34,6 +34,7 @@ namespace Tipitaka_DBTables
         public string PartitionKey { get; set; } = "TaskActivityLog";
         public string RowKey { get; set; } = default!; // Datetime
         public string UserID { get; set; } = default!;
+        public string Author { get; set; } = default!; // added 
         public string DocNo { get; set; } = default!;
         public string Activity { get; set; } = default!;
         public int Pages {  get; set; } = default!;
@@ -162,6 +163,7 @@ namespace Tipitaka_DBTables
     public class UserTaskProgressInfo
     {
         public string userID = "";
+        public string author = "";
         public string task = "";
         public string startDate = "";
         public string lastDate = "";
@@ -171,7 +173,7 @@ namespace Tipitaka_DBTables
         public UserTaskProgressInfo() { }
         public UserTaskProgressInfo(UserTaskProgressInfo u)
         {
-            this.userID = u.userID; this.task = u.task; this.startDate = u.startDate;
+            this.userID = u.userID; this.author = u.author; this.task = u.task; this.startDate = u.startDate;
             this.lastDate = u.lastDate; this.submitted = u.submitted;
             this.corrections = u.corrections; this.status = u.status;
         }
@@ -181,7 +183,7 @@ namespace Tipitaka_DBTables
         public const string _New_ = "New";
         public const string _Assigned_ = "Assigned";
         public const string _OnGoing_ = "OnGoing";
-        public const string _Completed_ = "Data Completed";
+        public const string _Completed_ = "Completed"; // changed from Data Completed 4/3/2025
         public const string _Completion_Report_ = "Completion Report";
         public const string _Uploaded_ = "Uploaded";
         public const string _HTMLCompleted_ = "HTML Completed";

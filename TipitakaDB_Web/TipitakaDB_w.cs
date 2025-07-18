@@ -1,8 +1,9 @@
 ﻿using Azure.Data.Tables;
 using Azure.Storage.Files.Shares;
 using Azure.Storage.Files.Shares.Models;
+using System.Collections.Concurrent;
 using Tipitaka_DBTables;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+//using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Tipitaka_DB
 {
@@ -59,9 +60,10 @@ namespace Tipitaka_DB
         //*******************************************************************
         public async Task<object> RetrieveTableRec(string rowKey)
         {
-            object obj = new object();
+            object obj = null; // new object();
             try
             {
+                string partitionKey = "";
                 switch (PartitionKey)
                 {
                     case "UserProfile":
@@ -86,7 +88,6 @@ namespace Tipitaka_DB
                                 rowKey: rowKey,
                                 partitionKey: SubPartitionKey
                             ).ConfigureAwait(false);
-
                             StatusCode = result.GetRawResponse().Status;
                             if (StatusCode == 200)
                             {
@@ -157,9 +158,11 @@ namespace Tipitaka_DB
                     case "KeyValueData":
                         if (tableClient != null)
                         {
+                            partitionKey = PartitionKey;
+                            if (SubPartitionKey.Length > 0) partitionKey = SubPartitionKey;
                             var result = await tableClient.GetEntityAsync<KeyValueData>(
                                 rowKey: rowKey,
-                                partitionKey: PartitionKey
+                                partitionKey: partitionKey
                             ).ConfigureAwait(false);
 
                             StatusCode = result.GetRawResponse().Status;
@@ -250,6 +253,7 @@ namespace Tipitaka_DB
             string? token = null;
             try
             {
+                string partitionKey = PartitionKey;
                 switch (PartitionKey)
                 {
                     case "UserProfile":
@@ -341,10 +345,11 @@ namespace Tipitaka_DB
                         }
                         break;
                     case "KeyValueData":
+                        if (SubPartitionKey.Length > 0) partitionKey = SubPartitionKey;
                         List<KeyValueData> listKeyValueData = new List<KeyValueData>();
                         if (tableClient != null)
                         {
-                            string filter = string.Format("(PartitionKey eq '{0}')", PartitionKey);
+                            string filter = string.Format("(PartitionKey eq '{0}')", partitionKey);
                             if (qualifier.Length > 0) { filter += " and " + qualifier; }
 
                             var pages = tableClient.QueryAsync<KeyValueData>(filter, maxPerPage: 1000).AsPages().ConfigureAwait(false);
@@ -445,6 +450,39 @@ namespace Tipitaka_DB
                 ProcessCatchErrorMessage(e.Message.Split('\n'));
             }
             return (object)listObj;
+        }
+        //*******************************************************************
+        //*** Query patition records
+        //*******************************************************************
+        public async Task<object> QueryPartitionRecs(string qualifier = "")
+        {
+            string? token = null;
+            try
+            {
+                switch(PartitionKey)
+                {
+                    case "KeyValueData":
+                    List<KeyValueData> listKeyValueData = new List<KeyValueData>();
+                    if (tableClient != null)
+                    {
+                        var pages = tableClient.QueryAsync<KeyValueData>(qualifier, maxPerPage: 1000).AsPages().ConfigureAwait(false);
+                        await foreach (var page in pages)
+                        {
+                            listKeyValueData.AddRange(page.Values.ToList());
+                            token = page.ContinuationToken;
+                        }
+                        objResult = (object)listKeyValueData;
+                    }
+                    break;
+                }
+            }
+            catch (Exception e)
+            {
+                await Task.Yield();
+                if (e.Message.Contains("Status")) ProcessCatchErrorMessage(e.Message.Split('\n'));
+                else StatusCode = -1;
+            }
+            return (objResult);
         }
         //*******************************************************************
         //*** Convert dt string into local DateTime
@@ -560,6 +598,9 @@ namespace Tipitaka_DB
             }
             return;
         }
+        //*******************************************************************
+        //*** Add table records in a batch
+        //*******************************************************************
         public async Task InsertBatch(List<object> dataList)
         {
             if (tableClient != null)
@@ -847,6 +888,15 @@ namespace Tipitaka_DB
                             DBErrMsg = string.Empty;
                         }
                         break;
+                    case "KeyValueData":
+                        KeyValueData keyValueData = (KeyValueData)obj;
+                        if (tableClient != null)
+                        {
+                            var result = await tableClient.DeleteEntityAsync(keyValueData.PartitionKey, keyValueData.RowKey).ConfigureAwait(false);
+                            StatusCode = result.Status;
+                            DBErrMsg = string.Empty;
+                        }
+                        break;
                     case "Timesheet":
                         Timesheet timesheet = (Timesheet)obj;
                         if (tableClient != null)
@@ -870,20 +920,69 @@ namespace Tipitaka_DB
             {
                 try
                 {
+                    int n = 0;
+                    List<TableTransactionAction> listTableTransactionAction = new List<TableTransactionAction>();
                     switch (PartitionKey)
                     {
-                        case "UserProfile":
-                            //UserProfile userProfile = (UserProfile)obj;
-                            //if (tableClient != null)
-                            //{
-                            //    var result = await tableClient.AddEntityAsync<UserProfile>(userProfile).ConfigureAwait(false);
-                            //    StatusCode = result.Status;
-                            //}
+                        case "CorrectionLog":
+                            List<CorrectionLog> listCorrectionLog = (List<CorrectionLog>)obj;
+                            n = 0;
+                            if (listCorrectionLog != null)
+                            {
+                                foreach (var item in listCorrectionLog) //SuttaPageData data in dataList)
+                                {
+                                    ++n;
+                                    listTableTransactionAction.Add(new TableTransactionAction(TableTransactionActionType.Delete, (CorrectionLog)item));
+                                    if (n == 100)
+                                    {
+                                        var result = await tableClient.SubmitTransactionAsync(listTableTransactionAction).ConfigureAwait(false);
+                                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                        if (StatusCode != 202) return;
+                                        DBErrMsg = string.Empty;
+                                        n = 0;
+                                        listTableTransactionAction.Clear();
+                                    }
+                                }
+                                if (n > 0)
+                                {
+                                    var result = await tableClient.SubmitTransactionAsync(listTableTransactionAction).ConfigureAwait(false);
+                                    ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                    if (StatusCode == 202) DBErrMsg = string.Empty;
+                                }
+                            }
+                            break;
+                        case "SuttaPageData":
+                            List<SuttaPageData> listSuttaPageData = (List<SuttaPageData>)obj;
+                            var transActionsSuttaPageData = new List<TableTransactionAction>();
+                            n = 0;
+                            if (listSuttaPageData != null)
+                            {
+                                foreach (var item in listSuttaPageData) //SuttaPageData data in dataList)
+                                {
+                                    ++n;
+                                    transActionsSuttaPageData.Add(new TableTransactionAction(TableTransactionActionType.Delete, (SuttaPageData)item));
+                                    if (n == 100)
+                                    {
+                                        var result = await tableClient.SubmitTransactionAsync(transActionsSuttaPageData).ConfigureAwait(false);
+                                        ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                        if (StatusCode != 202) return;
+                                        DBErrMsg = string.Empty;
+                                        n = 0;
+                                        transActionsSuttaPageData.Clear();
+                                    }
+                                }
+                                if (n > 0)
+                                {
+                                    var result = await tableClient.SubmitTransactionAsync(transActionsSuttaPageData).ConfigureAwait(false);
+                                    ProcessCatchErrorMessage(result.ToString().Split('\n'));
+                                    if (StatusCode == 202) DBErrMsg = string.Empty;
+                                }
+                            }
                             break;
                         case "ActivityLog":
                             List<ActivityLog> delList = (List<ActivityLog>)obj;
                             var transactionActions = new List<TableTransactionAction>();
-                            int n = 0;
+                            n = 0;
                             if (delList != null)
                             {
                                 foreach (var item in delList) //SuttaPageData data in dataList)

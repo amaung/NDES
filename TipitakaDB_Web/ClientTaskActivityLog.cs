@@ -35,14 +35,35 @@ namespace Tipitaka_DB
             InsertTableRec(taskActivityLog).Wait();
         }
         //*******************************************************************
+        //*** Add Activity Log Async
+        //*******************************************************************
+        public async Task AddTaskActivityLogAsync(string docNo, string userID, string activity, int pages, int totalSubmitted,
+                int submittedPages, string desc)
+        {
+            string rowKey = DateTime.UtcNow.ToString(_timeFormat_);
+            TaskActivityLog taskActivityLog = new TaskActivityLog()
+            {
+                PartitionKey = "TaskActivityLog",
+                RowKey = rowKey,
+                DocNo = docNo,
+                UserID = userID,
+                Activity = activity,
+                Pages = pages,
+                TotalSubmitted = totalSubmitted,
+                SubmittedPages = submittedPages,
+                Description = desc,
+            };
+            await InsertTableRec(taskActivityLog);
+        }
+        //*******************************************************************
         //*** UpdateUserTaskActivity
         //*******************************************************************
-        public void UpdateUserTaskActivity(string docNo, string userID, string activity, int pages, int totalSubmitted,
+        public async Task UpdateUserTaskActivityAsync(string docNo, string userID, string activity, int pages, int totalSubmitted,
         int submittedPages, string desc)
         {
             string rowKey = string.Format("{0}${1}${2}", docNo, userID, activity);
             SetSubPartitionKey("UserTaskActivity");
-            RetrieveTableRec(rowKey).Wait();
+            await RetrieveTableRec(rowKey);
             if (StatusCode == 200)
             {
                 // existing record found
@@ -51,7 +72,7 @@ namespace Tipitaka_DB
                 taskActivityLog.TotalSubmitted = totalSubmitted;
                 taskActivityLog.SubmittedPages = submittedPages;
                 taskActivityLog.Description = desc;
-                UpdateTableRec(taskActivityLog).Wait();
+                await UpdateTableRec(taskActivityLog);
             }
             else
             {
@@ -67,7 +88,7 @@ namespace Tipitaka_DB
                     SubmittedPages = submittedPages,
                     Description = desc,
                 };
-                InsertTableRec(taskActivityLog).Wait();
+                await InsertTableRec(taskActivityLog);
             }
         }
         public void UpdateUserTaskActivity(TaskActivityLog userTaskActivity) 
@@ -103,6 +124,18 @@ namespace Tipitaka_DB
             QueryTableRec(query).Wait();
             activities = (List<TaskActivityLog>)objResult;
             //activities.Reverse();
+            return activities;
+        }
+        public async Task<List<TaskActivityLog>> GetDocTaskActivities(string docNo)
+        {
+            List<TaskActivityLog> activities = new List<TaskActivityLog>();
+            string query = string.Empty;
+
+            query = string.Format("DocNo eq '{0}'", docNo);
+            SetSubPartitionKey("TaskActivityLog");
+            await QueryTableRec(query);
+            activities = (List<TaskActivityLog>)objResult;
+            activities.Reverse();
             return activities;
         }
         public void UpdateUserStartDate(string docNo, string userID, string startDate)

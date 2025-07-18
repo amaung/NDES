@@ -18,7 +18,7 @@
 @using Tipitaka_DB
 
 @* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
-<Administration componentName="NissayaSource" email=@email userName=@userName userClass=@userClass flex_width="550px">
+<Administration componentName="NissayaSource" email=@email userName=@userName userClass=@userClass flex_width="800px">
     <adminMenuItem>Nissaya Source Books</adminMenuItem>
 </Administration>
 <br/>
@@ -28,9 +28,9 @@
 @**************************** NissayaSource DataGrid ****************************@
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@NissayaBookRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="false" AllowTextWrap="true" Height="300" Width="800">
+    AllowSorting="false" AllowTextWrap="true" Height="300" Width="800">
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
-                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="100"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
@@ -54,9 +54,9 @@
 <br />
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@DocInfoRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" AllowReordering="false" AllowResizing="false" AllowExcelExport="false" AllowSelection="true"
-            AllowSorting="false" AllowTextWrap="true" Height="300" Width="800">
+    AllowSorting="false" AllowTextWrap="true" Height="300" Width="800">
         <GridEditSettings AllowAdding="false" AllowEditing="false" AllowDeleting="false" ShowDeleteConfirmDialog='true'
-                          NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
+        NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal">
         </GridEditSettings>
         <GridPageSettings PageSize="10"></GridPageSettings>
         <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
@@ -85,40 +85,42 @@
         <UploaderEvents ValueChange="@OnFileUpload" OnCancel="@OnCancelHandler"></UploaderEvents>
     </SfUploader>
 </div>
+<SfSpinner Type=SpinnerType.Bootstrap4 @bind-Visible="@VisibleSpinner">
+</SfSpinner>
 @************************ End of Upload more source books ************************@
 @*************************** System Admin button styles ***************************@
 <style>
-   .e-custom2 {
-        display: @ProjectAdminButtonHide;
-        /* border-radius: 25px; */
-        height: 32px;
-        color: white;
-        background: grey;
-        /* width: 120px; */
-   }
+    .e-custom2 {
+    display: @ProjectAdminButtonHide;
+    /* border-radius: 25px; */
+    height: 32px;
+    color: white;
+    background: grey;
+    /* width: 120px; */
+    }
 </style>
 @********************************** Grid styles **********************************@
 <style>
     .e-grid {
-        line-height: 20px;
+    line-height: 20px;
     }
 
     .e-headercell.e-attr1 {
-        background: #cfcfcf;
+    background: #cfcfcf;
     }
 
     .e-grid .e-altrow {
-        background-color: #F3F2F1;
+    background-color: #F3F2F1;
     }
 
     .e-grid .e-rowcell.e-selectionbackground {
-        background-color: lightsteelblue !important;
+    background-color: lightsteelblue !important;
     }
 
     .e-grid tr.e-row:hover .e-rowcell:not(.e-cellselectionbackground):not(.e-active):not(.e-updatedtd):not(.e-indentcell) {
-        border-block-color: black;
-        border-block-start-color: black;
-        /* border-bottom-color: black; */
+    border-block-color: black;
+    border-block-start-color: black;
+    /* border-bottom-color: black; */
     }
 </style>
 @****************************** End of Grid styles ******************************@
@@ -146,7 +148,7 @@
 
     SfGrid<SourceBookInfo>? sfgrid;
     SfGrid<DocInfo>? sfgrid1;
-
+    bool VisibleSpinner = false;
     int noBooks = 0;
     int totalPages = 0;
     int totalDocs = 0;
@@ -163,6 +165,16 @@
         ProjectAdminButtonHide = (userClass == "S" || State.dataFile.PayrollAdmin()) ? "block" : "none";
     }
 
+    //***********************************************************************
+    //*** DisplaySpinner(bool) - turns on Sfspinner on/off
+    //***********************************************************************
+    private async Task DisplaySpinner(bool isVisible)
+    {
+        VisibleSpinner = isVisible; // Set to true to make the spinner visible
+        StateHasChanged(); // Update the UI
+        // Introduce a delay
+        await Task.Delay(100);
+    }
     int srno = 0;
     private int GetSrNo() { return ++srno; }
     private void UploadMoreBooks()
@@ -260,9 +272,11 @@
     //***********************************************************************
     //******** RowSelectHandler()
     //***********************************************************************
-    public void RowSelectHandler(RowSelectEventArgs<SourceBookInfo> args)
+    public async Task RowSelectHandler(RowSelectEventArgs<SourceBookInfo> args)
     {
         if (State.dataFile == null) return;
+        DisplaySpinner(true);
+        await Task.Delay(100);
         SourceBookInfo sourceBookInfo = args.Data;
         pdfFileName = sourceBookInfo.BookFilename;
         List<SuttaInfo> list = State.dataFile.GetPDFSuttaList(sourceBookInfo.RowKey);
@@ -272,15 +286,16 @@
         foreach(SuttaInfo suttaInfo in list)
         {
             taskStatus = suttaInfo.Status;
-            if (taskStatus != "Completed")
-            {
-                if (suttaInfo.PagesSubmitted == suttaInfo.NoPages) taskStatus = "Completed";
-                else
-                {
-                    int pct = (int)(suttaInfo.PagesSubmitted * 100F / suttaInfo.NoPages);
-                    taskStatus = String.Format("{0}%", pct);
-                }
-            }
+            if (taskStatus == "Assigned" || taskStatus == "Created") taskStatus = "0%";
+            // if (taskStatus != "Completed")
+            // {
+            //     if (suttaInfo.PagesSubmitted == suttaInfo.NoPages) taskStatus = "Completed";
+            //     else
+            //     {
+            //         int pct = (int)(suttaInfo.PagesSubmitted * 100F / suttaInfo.NoPages);
+            //         taskStatus = String.Format("{0}%", pct);
+            //     }
+            // }
             DocInfoRecords.Add(new DocInfo()
             {
                 srNo = ++n,
@@ -293,6 +308,7 @@
                 status = taskStatus
             });
         }
+        DisplaySpinner(false);
     }
     //***********************************************************************
     //******** AlertBtn(string msg, string caption)

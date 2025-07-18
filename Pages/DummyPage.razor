@@ -1,0 +1,42 @@
+﻿@page "/test_assignment/{email}/{userName}/{userClass}"
+
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Calendars
+@using Newtonsoft.Json;
+@using Newtonsoft.Json.Linq;
+@using System.Diagnostics;
+@using System.Text.RegularExpressions;
+
+@inject SfDialogService DialogService
+@inject NavigationManager NavManager
+@inject State State
+
+@namespace NissayaEditor_Web.Data
+@using Tipitaka_DBTables
+@using Tipitaka_DB
+
+@code {
+    [Parameter]
+    public string email { get; set; } = "";
+    [Parameter]
+    public string userName { get; set; } = "";
+    [Parameter]
+    public string userClass { get; set; } = "";
+}
+
+@* *************************************************************************** *@
+@* ***************************** Base Component ****************************** *@
+@* *************************************************************************** *@
+<div>
+    <Administration componentName="TaskAssignment" email=@email userName=@userName userClass=@userClass flex_width="1000px">
+        <adminMenuItem>Task Assignments</adminMenuItem>
+    </Administration>
+</div>
+

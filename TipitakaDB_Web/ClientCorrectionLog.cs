@@ -43,7 +43,7 @@ namespace Tipitaka_DB
             return activities;
         }
         //*******************************************************************
-        //*** Query COrrections
+        //*** Query Corrections
         //*******************************************************************
         public List<CorrectionLog> QueryCorrections(string docNo)
         {
@@ -53,7 +53,14 @@ namespace Tipitaka_DB
             return corrections;
         }
         //*******************************************************************
-        //*** Delete Activities
+        //*** Reset CorrectionLog
         //*******************************************************************
+        public async Task ResetCorrectionLog(string docNo)
+        {
+            string query = String.Format("RowKey ge '{0}-' and RowKey le '{0}~'", docNo);
+            await QueryTableRec(query);
+            List<CorrectionLog> listCorrectionLog = (List<CorrectionLog>)objResult;
+            await DeleteTableRecBatch(listCorrectionLog);
+        }
     }
 }

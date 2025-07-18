@@ -26,8 +26,8 @@
     </div>
     <br />
     <div>
-        <label style="font-size:20px"><strong>@adminMenuItem</strong></Label>
-        <label Class="label_class">User: @userName</label>
+        <label style="font-size:20px; width:200px"><strong>@adminMenuItem</strong></Label>
+        <label class="label_class">User: @userName</label>
     </div>
 </body>
 @******** Documents DataGrid Style ***********@
@@ -37,15 +37,15 @@
 <style>
     .menu-control, .e-menu-container, .e-menu-container.e-menu-popup,
     .e-menu-container ul .e-menu-item, .e-menu-container .e-ul .e-menu-item {
-        background-color: #ded8ca;
-        font-size: 18px;
-        /* padding: 60 0px; */
-        /* letter-spacing: -.01em; */
+    background-color: #ded8ca;
+    font-size: 18px;
+    /* padding: 60 0px; */
+    /* letter-spacing: -.01em; */
     }
     .label_class
     {
-        width:@flex_width;
-        text-align:right;
+    width:@width2;
+    text-align:right;
     }
 </style>
 @code {
@@ -83,6 +83,8 @@
     const string _Logout = "Logout";
 
 #pragma warning disable
+    string width2 = "";
+
     protected override void OnInitialized()
     {
         if (userClass == "D")
@@ -96,10 +98,13 @@
         MenuData[3].Disabled = (componentName == "Activity");
         MenuData[4].Items[0].Disabled = (componentName == _UserTask);
         MenuData[4].Items[1].Disabled = (componentName == _DocReport);
-        MenuData[4].Items[2].Disabled = (componentName == _Timesheet);
+        //MenuData[4].Items[2].Disabled = (componentName == _Timesheet);
         MenuData[5].Disabled = (componentName == "NissayaSource");
         MenuData[6].Disabled = (componentName == "Project");
         State.screenID = 3;
+        flex_width = flex_width.Replace("px", "");
+        int w = int.Parse(flex_width);
+        width2 = String.Format("{0}px", w - 220);
     }
     // ***************************************************************************************
     //
@@ -117,7 +122,7 @@
             {
                 new MenuItem { Text = _UserTask },
                 new MenuItem { Text = _DocReport },
-                new MenuItem { Text = _Timesheet },
+                //new MenuItem { Text = _Timesheet },
             }
         },
         new MenuItem { Text = _NissayaSource },
@@ -154,7 +159,7 @@
                 NavManager.NavigateTo(String.Format("/timesheetadmin/{0}/{1}/{2}", email, userName, userClass));
                 break;
             case _TaskAssignments:
-                NavManager.NavigateTo(String.Format("/task_assignment/{0}/{1}/{2}", email, userName, userClass));
+                NavManager.NavigateTo(String.Format("/task_assignment_admin/{0}/{1}/{2}", email, userName, userClass));
                 break;
             case _NissayaSource:
                 NavManager.NavigateTo(String.Format("/nissaya_source/{0}/{1}/{2}", email, userName, userClass));

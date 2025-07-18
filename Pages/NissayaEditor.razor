@@ -281,7 +281,7 @@
                                 <DropDownListEvents TValue="string" TItem="DocType" ></DropDownListEvents>
                             </SfDropDownList> *@
                         @* </div> *@
-                        <input id="InputText" class="heighttext" type="search" spellcheck="false" placeholder="Enter Book ID. Blank for all." @bind-value="@selectedBookID" />
+                        <input id="InputText" class="heighttext" type="search" spellcheck="false" placeholder="BookID/DocNo or blank for all." @bind-value="@selectedBookID" />
                     </div>
                     <div style="width:180px; padding-top:8px;" class="form-group col-md-2 column">
                         <SfButton style="width:75px;height:35px" IsPrimary="true" CssClass="e-custom2" OnClick="@ShowDocs"> Show </SfButton>
@@ -478,7 +478,7 @@
         int pages = 0;
         if (s == "All") 
         {
-            allDocList = dataFile.GetAllSuttaList();
+            allDocList = dataFile.GetAllSuttaList("PagesSubmitted gt 0");
             if (allDocList != null)
             {
                 foreach (KeyValuePair<string, string> kv in allDocList)
@@ -492,7 +492,31 @@
         }
         else 
         {
-            List<string> listDoc = dataFile.GetPDFDocList(s);
+            List<string> listDoc = new List<string>();
+            string bookType = s.Substring(0, 3);
+            bool bookIdFlag = false;
+            switch(bookType)
+            {
+                case "MN-":
+                case "DN-":
+                case "SN-":
+                case "AN-":
+                case "KN-":
+                    if (s.Length == 5)
+                    {
+                        if (Char.IsDigit(s[3]) && Char.IsDigit(s[4]))
+                        {
+                            listDoc = dataFile.GetPDFDocList(s);
+                            bookIdFlag = true;
+                        }
+                    }
+                    break;
+            }
+            if (!bookIdFlag)
+            {
+                s = String.Format("RowKey ge '{0}' and RowKey lt '{0}~'", s);
+                listDoc = dataFile.GetDocListStartingWith(s);                
+            }
             if (listDoc.Count > 0)
             {
                 foreach(String item in listDoc)
@@ -1216,7 +1240,7 @@
             {
                 new MenuItem { Text = taskAssignment },
                 new MenuItem { Text = userProfile },
-                new MenuItem { Text = timesheet, Disabled=false },
+                // new MenuItem { Text = timesheet, Disabled=false },
             }
         },        
         new MenuItem
@@ -1235,7 +1259,7 @@
             {
                 new MenuItem { Text = DY },
                 //new MenuItem { Text = "Contact" },
-                new MenuItem { Text = ExportHTML },
+                //new MenuItem { Text = ExportHTML },
             }
         }
     };
@@ -1396,9 +1420,10 @@
             pagesToSubmit = String.Format("{0}-{1} ({2})", submitStartPage, submitEndPage, submitPages);
             if (submitPages == 0) pagesToSubmit = _NoNewPagesToSubmit_;
             //
-            hidePageSubmitRange = false;
-            if (userTask != "DataEntry" && userTask != "Edit-Upload") hidePageSubmitRange = true;
+            // hidePageSubmitRange = false;
+            // if (userTask != "DataEntry" && userTask != "Edit-Upload") hidePageSubmitRange = true;
             hideReviewPageSubmitRange = !hidePageSubmitRange;
+            hideReviewPageSubmitRange = true;
             StartDateValue = null;
             StartDatePickerEnabled = true;
             if (dictServerDocInfo["StartDate"].Length > 0)
@@ -1452,13 +1477,13 @@
             #pragma warning restore
         }
     }
-    private void UploadToServer()
+    private async Task UploadToServer()
     {
         string sdate = dataFile.GetTaskStartDate(doc_ID);
         if (StartDateValue == null) sdate = "" ;
         //else sdate = String.Format("{0}/{1}/{2}", StartDateValue.Value.Day, StartDateValue.Value.Month, StartDateValue.Value.Year);
         else sdate = StartDateValue!.Value.ToString("d/M/yyyy");
-        UploadToServer(sdate);
+        await UploadToServer(sdate);
         // string userTask = State.UserTaskInfo[email + "-Task"];
         // if ((userTask == Tipitaka_DBTables.TaskCategories._DataEntry_ || 
         //     userTask == Tipitaka_DBTables.TaskCategories._EditUpload_) && sdate.Length == 0)
@@ -1471,8 +1496,10 @@
         // else UploadToServer(sdate);
     }
     private string uploadServerTime = "";
-    private void UploadToServer(string taskStartDate)
+    private async Task UploadToServer(string taskStartDate)
     {
+        VisibleSpinner = true;
+        Task.Delay(50);
         string userTask = "";
         int fileFirstPage = dataFile.GetFirstPageNo();
         int fileLastPage = dataFile.GetLastPageNo();
@@ -1492,7 +1519,7 @@
         if (userTask == "DataEntry" || userTask == "Edit-Upload")
         {
             #pragma warning disable 4014
-            dataFile.UploadDocument(submitStartPage.ToString(), submitEndPage.ToString());
+            await dataFile.UploadDocumentAsync(submitStartPage.ToString(), submitEndPage.ToString());
             #pragma warning restore
         }
         else
@@ -1500,7 +1527,7 @@
             submitStartPage = (int)startValue;
             submitEndPage = (int)endValue;
             submitPages = submitEndPage - submitStartPage + 1;
-            int correctionCount = dataFile.Update_Document(submitStartPage.ToString(), submitEndPage.ToString(), userTask);
+            int correctionCount = await dataFile.UpdateDocCorrectionsAsync(submitStartPage.ToString(), submitEndPage.ToString(), userTask);
             dictServerDocInfo["CorrectionCount"] = correctionCount.ToString();
         }
         stopWatch.Stop();
@@ -1511,7 +1538,9 @@
         dictServerDocInfo["PagesSubmitted"] = (pagesSubmitted + submitPages).ToString();
         dataFile.userClass = userClass;
 
-        dataFile.LogUserTaskActivity(dictServerDocInfo, userTask, taskStartDate);
+        await dataFile.LogUserTaskActivityAsync(dictServerDocInfo, userTask, taskStartDate);
+        VisibleSpinner = false;
+
         TaskComplete(dataFile.ErrMsg);
     }
     private void UpdateRecentlyUsedFileList(string docNo = "")
@@ -2050,7 +2079,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
     {
         IsImportInfoDialogVisible = false;
     }
-    private void okClick_ImportInfoDialog()
+    private async Task okClick_ImportInfoDialog()
     {
         if (!StartDateValue.HasValue)
         {
@@ -2059,7 +2088,7 @@ https://www.syncfusion.com/forums/173054/menu-bar-font-color-and-vertical-align-
         }
         ErrMsgImportFile = "";
         IsImportInfoDialogVisible = false;
-        if (pagesToSubmit != _NoNewPagesToSubmit_) UploadToServer();
+        if (pagesToSubmit != _NoNewPagesToSubmit_) await UploadToServer();
     }
     // The following event is not really necessary. MinHeight in SfDialog satisfies the required height.
     private void ImportInfoDialogOpen(Syncfusion.Blazor.Popups.BeforeOpenEventArgs args)

@@ -19,7 +19,7 @@
 @using Tipitaka_DB
 
 @* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
-<Administration componentName="UseProfile" email=@email userName=@userName userClass=@userClass flex_width="860px">
+<Administration componentName="UseProfile" email=@email userName=@userName userClass=@userClass flex_width="1000px">
     <adminMenuItem>User Profiles</adminMenuItem>
 </Administration>
 
@@ -48,7 +48,8 @@
 @************************* End of User Profile DataGrid *************************@
 @****************************** User Tasks DataGrid *****************************@
 <br />
-<h5><strong>User Tasks</strong></h5>
+<h5 style="width:200px;"><strong>User Tasks</strong></h5>
+<label style="width:985px;text-align: right;"><strong>Total: </strong>@UserTaskDisplayCount</label>
 <br />
 <div id="ControlRegion">
     <SfGrid ID="Grid" DataSource="@UserTaskDisplayRecords" @ref="sfgrid2" AllowPaging="true" AllowFiltering="true" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
@@ -62,11 +63,11 @@
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick_Task" TValue="UserTaskDisplay"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(UserTaskDisplay.userSrNo) HeaderText="No" IsPrimaryKey="true" AllowEditing="false" Width="6%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
-            <GridColumn Field=@nameof(UserTaskDisplay.name) HeaderText="Name" TextAlign="TextAlign.Left" Width="25%" Type="ColumnType.String"></GridColumn>
-            <GridColumn Field=@nameof(UserTaskDisplay.docNo) HeaderText="DocNo" TextAlign="TextAlign.Left" Width="12%" Type="ColumnType.String"></GridColumn>
-            <GridColumn Field=@nameof(UserTaskDisplay.task) HeaderText="Task" TextAlign="TextAlign.Center" Width="10%" Type="ColumnType.String"></GridColumn>
-            <GridColumn Field=@nameof(UserTaskDisplay.pages) HeaderText="Pages" TextAlign="TextAlign.Center" Width="8%" AllowAdding="false" AllowEditing="false" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
-            <GridColumn Field=@nameof(UserTaskDisplay.submitted) HeaderText="Submitted" TextAlign="TextAlign.Center" Width="12%" AllowAdding="false" AllowEditing="false" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.name) HeaderText="Name" TextAlign="TextAlign.Left" Width="20%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.docNo) HeaderText="DocNo" TextAlign="TextAlign.Left" Width="17%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.task) HeaderText="Task" TextAlign="TextAlign.Center" Width="12%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.pages) HeaderText="Pages" TextAlign="TextAlign.Center" Width="9%" AllowAdding="false" AllowEditing="false" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
+            <GridColumn Field=@nameof(UserTaskDisplay.submitted) HeaderText="Submitted" TextAlign="TextAlign.Center" Width="9%" AllowAdding="false" AllowEditing="false" Type="ColumnType.Integer" DefaultValue="0"></GridColumn>
             <GridColumn Field=@nameof(UserTaskDisplay.startDate) HeaderText="StartDate" TextAlign="TextAlign.Center"  Width="10%" AllowAdding="false" AllowEditing="false"Type="ColumnType.String" DefaultValue=@State.dataFile.GetTodaysDate()></GridColumn>
             <GridColumn Field=@nameof(UserTaskDisplay.lastDate) HeaderText="LastDate" TextAlign="TextAlign.Center" Width="12%" AllowAdding="false" AllowEditing="true" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(UserTaskDisplay.status) HeaderText="Status" TextAlign="TextAlign.Center" Width="10%" AllowAdding="false" AllowEditing="true" Type="ColumnType.String"></GridColumn>
@@ -120,8 +121,9 @@
     private SpinnerType spinnerType { get; set; } = SpinnerType.Bootstrap4;
     // private string cellUserClass { get; set; }
     bool VisibleSpinner = false;
+    int UserTaskDisplayCount = 0;
 
-    public class UserDisplayProfile()
+    public class UserDisplayProfile
     {
         public int userSrNo { get; set; }
         public string email { get; set; }
@@ -130,8 +132,20 @@
         public int loginCount { get; set; }
         public string joinedDate { get; set; }
         public string lastDate { get; set; }
+
+        public UserDisplayProfile() { }
+        public UserDisplayProfile(UserDisplayProfile item) 
+        {
+            this.userSrNo = item.userSrNo;
+            this.email = item.email;
+            this.name = item.name;
+            this.userClass = item.userClass;
+            this.loginCount = item.loginCount;
+            this.joinedDate = item.joinedDate;
+            this.lastDate = item.lastDate;
+        }
     }
-    public class UserTaskDisplay()
+    public class UserTaskDisplay
     {
         public int userSrNo { get; set; }
         public string name { get; set; }
@@ -149,22 +163,35 @@
     {
         if (State.dataFile != null) State.dataFile.ClearLoadedUserProfiles();
         UserDisplayRecords = new List<UserDisplayProfile>();
-        VisibleSpinner = true;
+        DisplaySpinner(true);
         await LoadUsers();
         await LoadUserTasks();
-        VisibleSpinner = false;
+        DisplaySpinner(false);
+    }
+    //***********************************************************************
+    //*** DisplaySpinner(bool) - turns on Sfspinner on/off
+    //***********************************************************************
+    private async Task DisplaySpinner(bool isVisible)
+    {
+        VisibleSpinner = isVisible; // Set to true to make the spinner visible
+        StateHasChanged(); // Update the UI
+        // Introduce a delay
+        await Task.Delay(100);
     }
     int GetSrNo()
     {
         return sfgrid!.TotalItemCount + 1;
     }
+    //*****************************************************************************/
+    //*** LoadUsers : This function loads all users' profiles.
+    //*****************************************************************************/
     private async Task LoadUsers()
     {
         if (UserDisplayRecords != null && UserDisplayRecords.Count > 0) return;
         while (State == null || State.dataFile == null) await Task.Delay(100);
 
-        var result = State.dataFile.GetAllUserProfiles();
         if (sfgrid == null) sfgrid = new SfGrid<UserDisplayProfile>();
+        var result = State.dataFile.GetAllUserProfiles();
         UserRecords = (List<UserProfile>)result;
         UserDisplayRecords = new List<UserDisplayProfile>();
         int n = 0;
@@ -191,6 +218,10 @@
             }
         }
     }
+    //*****************************************************************************/
+    //*** LoadUserTasks : This function loads users and their tasks that are still
+    //***                 assigned and not completed yet.
+    //*****************************************************************************/
     private async Task LoadUserTasks()
     {
         while (State == null || State.dataFile == null) await Task.Delay(100);
@@ -198,57 +229,62 @@
         ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
         if (clientKeyValueData == null || clientTaskAssignmentInfo == null) { return; }
 
-        Dictionary<string, string> dictUserDoc = await clientKeyValueData.GetUserTasksAsync();
+        //Dictionary<string, string> dictUserDoc = await clientKeyValueData.GetUserTasksAsync("");
+        SortedDictionary<string, List<KeyValueData>> dictUserDoc = await clientKeyValueData.GetUserTasksAsync("All", "Assigned");
         if (dictUserDoc.Count == 0) return;
 
         Dictionary<string, List<UserTaskProgressInfo>> docTaskProgress = new Dictionary<string, List<UserTaskProgressInfo>>();
         Dictionary<string, int> dictDocPages = new Dictionary<string, int>();
 
-        foreach(KeyValuePair<string, string> kv in dictUserDoc)
+        string userID, docNo, task;
+        string[] ff;
+        foreach(KeyValuePair<string, List<KeyValueData>> kv in dictUserDoc)
         {
-            // string userID = kv.Key;
-            string[] dNos = kv.Value.Split(';');
-            foreach(string dNo in dNos)
+            foreach(KeyValueData keyValueData in kv.Value)
             {
-                if (dNo.Length > 0)
+                ff = keyValueData.RowKey.Split('|');
+                docNo = ff[0];
+                task = ff[1];
+                if (docNo.Length > 0)
                 {
-                    if (docTaskProgress.ContainsKey(dNo)) { continue; }
-                    TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(dNo);
+                    if (docTaskProgress.ContainsKey(docNo)) { continue; }
+                    TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(docNo);
                     if (taskAssignmentInfo != null)
                     {
                         string[] p = State.dataFile.ParsePageInfo(taskAssignmentInfo.PageNos);
-                        dictDocPages[dNo] = (p.Length == 3) ? Int32.Parse(p[2]) : 0;
+                        dictDocPages[docNo] = (p.Length == 3) ? Int32.Parse(p[2]) : 0;
                         var listItems = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
-                        if (listItems != null && listItems.Count > 0) { docTaskProgress.Add(dNo, listItems); }
+                        if (listItems != null && listItems.Count > 0) { docTaskProgress.Add(docNo, listItems); }
                     }
                 }
             }
         }
 
-        string userID, docNo;
+        //string userID, docNo, task;
         int srNo = 0;
         UserTaskDisplayRecords = new List<UserTaskDisplay>();
-        foreach(KeyValuePair<string, string> kv in dictUserDoc)
+        foreach(KeyValuePair<string, List<KeyValueData>> kv in dictUserDoc)
         {
-            userID = kv.Key;
-            docNo = kv.Value;
-            string[] f = kv.Value.Split(';');
-            foreach(string doc_No in f)
+            userID = kv.Key.Substring(5);
+            foreach(KeyValueData kvd in kv.Value)
             {
-                if (doc_No.Length == 0) continue;
-                if (docTaskProgress.ContainsKey(doc_No) && dictDocPages.ContainsKey(doc_No))
+                ff = kvd.RowKey.Split('|');
+                docNo = ff[0];
+                task = ff[1];
+                if (docNo.Length == 0) continue;
+                if (docTaskProgress.ContainsKey(docNo) && dictDocPages.ContainsKey(docNo))
                 {
-                    List<UserTaskProgressInfo> listUserTaskProgressInfo = docTaskProgress[doc_No];
-                    var item = listUserTaskProgressInfo.Where(r => r.userID == userID).ToList();
+                    List<UserTaskProgressInfo> listUserTaskProgressInfo = docTaskProgress[docNo];
+                    var item = listUserTaskProgressInfo.Where(r => r.userID == userID && r.task == task).ToList();
                     if (item.Count > 0)
                     {
                         UserTaskDisplayRecords.Add(new UserTaskDisplay()
                         {
                             userSrNo = ++srNo,
                             name = State.dataFile.GetUserName(userID),
-                            docNo = doc_No,
+                            docNo = docNo,
                             task = item[0].task,
-                            pages = dictDocPages[doc_No],
+                            pages = dictDocPages[docNo],
                             submitted = item[0].submitted,
                             startDate = item[0].startDate,
                             lastDate = item[0].lastDate,
@@ -258,7 +294,9 @@
                 }
             }
         }
+        UserTaskDisplayCount = UserTaskDisplayRecords.Count;
     }
+    
     void CheckUserTasks(string userID, string[] userTasks)
     {
         if (email != "dhammayaungchi2011@gmail.com" || userID.Length == 0 || userTasks.Length == 0) return;
@@ -320,50 +358,13 @@
             fs.Close();
         }
     }
-    // public Dictionary<string, string> GetUserTasks(out Dictionary<string, List<UserTaskProgressInfo>> docTasks,
-    //     out Dictionary<string, TaskAssignmentInfo> taskAssignments)
-    // {
-    //     Dictionary<string, string> dict = new Dictionary<string, string>();
-    //     Dictionary<string, List<UserTaskProgressInfo>> docTaskProgress = new Dictionary<string, List<UserTaskProgressInfo>>();
-    //     Dictionary<string, TaskAssignmentInfo> dictTaskAssignmentInfo = new Dictionary<string, TaskAssignmentInfo>();
-    //     docTasks = docTaskProgress;
-    //     taskAssignments = dictTaskAssignmentInfo;
-    //     ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
-    //     ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
-    //     if (clientKeyValueData == null || clientTaskAssignmentInfo == null) { return dict; }
 
-    //     List<UserTaskProgressInfo> userTaskProgressInfos = new List<UserTaskProgressInfo>();
-    //     dict = clientKeyValueData.GetUserTasks();
-    //     if (dict.Count > 0)
-    //     {
-    //         foreach(KeyValuePair<string, string> kv in dict)
-    //         {
-    //             string userID = kv.Key;
-    //             string[] dNos = kv.Value.Split(';');
-    //             foreach(string dNo in dNos)
-    //             {
-    //                 if (dNo.Length > 0)
-    //                 {
-    //                     if (docTaskProgress.ContainsKey(dNo)) { continue; }
-    //                     TaskAssignmentInfo? taskAssignmentInfo = clientTaskAssignmentInfo.GetTaskAssignmentInfo(dNo);
-    //                     if (taskAssignmentInfo != null)
-    //                     {
-    //                         dictTaskAssignmentInfo[dNo] = taskAssignmentInfo;
-    //                         var listItems = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
-    //                         if (listItems != null && listItems.Count > 0) { docTaskProgress.Add(dNo, listItems); }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     return dict;
-    // }
     //********************************
     //******** RowSelectHandler()
     //********************************
     public void RowSelectHandler(RowSelectEventArgs<UserDisplayProfile> args)
     {
-        selectedRowUserDisplayProfile = args.Data;
+        selectedRowUserDisplayProfile = new UserDisplayProfile(args.Data);
     }
     // private 
     private async Task ToolbarClick(Syncfusion.Blazor.Navigations.ClickEventArgs args)
@@ -526,6 +527,7 @@
                 DateTime dt = new DateTime(yr, mon, day);
                 lastDate = State.dataFile.GetUKDateOnly(dt.ToShortDateString());
             }
+            if (selectedRowUserDisplayProfile.lastDate != args.Data.lastDate) modified = true;
             if (modified)
             {
                 UserProfile userProfile = new UserProfile()

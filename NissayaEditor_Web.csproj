@@ -25,6 +25,7 @@
     <Content Remove="Pages\Counter.razor" />
     <Content Remove="Pages\DataGridFeatures.razor" />
     <Content Remove="Pages\DialogFeatures.razor" />
+    <Content Remove="Pages\DummyPage.razor" />
     <Content Remove="Pages\Error.cshtml" />
     <Content Remove="Pages\FetchData.razor" />
     <Content Remove="Pages\FileUploadFeatures.razor" />
@@ -34,6 +35,7 @@
     <Content Remove="Pages\MenuBarFeatures.razor" />
     <Content Remove="Pages\MessageFeatures.razor" />
     <Content Remove="Pages\SourceBookViewer.razor" />
+    <Content Remove="Pages\TaskAssignment.razor" />
     <Content Remove="Pages\TextBoxFeatures.razor" />
     <Content Remove="Pages\ToolbarFeatures.razor" />
     <Content Remove="Pages\UserProfile.razor" />
@@ -46,6 +48,7 @@
    <ItemGroup>
          <PackageReference Include="Azure.Data.Tables" Version="12.9.0" />
          <PackageReference Include="Azure.Storage.Files.Shares" Version="12.20.0-beta.1" />
+         <PackageReference Include="F23.StringSimilarity" Version="6.0.0" />
          <PackageReference Include="IPInfo" Version="3.0.0" />
          <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
          <PackageReference Include="RCommon.Json.NewtonSoft" Version="1.0.1.71" />

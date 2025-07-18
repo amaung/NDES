@@ -10,7 +10,7 @@
 @using Syncfusion.Blazor.Navigations
 @using Newtonsoft.Json;
 @using Newtonsoft.Json.Linq;
-
+@using System.Diagnostics;
 
 @inject SfDialogService DialogService
 @inject NavigationManager NavManager
@@ -31,12 +31,42 @@
     [Parameter]
     public string userClass { get; set; } = "";
 
+    // **************************************************
+    // *** class ImportDocInfo
+    // **************************************************
+    public class ImportDocInfo()
+    {
+        public int srNo { get; set; }
+        public string docNo { get; set; }
+        public string docTitle { get; set; }
+        public string startPage { get; set; }
+        public string endPage { get; set; }
+        public string sourceFileCode { get; set; }
+        public string status { get; set; }
+        public ImportDocInfo(ImportDocInfo d) : this()
+        {
+            this.srNo = d.srNo; this.docNo = d.docNo; this.docTitle = d.docTitle;
+            this.startPage = d.startPage; this.endPage = d.endPage; 
+            this.sourceFileCode = d.sourceFileCode; this.status = d.status;
+        }
+    };
     protected override async Task OnInitializedAsync()
     {
         while (State.dataFile == null) await Task.Delay(100);
         State.dataFile.GetSourceBookInfo();
         LoadRequiredData();
-        //await AdminWork();
+        // for testing
+        // await AdminWork();
+    }
+    //***********************************************************************
+    //*** DisplaySpinner(bool) - turns on Sfspinner on/off
+    //***********************************************************************
+    private async Task DisplaySpinner(bool isVisible)
+    {
+        VisibleSpinner = isVisible; // Set to true to make the spinner visible
+        StateHasChanged(); // Update the UI
+        // Introduce a delay
+        await Task.Delay(100);
     }
 }
 
@@ -45,7 +75,7 @@
 @*****************************************************************************@
 @****************************** Base Document  *******************************@
 @*****************************************************************************@
-<Administration componentName="Documents" email=@email userName=@userName userClass=@userClass flex_width="875px">
+<Administration componentName="Documents" email=@email userName=@userName userClass=@userClass flex_width="1000px">
     <adminMenuItem>Documents</adminMenuItem>
 </Administration>
 
@@ -61,6 +91,8 @@
     <div style="width:200px" class="form-group col-md-2 column">
         <label class="col-form-label">Search Text</label>
         <SfTextBox TValue="string" @bind-Value="@pattern"></SfTextBox>
+        @* <input type="search" id="doc_no" @bind-value="searchDocNo"><br> *@
+        @* <input class="col-form-label" type="search" @bind="pattern" /><br/> *@
     </div>
 </div>
 <br />
@@ -77,8 +109,10 @@
 @****************************** Document DataGrid ******************************@
 @*******************************************************************************@
 <div id="ControlRegion">
-    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="true" AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
-            AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "ExcelExport", "Search" })" AllowTextWrap="false" Height="450" Width="1000">
+    <SfGrid ID="Grid" DataSource="@DocDisplayRecords" @ref="sfgrid" AllowPaging="false" AllowFiltering="true" 
+        AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+        AllowSorting="true" Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Reset","ExcelExport", "Search" })"
+            AllowTextWrap="false" Height="450" Width="1000">
         <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" ShowDeleteConfirmDialog='true'
                           NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal" Dialog="DialogParams">
         </GridEditSettings>
@@ -102,6 +136,8 @@
             <GridColumn Field=@nameof(DocInfo.team) HeaderText="Team" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
                 TextAlign="TextAlign.Left" AllowEditing="false" Type="ColumnType.String"></GridColumn>
         </GridColumns>
+        <SfSpinner Type=SpinnerType.Bootstrap4 @bind-Visible="@VisibleSpinner">
+        </SfSpinner>
     </SfGrid>
 </div>
 <br />
@@ -119,9 +155,6 @@
 <labael><strong>Source Book : </strong>@sourceBookPDF</labael>
 <br /><br />
 
-@* <span>@checking</span> *@
-<SfSpinner Type=SpinnerType.Bootstrap4 @bind-Visible="@VisibleSpinner">
-</SfSpinner>
 @* *************************************************************************** *@
 @* ************************* New doc info SfDialog *************************** *@
 @* *************************************************************************** *@
@@ -194,14 +227,62 @@
     </SfDialog>
 </div>
 
-<SfButton OnClick="@FileUploadBrowser"> Upload New Doc Info From File </SfButton>
+@* <SfButton OnClick="@FileUploadBrowser"> Upload New Doc Info From File </SfButton> *@
+<button OnClick="document.getElementById('fileUpload').click();"> Upload New Doc Info From File </button>
+<InputFile id="fileUpload" style="display: none;" OnChange="@OnFileUpload" />
 <br />
 @* https://help.syncfusion.com/cr/blazor/Syncfusion.Blazor.Inputs.SfUploader.html *@
 <div hidden="@hideFileUpload">
-    <SfUploader AutoUpload="true">
+    @* <SfUploader AutoUpload="true">
         <UploaderEvents ValueChange="@OnFileUpload"></UploaderEvents>
-    </SfUploader>
+    </SfUploader> *@
 </div>
+
+<div>
+    @********************************************************************************************************************************************@
+    @************************** Import document status form ****************************@
+    @********************************************************************************************************************************************@
+    <SfDialog Width="1000px" MinHeight="640px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsImportFormVisible">
+        <DialogTemplates>
+            <Header> Import Document List </Header>
+            <Content>
+                <label style="font-size:16px; text-align:center; width:100%;">@labelOkImport (@okCount)&nbsp&nbsp&nbsp&nbsp&nbspErr (@errCount)&nbsp&nbsp&nbsp&nbsp&nbspTotal (@ImportDocDisplayRecords.Count)&nbsp&nbsp&nbsp @importLabel</label>
+                <SfGrid ID="ImportSFGrid" DataSource="@ImportDocDisplayRecords" @ref="sfgrid1" AllowPaging="false" AllowFiltering="false" 
+                    AllowReordering="true" AllowResizing="true" AllowExcelExport="true" AllowSelection="true"
+                    AllowSorting="false" AllowTextWrap="false" Height="450" Width="950">
+                    <GridEditSettings AllowAdding="false" AllowEditing="true" AllowDeleting="false" ShowDeleteConfirmDialog='false'
+                                      NewRowPosition="NewRowPosition.Bottom" Mode="Syncfusion.Blazor.Grids.EditMode.Normal" Dialog="DialogParams">
+                    </GridEditSettings>
+                    <GridEvents OnActionComplete="ActionCompleteImportFile" TValue="ImportDocInfo"></GridEvents>
+                    <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+                    <GridColumns>
+                        <GridColumn Field=@nameof(ImportDocInfo.srNo) HeaderText="Sr No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            IsPrimaryKey="true" AllowEditing="false" Width="7%" Type="ColumnType.Integer" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(ImportDocInfo.docNo) HeaderText="Doc No" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            AllowEditing="true" Width="18%" Type="ColumnType.String" TextAlign="TextAlign.Left"></GridColumn>
+                        <GridColumn Field=@nameof(ImportDocInfo.docTitle) HeaderText="Title" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            TextAlign="TextAlign.Left" AllowEditing="true" Width="35%" Type="ColumnType.String"></GridColumn>
+                        <GridColumn Field=@nameof(ImportDocInfo.startPage) HeaderText="Start" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            TextAlign="TextAlign.Center" AllowEditing="true" Width="6%" Type="ColumnType.String"></GridColumn>
+                        <GridColumn Field=@nameof(ImportDocInfo.endPage) HeaderText="End" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            TextAlign="TextAlign.Center" AllowEditing="true" Width="6%" Type="ColumnType.String"></GridColumn>
+                        <GridColumn Field=@nameof(DocInfo.sourceFileCode) HeaderText="File ID" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            AllowEditing="true" Width="8%" Type="ColumnType.String" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(ImportDocInfo.status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" 
+                            TextAlign="TextAlign.Center" AllowEditing="false" Type="ColumnType.String"></GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton style="width:75px;" Content="Import" IsPrimary="false" OnClick="@ImportDoc" />
+            <DialogButton style="width:75px;" Content="Exit" IsPrimary="true" OnClick="@(() => IsImportFormVisible = false)" />
+        </DialogButtons>
+@*         <SfSpinner Type=SpinnerType.Bootstrap4 @bind-Visible="@VisibleSpinner">
+        </SfSpinner> *@
+    </SfDialog>
+</div>
+
 
 @************************* End of User Document DataGrid *************************@
 <style>
@@ -285,20 +366,23 @@
     string pages = "", docNo = "", docTitle = "", docSubTitle = "", status = "", teamMembers = "";
     string doc_Type = "", doc_SubType = "", doc_No = "", doc_Title = "", doc_SubTitle = "";
     string doc_TypeID = "", doc_SubTypeID = "", selected_PdfID = "", sourceBookPDF = "";
-    //string selected_docNo = "";
+    string importLabel = "";
+    string labelOkImport = "Ok";
     string ErrMsgNewDocInfo = "";
-    int nextCount = 10;
+    int nextCount = 10, okCount = 0, errCount = 0;
     int nPages = 0, sPages = 0, totalCount = 0;
     List<int> SelectedRowIndexes { get; set; }
     bool hideFileUpload = true;
     string showNextButton = "none";
     bool IsVisible_NewDocInfo = false;
+    bool IsImportFormVisible = false;
     bool VisibleSpinner = false;
     DocInfo DocInfoRec = new DocInfo();
     DocInfo? selectedRowDocInfo = null;
     SuttaInfo SuttaInfoRec = new SuttaInfo();
     SourceBookInfo? selectedSourceBookInfo = null;
     SfGrid<DocInfo>? sfgrid;
+    SfGrid<ImportDocInfo>? sfgrid1;
     SfUploader UploadObj;
     /************************************************************************************/
     //******** New Doc Dialog
@@ -313,7 +397,7 @@
     public SfDropDownList<string, DataItem> docTypeDropdown;
     public SfDropDownList<string, DataItem> srcPDFDropdown;
     public SfComboBox<string, DataItem> docSubTypeCombo;
-    enum DocUserAction { View, Add, Edit, Delete };
+    enum DocUserAction { View, Add, Edit, Delete, Reset };
     DocUserAction curDocUserAction  = DocUserAction.View;
 
     string PDF_DropDownValue = "";
@@ -368,6 +452,7 @@
     List<SuttaInfo> SuttaInfoRecords = new List<SuttaInfo>();
     List<DocInfo> DocDisplayRecords = new List<DocInfo>();
     List<DocInfo> SelectedDocRecords = new List<DocInfo>();
+    List<ImportDocInfo> ImportDocDisplayRecords = new List<ImportDocInfo>();
     SortedDictionary<string, SourceBookInfo>? dictSourceBooks = null;
     /************************************************************************************/
     //******** Initialization
@@ -511,7 +596,7 @@
                 Doc_Insert();
                 break;
             case DocUserAction.Delete:
-                // deletion actually done at Action
+                // deletion actually done at ActionComplete
                 break;
         }
         curDocUserAction = DocUserAction.View;
@@ -573,9 +658,9 @@
             }
         }
         DocDisplayRecords = listDocInfoTmp; // assign new data to grid source DocDisplayRecords
-                                            // **************************************************
-                                            // Add doc info to SuttaInfo
-                                            // **************************************************
+        // **************************************************
+        // Add doc info to SuttaInfo
+        // **************************************************
         SuttaInfo suttaInfo = new SuttaInfo()
             {
                 RowKey = formattedDocNo,
@@ -715,26 +800,28 @@
     //*********************************** End of Doc_Edit() ************************************/
 
     //************************************* Doc_Delete() ***************************************/
-    private void Doc_Delete(string docNo_ToDelete)
+    private async Task Doc_Delete(string docNo_ToDelete)
     {
         if (State.dataFile == null) return;
-
-        SuttaInfo? suttaInfo = State.dataFile.GetSuttaInfo(docNo_ToDelete);
+        SuttaInfo? suttaInfo = await State.dataFile.GetSuttaInfoAsync(docNo_ToDelete);
         if (State.dataFile.ErrMsg.Length > 0)
         {
             AlertBtn(State.dataFile.ErrMsg, "Error");
             return;
         }
         // check if the DocNo is still in created status; if not cannot delete anymore
-        State.dataFile.RemoveSourceBookDocNo(selected_PdfID, docNo_ToDelete);
-        State.dataFile.RemoveSuttaInfo(docNo_ToDelete);
-        State.dataFile.RemoveTaskAssignmentInfo(docNo_ToDelete);
-        State.dataFile.RemoveTaskFromUsers(docNo_ToDelete);
-        var itemToRemove = DocDisplayRecords.Single(r => r.docNo == docNo_ToDelete);
-        DocDisplayRecords.Remove(itemToRemove);
+        await State.dataFile.RemoveSourceBookDocNo(selected_PdfID, docNo_ToDelete);
+        await State.dataFile.RemoveSuttaInfoAsync(docNo_ToDelete);
+        await State.dataFile.RemoveTaskAssignmentInfoAsync(docNo_ToDelete);
+        await State.dataFile.RemoveTaskFromUsersAsync(docNo_ToDelete);
+        var itemToRemove = DocDisplayRecords.FirstOrDefault(r => r.docNo == docNo_ToDelete);
+        if (itemToRemove != null) DocDisplayRecords.Remove(itemToRemove);
     }
     //********************************* end of Doc_Delete() ***********************************/
 
+    //*******************************************************************************/
+    // SyncFusion Predefined dialogs
+    //*******************************************************************************/
     private async Task AlertBtn(string msg, string warn)
     {
         await DialogService.AlertAsync(msg, warn, new DialogOptions()
@@ -750,6 +837,16 @@
 
             });
     }
+    private async Task<bool> ConfirmBtn(string msg, string title)
+    {
+        bool isConfirm = await DialogService.ConfirmAsync(msg, title);
+        // string confirmMessage = isConfirm ? "confirmed" : "canceled";
+        // this.DialogStatus = $"The user {confirmMessage} the dialog box."; 
+        return isConfirm;
+    }
+    //
+    //*******************************************************************************/
+
     private async Task AddNewDocToGrid(DocInfo docInfo, int rowIndex)
     {
         await sfgrid.AddRecordAsync(docInfo, rowIndex);
@@ -828,6 +925,7 @@
             new UserTaskProgressInfo()
             {
                 userID = email,
+                author = email,
                 task = "NewDoc",
                 startDate = today,
                 lastDate = "",
@@ -880,8 +978,273 @@
     {
         hideFileUpload = false;
     }
+    public static bool IsNumericUsingRegex(string input)
+    {
+        return System.Text.RegularExpressions.Regex.IsMatch(input, @"^\d+$");
+    }
     //******** Open file read in doc info and add to sfgrid file and update server table
-    private async Task OnFileUpload(UploadChangeEventArgs args)
+    private async Task FillImportFiles(string[] importFileList)
+    {
+        string userID = "";
+        string title = "";
+        string bookID = "";
+        string docNo = "";
+        string status = "";
+        string startPage = "";
+        string endPage = "";
+        int srNo = 0;
+        okCount = errCount = 0;
+        IsImportFormVisible = true;
+        labelOkImport = "Ok";
+        ImportDocDisplayRecords.Clear();
+        DisplaySpinner(false);
+        foreach(string rec in importFileList)
+        {
+            if (rec.Trim().Length == 0) continue;
+            userID = "";
+            title = bookID = docNo = status = "";
+            startPage = endPage = "0";
+            string[] f = rec.Trim().Split(',');
+            if (f.Length >= 1) docNo = f[0].Trim();
+            if (f.Length >= 2) title = f[1].Trim();
+            if (f.Length >= 3 && IsNumericUsingRegex(f[2].Trim())) startPage = int.Parse(f[2].Trim()).ToString();
+            if (f.Length >= 4 && IsNumericUsingRegex(f[3].Trim())) endPage = int.Parse(f[3].Trim()).ToString();
+            if (f.Length >= 5) bookID = f[4].Trim();
+            if (startPage == "0" || endPage == "0" || int.Parse(startPage) > int.Parse(endPage)) status = "Error";
+            ImportDocInfo importDocInfo = new ImportDocInfo()
+            {
+                srNo = ++srNo,
+                docNo = docNo,
+                docTitle = title,
+                startPage = startPage,
+                endPage = endPage,
+                sourceFileCode = bookID,
+                status = status
+            };
+            importDocInfo.status = GetImportDocInfoStatus(importDocInfo);
+            ImportDocDisplayRecords.Add(importDocInfo);
+            if (importDocInfo.status == "Ok") ++okCount;
+            if (importDocInfo.status.ToLower().Contains("error")) ++errCount;
+        }
+        // do StateHasChanged for importLabel to display correctly
+        // StateHasChanged(); await Task.Delay(100);
+        DisplayImportMessage("Ok", "");
+
+    }
+    private async Task ImportDoc()
+    {
+        if (State == null || State.dataFile == null) return;
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+        if (clientSuttaInfo == null || clientTaskAssignmentInfo == null) return;
+        SuttaInfo suttaInfo;
+        TaskAssignmentInfo taskAssignmentInfo;
+
+        List<SuttaInfo> listSuttaInfo = new List<SuttaInfo>();
+        List<Object> listSuttaInfoObj = new List<Object>();
+        List<DocInfo> listDocInfo = new List<DocInfo>();
+        List<TaskAssignmentInfo> listTaskAssignmentInfo = new List<TaskAssignmentInfo>();   // this is the list of docs to update
+        List<Object> listTaskAssignmentInfoObj = new List<Object>();   // this is the list of docs to update
+        Dictionary<string, string> dictDocStatus = new Dictionary<string, string>();
+        string userName = State.dataFile.GetUserName(email);
+        int sPage = -1, ePage = -1, srNo = 0;
+        string status = "";
+        var ImportDocDisplayRecordsCopy = new List<ImportDocInfo>(ImportDocDisplayRecords);
+        await DisplaySpinner(true);
+        // importLabel = "Importing ...";
+        // StateHasChanged(); await Task.Delay(100);
+        DisplayImportMessage("Ok", "Importing ...");
+        foreach(ImportDocInfo importDocInfo in ImportDocDisplayRecordsCopy)
+        {
+            if (importDocInfo.status != "Ok") continue;
+            var curSuttaInfo = await clientSuttaInfo.GetSuttaInfoAsync(importDocInfo.docNo);
+            sPage = int.Parse(importDocInfo.startPage);
+            ePage = int.Parse(importDocInfo.endPage);
+            if (curSuttaInfo != null)
+            {
+                if (curSuttaInfo.Status != "Created" || curSuttaInfo.PagesSubmitted > 0)
+                {
+                    status = "Doc already started.";
+                }
+                else
+                {
+                    // existing docNo, update if necessary
+                    if ((curSuttaInfo.Title != importDocInfo.docTitle || curSuttaInfo.BookID != importDocInfo.sourceFileCode ||
+                        curSuttaInfo.StartPage != sPage || curSuttaInfo.EndPage != ePage) && curSuttaInfo.Status == "Created") 
+                    {
+                        status = "Existing doc updated.";
+                        suttaInfo = new SuttaInfo()
+                        {
+                            RowKey = curSuttaInfo.RowKey,
+                            Title = curSuttaInfo.Title,
+                            BookID = curSuttaInfo.BookID,
+                            StartPage = sPage,
+                            EndPage = ePage,
+                            NoPages = ePage - sPage + 1,
+                            PagesSubmitted = 0,
+                            Status = curSuttaInfo.Status,
+                            Team = curSuttaInfo.Team
+                        };
+                        await clientSuttaInfo.UpdateSuttaInfoAsync(suttaInfo);
+                    }
+                    else
+                    {
+                        status = "Existing doc not updated.";
+                    }
+                }
+            }
+            else
+            {
+                // new docNo, just add
+                string pageRange = String.Format("{0}-{1}", importDocInfo.startPage, importDocInfo.endPage);
+                int pCount = ePage - sPage + 1;
+                string team = "", taskStatus = "Created"; 
+                status = "Imported";
+                listSuttaInfoObj.Add((Object)new SuttaInfo()
+                {
+                    RowKey = importDocInfo.docNo,
+                    Title = importDocInfo.docTitle,
+                    BookID = importDocInfo.sourceFileCode,
+                    StartPage = sPage,
+                    EndPage = ePage,
+                    NoPages = ePage - sPage + 1,
+                    PagesSubmitted = 0,
+                    Status = taskStatus,
+                    Team = userName
+                });
+                // for the display
+                listDocInfo.Add(new DocInfo()
+                {
+                    srNo = ++srNo,
+                    docNo = importDocInfo.docNo,
+                    docTitle = importDocInfo.docTitle,
+                    sourceFileCode = importDocInfo.sourceFileCode,
+                    startPage = sPage,
+                    endPage = ePage,
+                    pages = pageRange,
+                    pageCount = pCount,
+                    pagesSubmitted = 0,
+                    lastUpdate = DateTime.Now.ToString(),
+                    status = status,
+                    team = team
+                });
+                List<UserTaskProgressInfo> dictUserTaskProgressInfo = new List<UserTaskProgressInfo>()
+                {
+                    new UserTaskProgressInfo()
+                    {
+                        userID = email,
+                        author = email,
+                        task = "NewDoc",
+                        startDate = DateTime.Today.ToString("d'/'M'/'yyyy"),
+                        lastDate = "",
+                        submitted = 0,
+                        corrections = 0,
+                        status = taskStatus,
+                    }
+                };
+                listTaskAssignmentInfoObj.Add((Object)new TaskAssignmentInfo()
+                {
+                    RowKey = importDocInfo.docNo,
+                    DocTitle = importDocInfo.docTitle,
+                    PageNos = String.Format("{0}-{1} ({2})", sPage, ePage, pCount),
+                    PagesSubmitted = 0,
+                    AssigneeProgress = JsonConvert.SerializeObject(dictUserTaskProgressInfo),
+                    StartDate ="",
+                    LastDate = "",
+                    CorrectionCount = 0,
+                    Status  = taskStatus
+                });
+            }
+
+            dictDocStatus.Add(importDocInfo.docNo, status);
+        }
+        if (listSuttaInfoObj.Count > 0) await clientSuttaInfo.InsertBatch(listSuttaInfoObj);
+        if (listTaskAssignmentInfoObj.Count > 0) await clientTaskAssignmentInfo.InsertBatch(listTaskAssignmentInfoObj);
+        ImportDocDisplayRecordsCopy.Clear();
+        foreach(var importDocInfo in ImportDocDisplayRecords)
+        {
+            ImportDocInfo newImportDocInfo = new ImportDocInfo(importDocInfo);
+            if (dictDocStatus.ContainsKey(importDocInfo.docNo))
+                newImportDocInfo.status = dictDocStatus[importDocInfo.docNo];
+            ImportDocDisplayRecordsCopy.Add(newImportDocInfo);
+        }
+        ImportDocDisplayRecords = ImportDocDisplayRecordsCopy;
+        await DisplaySpinner(false);
+        okCount = (from item in ImportDocDisplayRecords
+                   where item.status == "Imported"
+                   select item).ToList().Count;
+        errCount = (from item in ImportDocDisplayRecords
+                    where item.status.ToLower().Contains("error")
+                    select item).ToList().Count;
+        await DisplayImportMessage("Imported", "");
+        searchTypeValue = null;
+        ShowDocs();
+    }
+    private async Task DisplayImportMessage(string lblOkImport, string labelProgress = "")
+    {
+        labelOkImport = lblOkImport; importLabel = labelProgress;
+        StateHasChanged(); await Task.Delay(100);
+    }
+    private string GetImportDocInfoStatus(ImportDocInfo importDocInfo)
+    {
+        string[] docTypes = { "AN", "MN", "SN", "DN", "KN" };
+        string status = "";
+        string s = importDocInfo.docNo.Substring(0, 2);
+        status = "DocNo format error.";
+        if (s.Length == 0 || !docTypes.Contains(s) || (importDocInfo.docNo[2] != '-' && importDocInfo.docNo[2] != '.')) return status;
+        if (importDocInfo.docNo[2] == '.' && importDocInfo.docNo.Substring(2, 6) != ".Tika-") return status;
+        int st = int.Parse(importDocInfo.startPage);
+        int en = int.Parse(importDocInfo.endPage);
+        status = "Page number error.";
+        if (st == -1 || en == -1 || st > en) return status;
+        status = "Source file ID error";
+        s = importDocInfo.sourceFileCode.Trim();
+        if (s.Length == 0 || !docTypes.Contains(s.Substring(0, 2)) || s[2] != '-' || !IsNumericUsingRegex(s.Substring(3))) return status;
+        status = "Ok";
+        return status;
+    }
+    private async void OnFileUpload(InputFileChangeEventArgs args)
+    {
+        try
+        {
+            string fileName = "";
+            //*************************************************/
+            //*** Read from file                            ***/
+            //*************************************************/
+            var file = args.File;
+            MemoryStream filestream = new MemoryStream();
+            await file.OpenReadStream(long.MaxValue).CopyToAsync(filestream);
+            var buffer = new byte[filestream.Length];
+            filestream.Read(buffer, 0, (int)filestream.Length);
+            string fileContent = buffer.ToString();
+            string status = "", team = "", userID = "";
+            fileContent = System.Text.Encoding.UTF8.GetString(filestream.ToArray());
+            filestream.Close();
+            fileName = file.Name;
+            // check if the file data is the right data
+            if (fileContent.IndexOfAny(new char[] { '*', '^' }) != -1)
+            {
+                var msg = String.Format("{0} file is not in the required format. Import aborted.", fileName);
+                AlertBtn(msg, "Error");
+                return;
+            }
+            DisplaySpinner(true);
+            string[] recs = fileContent.Split("\n");
+            int sPage = 0, ePage = 0, pCount = 0;
+            int n = 0, updateCount = 0, errorCount = 0, uidErrCount = 0;
+            string docPages = "";
+            SuttaInfo? curSuttaInfo = null;
+            ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+            FillImportFiles(recs);
+            DisplaySpinner(false);
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+    private async void OnFileUpload1(InputFileChangeEventArgs args)
     {
         try
         {
@@ -896,28 +1259,44 @@
             ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
             ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
             if (State.dataFile != null) listExistingDocs = State.dataFile.GetSuttaList("All");
-            VisibleSpinner = true;
+            DisplaySpinner(true);
             string fileName = "";
             bool invalidFileFormat = false;
+            //IBrowseFile[] files = { args.File };
             //*************************************************/
             //*** Read from file                            ***/
             //*************************************************/
-            foreach (var file in args.Files)
+            var file = args.File;
+            //
+            // Import file format
+            // ******************
+            //
+            // MN-001,မူလပရိယာယသုတ်,1,179,MN-01
+            //
+            // 1. DocId (e.g. MN-001)
+            // 2. Doc Title (e.g. မူလပရိယာယသုတ်)
+            // 3. StartPage (e.g. 1)
+            // 4. EndPage (e.g. 179)
+            // 5. PDF SourceFile Id (e.g. MN-01)
+            // 6. Assignee Email (e.g. user1@gmail.com)
+            //
+            //foreach (var file in )
             {
                 MemoryStream filestream = new MemoryStream();
-                await file.File.OpenReadStream(long.MaxValue).CopyToAsync(filestream);
+                // await file.File.OpenReadStream(long.MaxValue).CopyToAsync(filestream);
+                await file.OpenReadStream(long.MaxValue).CopyToAsync(filestream);
                 var buffer = new byte[filestream.Length];
                 filestream.Read(buffer, 0, (int)filestream.Length);
                 string fileContent = buffer.ToString();
                 string status = "", team = "", userID = "";
                 fileContent = System.Text.Encoding.UTF8.GetString(filestream.ToArray());
                 filestream.Close();
-                fileName = file.FileInfo.Name;
+                fileName = file.Name;
                 // check if the file data is the right data
                 int charCount = fileContent.IndexOfAny( new char[] { '*', '^' });
                 if (charCount != -1)
                 {
-                    invalidFileFormat = true; break;
+                    invalidFileFormat = true; return;
                 }
                 string[] recs = fileContent.Split("\n");
                 int sPage = 0, ePage = 0, pCount = 0;
@@ -925,6 +1304,8 @@
                 string docPages = "";
                 SuttaInfo? curSuttaInfo = null;
                 ClientSuttaInfo?clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+                FillImportFiles(recs);
+                return;
                 if (State.dataFile != null)
                 {
                     string bookID = "";
@@ -1092,7 +1473,7 @@
                                 dictBookDocList.Add(bookID, new List<string>() { docNoTrimmed });
                         }
                         // end of new doc data collection
-                    //
+                        //
                     }
                     // update existing docs
                     totalCount += recs.Length;
@@ -1178,7 +1559,7 @@
                     AlertBtn(String.Format("{0} new docs imported.  {1} docs updated. {2} page number error(s) found. See activity log.",
                     listSuttaInfo.Count, updateCount, errorCount), "Success");
             }
-            VisibleSpinner = false;
+            DisplaySpinner(false);
             if (invalidFileFormat)
                 AlertBtn(String.Format("{0} file is not a document definition file.", fileName), "Error");
         }
@@ -1226,7 +1607,7 @@
                 listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
                     {
                         userID = userID,
-                        task = "Edit-Upload",
+                        task = "DataEntry",
                         startDate = "", //DateTime.Now.ToString("d'/'M'/'yyyy"),
                         lastDate = "",
                         submitted = 0,
@@ -1267,7 +1648,8 @@
         // retrieve
         if (State.dataFile == null) return;
         if (searchTypeValue == null) searchTypeValue = searchTypes[0].ID;
-        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass);
+        string sortCol = (searchTypeValue == TaskCategories._BookID_) ? "RowKey" : "TS";
+        List<SuttaInfo> listSuttaInfo = State.dataFile.GetSuttaList(searchTypeValue, pattern, userClass, sortCol);
         totalCount = State.dataFile.GetSearchResultCount();
         DocDisplayRecords = new List<DocInfo>();
         if (totalCount == 0)
@@ -1409,12 +1791,118 @@
                     }
                 }
             }
+            if (args.Item.Text.Equals("Reset") && State.dataFile != null && SelectedDocRecords.Count > 0)
+            {
+                // get confirmation from the user
+                string msg = String.Format("You have selected {0} doc{1} to reset. Do you want to continue?", 
+                        SelectedDocRecords.Count, SelectedDocRecords.Count > 1? "s" : "");
+                var confirm = await ConfirmBtn(msg, "Confirm Reset");
+                if (!confirm) return;
+                int count = 0;
+                curDocUserAction = DocUserAction.Reset;
+                List<string> DocNos = SelectedDocRecords.Select(s => s.docNo).ToList();
+                //await Task.Delay(100);
+                await DoReset(DocNos);
+
+                string plu1 = "", plu2 = "";
+                if (SelectedDocRecords.Count > 1)
+                {
+                    plu1 = "s"; plu2 = "es";
+                }
+                AlertBtn(String.Format("{0} document{1} reset. Please check the status{2} in the Task Activity Log.", SelectedDocRecords.Count, plu1, plu2), "Notice");
+            }
             if (args.Item.Id == "Grid_excelexport")
             {
                 ExcelExportProperties ExcelProperties = new ExcelExportProperties();
                 ExcelProperties.FileName = "Document.xlsx";
                 ExcelProperties.DataSource = DocDisplayRecords;
                 await this.sfgrid.ExcelExport(ExcelProperties);
+            }
+        }
+    }
+    private async Task DoReset(List<string> DocNos)
+    {
+        if (DocNos.Count == 0) return;
+        DisplaySpinner(true);
+        int count = 0;
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile.GetClientSuttaInfo();
+        ClientSuttaPageData? clientSuttaPageData = State.dataFile.GetClientSuttaPageData();
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile.GetClientTaskAssignmentInfo();
+        ClientKeyValueData? clientKeyValueData = State.dataFile.GetClientKeyValueData();
+        ClientTaskActivityLog? clientTaskActivityLog = State.dataFile.GetClientTaskActivityLog();
+        ClientCorrectionLog? clientCorrectionLog = State.dataFile.GetClientCorrectionLog();
+        if (clientSuttaInfo != null && clientSuttaPageData != null &&
+            clientTaskAssignmentInfo != null && clientKeyValueData != null && clientCorrectionLog != null)
+        {
+            string errMsg = "", ownerName = "";
+            bool alreadyCreated = false;
+            foreach (string docNo in DocNos)
+            {
+                // removes all assignments leaving the creator info from TaskAssignmentInfo
+                var result = await clientTaskAssignmentInfo.GetTaskAssignmentInfoAsync(docNo);
+                TaskAssignmentInfo? taskAssignmentInfo = (TaskAssignmentInfo)result;
+
+                errMsg = "";
+                alreadyCreated = (taskAssignmentInfo.Status == "Created");
+                if (alreadyCreated) errMsg += "Doc already in NewDoc state.";
+                // update task assignments
+                await clientTaskAssignmentInfo.ResetTaskAssignmentInfoAsync(taskAssignmentInfo, email, userName);
+                if (errMsg.Length > 0) errMsg += " ";
+                errMsg += "ResetTaskAssignmentInfo rc = " + clientTaskAssignmentInfo.StatusCode.ToString();
+
+                if (!alreadyCreated)
+                {
+                    // this action puts the DocNo to its initial state in SuttaInfo
+                    ownerName = GetDocOwnerName(taskAssignmentInfo);
+                    await clientSuttaInfo.ResetSuttaInfoAsync(docNo, ownerName);
+                    errMsg += "; ResetSuttaInfo rc = " + clientTaskAssignmentInfo.StatusCode.ToString();
+
+                    // remove tasks assigned for this docNo
+                    await clientKeyValueData.RemoveUserAssignedTasksAsync(docNo, taskAssignmentInfo);
+                    errMsg += "; RemoveUserAssignedTasksAsync rc = " + clientKeyValueData.StatusCode.ToString();
+
+                    // deletes all data records from SuttaPageData if they exist
+                    count = await clientSuttaPageData.DeleteDocDataAsync(docNo);
+                    errMsg += "; DeleteDocData rc = " + clientSuttaPageData.StatusCode.ToString();
+
+                    // Reset CorrectionLog
+                    await clientCorrectionLog.ResetCorrectionLog(docNo);
+                    errMsg += "; CorrectionLog rc = " + clientCorrectionLog.StatusCode.ToString();
+                }
+
+                // update Task Activities
+                if (clientTaskActivityLog != null)
+                {
+                    await clientTaskActivityLog.AddTaskActivityLogAsync(docNo,
+                        email, "Reset", count, count, count, errMsg);
+                }
+                // update the display
+                int idx = DocDisplayRecords.FindIndex(x => x.docNo == docNo);
+                if (idx >= 0)
+                {
+                    List<DocInfo> newDocDisplayRecords = new List<DocInfo>(DocDisplayRecords);
+                    newDocDisplayRecords[idx].pagesSubmitted = 0;
+                    newDocDisplayRecords[idx].status = "Created";
+                    newDocDisplayRecords[idx].team = ownerName;
+                    DocDisplayRecords = newDocDisplayRecords;
+                }
+            }
+            DisplaySpinner(false);
+            //VisibleSpinner = false;
+            string GetDocOwnerName(TaskAssignmentInfo? taskAssignmentInfo)
+            {
+                string s = "Unlnown";
+                if (taskAssignmentInfo == null) return s;
+                var listUserTaskProgressInfo = JsonConvert.DeserializeObject<List<UserTaskProgressInfo>>(taskAssignmentInfo.AssigneeProgress);
+                if (listUserTaskProgressInfo != null)
+                {
+                    var x = listUserTaskProgressInfo.FirstOrDefault(x => x.task == "NewDoc");
+                    if (x != null) 
+                    { 
+                        return State.dataFile.GetUserName(x.userID);
+                    }
+                }
+                return s;
             }
         }
     }
@@ -1476,7 +1964,29 @@
         status = String.Format("{0} ({1}%)", docInfo.status, pct);
         teamMembers = docInfo.team;
     }
-    private void ActionBeginUser(ActionEventArgs<DocInfo> args)
+    private async Task ActionCompleteImportFile(ActionEventArgs<ImportDocInfo> args)
+    {
+        await Task.Delay(1);
+        if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save) && args.Action == "Edit"))
+        {
+            var data = (ImportDocInfo)args.Data;
+            var rec = ImportDocDisplayRecords.FirstOrDefault(r => r.srNo == data.srNo);
+            if (rec != null)
+            {
+                ImportDocDisplayRecords[rec.srNo - 1].status = GetImportDocInfoStatus(rec);
+                var tempDispRecords = new List<ImportDocInfo>(ImportDocDisplayRecords);
+                ImportDocDisplayRecords = tempDispRecords;
+                labelOkImport = "Ok";
+                okCount = (from item in ImportDocDisplayRecords 
+                           where item.status == "Ok" 
+                           select item).ToList().Count;
+                errCount = (from item in ImportDocDisplayRecords
+                            where item.status.ToLower().Contains("error")
+                            select item).ToList().Count;
+            }
+        }
+    }
+    private async Task ActionBeginUser(ActionEventArgs<DocInfo> args)
     {
         if ((args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete) && args.Action == "Delete"))
         {
@@ -1484,6 +1994,7 @@
             {
                 string pdfID, delDocNo;
                 int pages;
+                await DisplaySpinner(true);
                 foreach (DocInfo docInfo in SelectedDocRecords)
                 {
                     delDocNo = docInfo.docNo;
@@ -1498,6 +2009,7 @@
                     var itemToRemove = DocDisplayRecords.Single(r => r.docNo == delDocNo);
                     DocDisplayRecords.Remove(itemToRemove);
                 }
+                await DisplaySpinner(false);
             }
         }
     }    
@@ -1553,6 +2065,284 @@
         DocDisplayRecords.Add(docInfo);
     }
     private async Task AdminWork()
+    {
+        if (email != "dhammayaungchi2011@gmail.com") return;
+        // await Setup_MN017();
+        // await ResetAllDocNos("DN");
+        await RemoveDocNosFromFile();
+    }
+    private async Task ResetAllDocNos(string docType = "MN")
+    {
+        if (email != "dhammayaungchi2011@gmail.com") return;
+        List<string> docNos = new List<string>();
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile!.GetClientSuttaInfo();
+        string query = String.Format("RowKey ge '{0}-' and RowKey le '{0}~' and (Status eq 'Created' or Status eq '')", docType);
+        // query = String.Format("RowKey eq 'MN-017'");
+        if (clientSuttaInfo != null)
+        {
+            var result = await clientSuttaInfo.QuerySuttaInfoAsync(query);
+            List<SuttaInfo> listSuttaInfo = (List<SuttaInfo>)result;
+            docNos = listSuttaInfo.Select(s => s.RowKey).ToList();
+            Debug.WriteLine("Count = {0}", docNos.Count);
+            docNos.Sort(); docNos.Reverse();
+            string msg = String.Format("Do you want to reset all {0} docs of {1}", docNos.Count, docType);
+            bool confirm = await ConfirmBtn(msg, "Confirm Reset");
+            if (confirm)
+            {
+                await DoReset(docNos);
+            }
+        }
+    }
+    private async Task RemoveDocNosFromFile()
+    {
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile!.GetClientSuttaInfo();
+        string query = "RowKey gt 'DN.Tika-14.' and RowKey lt 'DN.Tika-17.'";
+        var listSuttaInfo = await clientSuttaInfo.QuerySuttaInfoAsync(query);
+        if (listSuttaInfo.Count == 0) return;
+        foreach (var suttaInfo in listSuttaInfo)
+        {
+            Doc_Delete(suttaInfo.RowKey);
+        }
+    }
+    private async Task Setup_MN017()
+    {
+        ClientSuttaInfo? clientSuttaInfo = State.dataFile!.GetClientSuttaInfo();
+        ClientSuttaPageData? clientSuttaPageData = State.dataFile!.GetClientSuttaPageData();
+        ClientKeyValueData? clientKeyValueData = State.dataFile!.GetClientKeyValueData();
+        ClientTaskAssignmentInfo? clientTaskAssignmentInfo = State.dataFile!.GetClientTaskAssignmentInfo();
+        //await clientSuttaInfo.DeleteTableRec(suttaInfo);
+        // [{"userID":"dhammayaungchi2011@gmail.com","task":"NewDoc","startDate":"7/4/2024","lastDate":"8/4/2024","submitted":0,"corrections":0,"status":"Created"},
+        // {"userID":"user1@gmail.com","task":"DataEntry","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"user2@gmail.com","task":"Review1","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"user3@gmail.com","task":"Review2","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"user4@gmail.com","task":"Edit","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"user5@gmail.com","task":"Review3","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"user6@gmail.com","task":"Review4","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"hhw@gmail.com","task":"Review5","startDate":"7/4/2024","lastDate":"7/4/2024","submitted":3,"corrections":0,"status":"Completed"},
+        // {"userID":"poeeisan96.pes@gmail.com","task":"Review6","startDate":"","lastDate":"","submitted":0,"corrections":0,"status":"Assigned"}]
+        List<KeyValueData> listKeyValueData = new List<KeyValueData>();
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "user1@gmail.com",
+                RowKey = "MN-017|DataEntry",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "user2@gmail.com",
+                RowKey = "MN-017|Review1",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "user3@gmail.com",
+                RowKey = "MN-017|Review2",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "user4@gmail.com",
+                RowKey = "MN-017|Edit",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "user5@gmail.com",
+                RowKey = "MN-017|Review3",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "user6@gmail.com",
+                RowKey = "MN-017|Review4",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "hhw@gmail.com",
+                RowKey = "MN-017|Review5",
+                Value = "Completed"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-" + "hhw@gmail.com",
+                RowKey = "MN-020|DataEntry",
+                Value = "Assigned"
+            });
+        listKeyValueData.Add(new KeyValueData()
+            {
+                PartitionKey = "User-poeeisan96.pes@gmail.com",
+                RowKey = "MN-017|Review6",
+                Value = "Assigned"
+            });
+        // KeyValueData
+        if (clientKeyValueData != null)
+        {
+            foreach (KeyValueData keyValueData in listKeyValueData)
+            {
+                // if will update if data exists or else will insert
+                await clientKeyValueData.UpdateKeyValueDataAsync(keyValueData);
+            }
+        }
+        // update SuttaInfo
+        if (clientSuttaInfo != null)
+        {
+            SuttaInfo? suttaInfo = await clientSuttaInfo.GetSuttaInfoAsync("MN-017");
+            if (suttaInfo != null)
+            {
+                suttaInfo.Status = "Review5";
+                suttaInfo.Team = "System Admin, User One, User Two, User Three, User Four, User Five, User Six, Htay Htay Wai, Poe Ei San";
+                suttaInfo.PagesSubmitted = 3;
+                await clientSuttaInfo.UpdateSuttaInfoAsync(suttaInfo);
+            }
+        }
+        // update TaskAssignmentInfo
+        if (clientTaskAssignmentInfo != null)
+        {
+            TaskAssignmentInfo? taskAssignmentInfo = await clientTaskAssignmentInfo.GetTaskAssignmentInfoAsync("MN-017");
+            if (taskAssignmentInfo != null)
+            {
+                taskAssignmentInfo.Status = "Completed";
+                taskAssignmentInfo.PagesSubmitted = 3;
+                taskAssignmentInfo.LastDate = "8/4/2024";
+                List<UserTaskProgressInfo> listUserTaskProgressInfo = new List<UserTaskProgressInfo>();
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "dhammayaungchi2011@gmail.com",
+                        task = "NewDoc",
+                        startDate = "7/4/2024",
+                        lastDate = "8/4/2024",
+                        submitted = 0,
+                        corrections = 0,
+                        status = "Created"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "user1@gmail.com",
+                        task = "DataEntry",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "user2@gmail.com",
+                        task = "Review1",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "user3@gmail.com",
+                        task = "Review2",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "user4@gmail.com",
+                        task = "Edit",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "user5@gmail.com",
+                        task = "Review3",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "user6@gmail.com",
+                        task = "Review4",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "hhw@gmail.com",
+                        task = "Review5",
+                        startDate = "7/4/2024",
+                        lastDate = "7/4/2024",
+                        submitted = 3,
+                        corrections = 0,
+                        status = "Completed"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "hhw@gmail.com",
+                        task = "DataEntry",
+                        startDate = "7/4/2024",
+                        lastDate = "",
+                        submitted = 0,
+                        corrections = 0,
+                        status = "Assigned"
+                    });
+                listUserTaskProgressInfo.Add(new UserTaskProgressInfo()
+                    {
+                        userID = "poeeisan96.pes@gmail.com",
+                        task = "Review6",
+                        startDate = "7/4/2024",
+                        lastDate = "",
+                        submitted = 0,
+                        corrections = 0,
+                        status = "Assigned"
+                    });
+                taskAssignmentInfo.AssigneeProgress = JsonConvert.SerializeObject(listUserTaskProgressInfo);
+                await clientTaskAssignmentInfo.UpdateTableRec(taskAssignmentInfo);
+            }
+        }
+        if (clientSuttaPageData != null)
+        {
+            SuttaPageData suttaPageData = new SuttaPageData();
+            // #399
+            suttaPageData.PartitionKey = "MN-017";
+            suttaPageData.RowKey = "MN-017-399";
+            suttaPageData.PageNo = 399;
+            suttaPageData.PageData = "*ဧဝံမေသုတန္တိ ^ဧဝံ မေ သုတံ အစရှိသောသုတ်သည် *ရထဝိနီတသုတ္တံ ^ရထဝီနိတသုတ်တည်း *တတ္ထ ^ထိုရထဝီနိတသုတ်၌ *ရာဇဂဟေတိ ^ရာဇဂဟေဟူသည်ကား *ဧဝံ နာမကေ ^ဤသို့ ရာဇဂြိုဟ်ဟူ၍-အမည်ရှိသော *နဂရေ ^ပြည်၌ *ဟိသစ္စံ ^မှန်၏ *တံ ^ထိုရာဇဂြိုဟ်ပြည်ကို *မန္ဓာတုမဟာဂေါဝိန္ဒာဒီဟိ ^မန္ဓာတ်မင်း-မဟာဂေါဝိန္ဒပုဏ္ဏားအစရှိသော သူတို့သည် *ပဋိဂ္ဂဟိတတ္တာ ^သိမ်းဆည်းအပ်သည်၏ အဖြစ်ကြောင့် *ရာဇဂဟန္တိ ^ရာဇဂဟံဟူ၍ *ဝုစ္စတိ ^ဆိုအပ်၏ *ဧတ္ထ ^ဤရာဇဂဟံဟူသောပုဒ်၌ *အညေပိ ^တပါးလည်းဖြစ်ကုန်သော *ပကာရေ ^အပြားတို့ကို *ဝဏ္ဏယန္တိ ^ဖွင့်အပ်ကုန်၏ *တေဟိ ^ထိုအပြားတို့ဖြင့် *ကိံ ^အဘယ်အကျိုးရှိအံ့နည်း *ဧတံ ^ထိုရာဇဂဟေဟူသော အမည်သည် *တဿနဂရဿ ^ထိုပြည်၏ *နာမမတ္တံ ^အမည်မျှသာတည်း *တံ ပနေတံ တံပနဧတံ နဂရံ ^ထိုရာဇဂြိုဟ်ပြည်သည် *ဗုဒ္ဓကာလေစ ^ဘုရားဖြစ်သော-အခါ၌လည်းကောင်း *စက္ကဝတ္တိကာလေစ ^စကြာဝတေးမင်းဖြစ်သော-အခါ၌လည်းကောင်း *နဂရံ ^မြို့သည်";
+            suttaPageData.UserID = "user1@gmail.com";
+            suttaPageData.NISRecCount = 25;
+            suttaPageData.NISRecLen = 757;
+            await clientSuttaPageData.UpdateSuttaPageDataAsync(suttaPageData);
+            // #400
+            suttaPageData.PartitionKey = "MN-017";
+            suttaPageData.RowKey = "MN-017-400";
+            suttaPageData.PageNo = 400;
+            suttaPageData.PageData = "*ဟောတိ ^ဖြစ်၏ *သေသကာလေ ^ကြွင်းသောအခါ၌ *သုညံ ^လူမှ ဆိတ်သည် *ဟောတိ ^ဖြစ်၏ *ယက္ခပရိဂ္ဂဟိတံ ^ဘီလူးတို့သည်-သိမ်းဆည်းအပ်သည်ဖြစ်၍ *တေသံ ^ထိုဘီလူးတို့၏ *ဝသနဝနံ ^နေရာဖြစ်သော-တောသည် *ဟုတွာ ^ဖြစ်၍ *တိဋ္ဌတိ ^တည်၏ *ဝေဠုဝနေကလန္ဒက နိဝါပေတိ ဧတ္ထ ^ဝေဠုဝနေ ကလန္ဒနိဝါပေဟူသော ဤပါဌ်၌ *ဝေဠုဝနန္တိ ^ဝေဠုဝနံဟူသည်ကား *တဿဥယျာနဿ ^ထိုဥယျာဉ်၏ *နာမ ^အမည်တည်း *တံ ^ထိုဥယျာဉ်ကို *ဝေဠူဟိ ^ဝါးပင်တို့ဖြင့် *ပရိက္ခိတ္တံ ^ရံအပ်သည် *အဟောသိ ကိရ ^ဖြစ်သတတ် *အဋ္ဌရသဟတ္ထေ ^တစ်ဆယ့်ရှစ်တောင် အတိုင်းအရှည်ရှိသော *ပါကာရေနစ ^တံတိုင်းတို့ဖြင့်လည်း *ပရိက္ခိတ္တံ ^ရံအပ်၏ *ဂေါပုရဋ္ဋာလကယုတ္တံ ^တံခါးမုတ်နှင့်ယှဉ်၏ *နီလောဘာသံ ^စိန်းညိုသောအရောင်ရှိ၏ *မနောရမ္မံ ^နှလုံးမွေ့လျှော်ဖွယ်ရှိ၏ *တေန ^ထို့ကြောင့် *ဝေဠုဝနန္တိ ^ဝေဠုဝနံဟူ၍ *ဝုစ္စတိ ^ဆိုအပ်၏ *ဧတ္ထ ^ဤဥယျာဉ်၌ *ကလန္ဒကာနဉ္စ ^ရှဉ့်နက်တို့အားလည်း *နိဝါပံ ^အစာကို *အဒံသု ^ပေးကုန်ပြီ *တေန ^ထို့ကြောင့် *ကလန္ဒကနိဝါပေါတိ ^ကလန္ဒကနိဝါပေါဟူ၍ *ဝုစ္စတိ ^ဆိုအပ်၏ *ကိရ ^ကြားဖူးသည်ကို-ဆိုဦးအံ့ *ပုဗ္ဗေ ^ရှေး၌ *အညတရော ^တယောက်သော *ရာဇ ^မင်းသည် *တတ္ထ ^ထိုဥယျာဉ်၌ *ဥယျာနကီဠနတ္ထံ ^ဥယျာဉ်ကစားခြင်းအကျိုးငှာ *အာဂတော ^လာသည်ရှိသော် *သုရာ မဒေန ^သေယစ်ခြင်းဖြင့် *မတ္တော ^ယစ်သည်ဖြစ်၍ *ဒိဝါ ^နေ့အခါ၌ *သေယျံ ^အိပ်ခြင်းသို့ *ဥပဂတော ^ရေခံသည်ဖြစ်၍ *သုပိ ^အိပ်၏ *အဿ ^ထိုမင်း၏ *ပရိဇနေပိ ^ပရိသတ်-အပေါင်းသည်လည်း *ရာဇ ^မင်းသည် *သုတ္တော ^အိပ်ပျော်ခြင်းသို့ရောက်ပြီ *ဣတိ ^ဤသို့ *ပုပ္ဖပလာဒီဟိ ^ပန်း-သစ်သီး အစရှိသည်တို့ဖြင့် *ပလောဘိယမာနော ^ဖြားယောင်းအပ်သည်ဖြစ်၍ *ဣတောစိတောစ ^ထိုမှဤမှလည်း *ပက္ကမိ ^ဖဲလေ၏ *အထ ^ထိုအခါ၌ *သုရာဂန္ဓေန ^သေနံ့ကြောင့် *အညတရသ္မာ ^တပါးသော *သုသိရရုက္ခာ ^အခေါင်းရှိသော-သစ်ပင်မှ *ကဏှသပ္ပေါ ^မြွေဟောက်သည် *နိက္ခမိတွာ ^ထွက်၍ *ရညာဘိမုခေါ ^မင်းသို့ရှေးရှု *အာဂစ္ဆတိ ^လာ၏ *တံ ^ထိုမင်းသို့ရှေးရှုလာသော- မြွေဟောက်ကို *ဒိသွား ^မြင်၍ *ရုက္ခဒေဝတာ ^ရုက္ခစိုးနတ်သည် *ရညော ^မင်းအား *ဇီဝိတံ ^အသက်ကို *ဒမှီတိ ^ပေးအံ့ဟူ၍ *ကာဠကဝေသေန ^ရှဉ့်နက်အသွင်ဖြင့် *အာဂန္တွာ ^လာ၍ *ကဏ္ဏမူလေး ^နားရင်း၌ *သဒ္ဒံ ^အသံကို *အကာသိ ^ပြု၏ *ရာဇ ^မင်းသည် *ပဋိဗုဇ္ဈိ ^နိုး၏ *ကဏှသပ္ပေါ ^မြွေဟောက်သည် *နိဝတ္တော ^ပြန်နစ်လေ၏ *သော ^ထိုမင်းသည် *ဒိသွာ ^မြင်၍ *ဣမာယ ကာဠကာယ ^ဤရှဉ့်နက်သည် *မမ ^ငါအား";
+            suttaPageData.UserID = "user1@gmail.com";
+            suttaPageData.NISRecCount = 82;
+            suttaPageData.NISRecLen = 1924;
+            await clientSuttaPageData.UpdateSuttaPageDataAsync(suttaPageData);
+            // #401
+            suttaPageData.PartitionKey = "MN-017";
+            suttaPageData.RowKey = "MN-017-401";
+            suttaPageData.PageNo = 401;
+            suttaPageData.PageData = "*ဇီဝိတံ ^အသက်ကို *ဒိန္နံ ^ပေးအပ်ပြီး *ဣတိ ^ဤသို့ကြံ၍ *ကာဠကာနံ ^ရှဉ့်နက်တို့အား *တတ္ထ ^ထိုဥယျာဉ်၌ *နိဝါပံ ^အစာကို *ပဋ္ဌပေသိ ^ဖြစ်စေပြီ *အဘယဃောသနဉ္စ ^ဘေးမရှိစေလင့် ဟူသော-ကြွေးကြော်ခြင်းကိုလည်း *ဃောသာပေသိ ^ကြွေးကြော်စေ၏ *တသ္မာ ^ထိုကြောင့် *တံ ^ထိုဥယျာဉ်သည် *တတော ^ထိုအခါမှ *ပဘူတိ ^အစပြု၍ *ကလန္ဒကနိဝါပန္တိသင်္ခံ ^ကလန္ဒက နိဝါပံဟူသော-ခေါ်ဝေါ်ခြင်းသို့ *ဂတံ ^ရောက်ပြီ *ကလန္ဒကာတိ ^ကလန္ဒကာဟူသော-ဤအမည်သည် *ကာဠကာနံ ^ရှဉ့်နက်တို့၏ *နာမံ ^အမည်တည်း *ဇာတိဘူမိကာတိ ^ဇာတိဘူမိကာဟူသည်ကား *ဇာတိဘူမိဝါသိနော ^ဇာတိဘူမိအရပ်၌-သီတင်းသုံးနေလေ့ရှိသောရဟန်းသည် *တတ္ထ ^ထိုပါဌ်၌ *ဇာတိဘူမီတိ ^ဇာတိဘူမိဟူသည်ကား *ဇာတဋ္ဌာနံ ^ဘုရားလောင်း၏-ဖွားရာဖြစ်သော-အရပ်တည်း *နေဝ ဟောတိ ^မဖြစ် *စင်္ကီဗြာဟ္မဏာဒိနံ ^စင်္ကပုဏ္ဏာအစရှိသောသူတို့၏ *ဇာတဋ္ဌာနံ ^သွားရာအရပ်သည် *နေဝဟောတိ ^မဖြစ် *သတ္က သုယာမ သန္တုဿီတာဒီနံ ^သိကြား-သုယာမ-သန္တုဿီတနတ်-အစရှိသည်တို့၏ *ဇာတဋ္ဌာနံ ^ဖြစ်ရာအရပ်သည် *နဟောတိ ^မဖြစ် *အသီတိမဟာ သာဝကာဒီနံ ^အသီတိမဟာ သာဝက-အစရှိသည်တို့၏ *ဇာတဋ္ဌာနံ ^ဖွားရာ အရပ်သည် *နဟောတိ ^မဖြစ် *အညေသံ ^တပါးကုန်သော *သတ္တာနံ ^သတ္တဝါတို့၏ *ဇာတဋ္ဌာနံ ^ဖွားရာအရပ်ကို *ဇာတိဘူမီတိ ^ဇာတိဘူမိဟူ၍ *နဝုစ္စတိ ^မဆိုအပ် *ယဿ ပန ^အကြင် ဘုရားလောင်းအား *ဇာတဒိဝသေ ^ဖွားသော နေ့၌ *ဒသသဟဿိ လောကဓာတု ^တစ်သောင်းသော-လောကဓာတ်သည် *ဧက ဓဇ မာလာ ဝိပ္ပကိဏ္ဏ ကုသုမဝါသ စုဏ္ဏဂန္ဓ သုဂန္ဓာ သဗ္ဗဖာလိပုလ္လံ ^တစ်ပြိုင်နက်သော-တံခွန်-ပန်းတို့ဖြင့် ရောပြွမ်းသော-ပန်းပွင့်တို့ဖြင့်ထုံအပ်သော- ပန်းဝတ်မှုန်အနံ့တို့ဖြင့်-ကောင်းသော အနံ့ရှိသော- အလုံးစုံပင်လုံးကျွတ်ပွင့်သော *နန္ဒဝနံ ^နန္ဒဝန်-ဥယျဉ်သည် *ဝိရောစမာနံဣဝ ^ပဒုမ္မာကြာဖက်၌ *ဥဒကဗိန္ဒုဝိယ ^ရေပေါက်ကဲ့သို့ *အကမ္ပိတ္ထ ^တုန်လှုပ်ပြီ *ဇစ္စန္ဓာဒီနဉ္စ ^အမိဝမ်းတွင်းမှ- ကန်းသောသူအစရှိသည်တို့၏လည်း *ရူပဒဿနာဒီနိ ^ရူပါရုံကိုမြင်ခြင်း- အစရှိကုန်သော *အနေကာနိ ^များစွာကုန်သော *ပါဋိဟာရိယာနိ ^အံ့ဖွယ်သရဲတို့သည်";
+            suttaPageData.UserID = "user1@gmail.com";
+            suttaPageData.NISRecCount = 50;
+            suttaPageData.NISRecLen = 1639;
+            await clientSuttaPageData.UpdateSuttaPageDataAsync(suttaPageData);
+        }
+    }
+    private async Task AdminWork1()
     {
         if (email != "dhammayaungchi2011@gmail.com") return;
         if (State.dataFile == null) await Task.Delay(50);

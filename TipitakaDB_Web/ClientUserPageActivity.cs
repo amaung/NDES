@@ -32,6 +32,22 @@ namespace Tipitaka_DB
                 InsertTableRec(userPageActivity).Wait();
             }
         }
+        public async Task AddUserPageActivityAsync(string email, string DocID, string activity, int StartPage, int EndPage)
+        {
+            UserPageActivity userPageActivity = new UserPageActivity()
+            {
+                PartitionKey = "UserPageActivity",
+                RowKey = email + "-" + DocID,
+                DocID = DocID,
+                Activity = activity,
+                PageRange = string.Format("{0}-{1}", StartPage, EndPage),
+                Pages = EndPage - StartPage + 1
+            };
+            if (userPageActivity != null)
+            {
+                await InsertTableRec(userPageActivity);
+            }
+        }
         public List<UserPageActivity> QueryUserPageActivity(string suttaType, string userID)
         {
             List<UserPageActivity> listUserPageActivity = new List<UserPageActivity>();
@@ -56,9 +72,27 @@ namespace Tipitaka_DB
             else StatusCode = -1;
             return result;
         }
+        public async Task<UserPageActivity?> GetUserPageActivityAsync(string rowKey)
+        {
+            UserPageActivity? result = null;
+            if (rowKey != null && rowKey.Length > 0)
+            {
+                await RetrieveTableRec(rowKey);
+                if (StatusCode == 200)
+                {
+                    result = (UserPageActivity)objResult;
+                }
+            }
+            else StatusCode = -1;
+            return result;
+        }
         public void UpdateUserPageActivity(UserPageActivity userPageActivity)
         {
             UpdateTableRec(userPageActivity).Wait();
+        }
+        public async Task UpdateUserPageActivityAsync(UserPageActivity userPageActivity)
+        {
+            await UpdateTableRec(userPageActivity);
         }
     }
 }

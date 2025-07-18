@@ -7,6 +7,7 @@
 @using Syncfusion.Blazor.Grids
 @using Syncfusion.Blazor.Inputs
 @using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Spinner
 
 @namespace NissayaEditor_Web.Data
 
@@ -53,7 +54,7 @@
             <GridEditSettings AllowAdding="true" AllowEditing="false" AllowDeleting="true" Mode="@EditMode.Normal"></GridEditSettings>
             <GridPageSettings PageSize="10"></GridPageSettings>
             <GridSelectionSettings Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
-            <GridEvents OnRecordClick="DocRecordClickHandler" OnRecordDoubleClick="RecordDoubleClickHandler" TValue="DocSelectInfo"></GridEvents>
+            <GridEvents OnRecordClick="DocRecordClickHandler" OnRecordDoubleClick="RecordDoubleClickHandler" DataBound="DataBoundHandler" TValue="DocSelectInfo"></GridEvents>
             <GridColumns>
                 <GridColumn Field=@nameof(DocSelectInfo.DocNo) HeaderText="Doc No" IsPrimaryKey="true" AllowEditing="false" Width="25%" Type="ColumnType.String"
                 TextAlign="TextAlign.Left" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})"></GridColumn>
@@ -64,7 +65,9 @@
             </GridColumns>
         </SfGrid>
     </div>
-
+    @* <span>@checking</span> *@
+    <SfSpinner Type="SpinnerType.Bootstrap4" @bind-Visible="@VisibleSpinner">
+    </SfSpinner>
 </body>
 <style>
     .e-custom {
@@ -121,6 +124,7 @@
     DataFile? dataFile = null;
     string docNo = "", docTitle = "", pattern = "";
     int completedDocCount = 0;
+    public bool VisibleSpinner = false;
 
     // public class DocSelectInfo
     // {
@@ -154,7 +158,13 @@
                 completedDocCount = await clientSuttaInfo.CompletedDocCount();
             }
         }
-        //await LoadData();
+        VisibleSpinner = true;
+        await LoadData();
+    }
+    public void DataBoundHandler()
+    {
+        // Here, you can customize your code.
+        VisibleSpinner = false;
     }
     private async Task LoadData()
     {

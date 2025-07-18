@@ -75,7 +75,7 @@
             {
                 new MenuItem { Text = _UserTask },
                 new MenuItem { Text = _DocReport },
-                new MenuItem { Text = _Timesheet },
+                //new MenuItem { Text = _Timesheet },
             }
         },
         new MenuItem { Text = _NissayaSource },
@@ -112,7 +112,7 @@
                 NavManager.NavigateTo(String.Format("/timesheetadmin/{0}/{1}/{2}", email, userName, userClass));
                 break;
             case _TaskAssignments:
-                NavManager.NavigateTo(String.Format("/task_assignment/{0}/{1}/{2}", email, userName, userClass));
+                NavManager.NavigateTo(String.Format("/task_assignment_admin/{0}/{1}/{2}", email, userName, userClass));
                 break;
             case _NissayaSource:
                 NavManager.NavigateTo(String.Format("/nissaya_source/{0}/{1}/{2}", email, userName, userClass));

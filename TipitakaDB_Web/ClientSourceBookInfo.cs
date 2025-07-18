@@ -98,6 +98,16 @@ namespace Tipitaka_DB
             }
             return sourcebookInfo;
         }
+        public async Task<SourceBookInfo?> GetSourceBookInfoAsync(string docID)
+        {
+            SourceBookInfo? sourcebookInfo = null;
+            await RetrieveTableRec(docID);
+            if (StatusCode == 200)
+            {
+                sourcebookInfo = (SourceBookInfo?)objResult;
+            }
+            return sourcebookInfo;
+        }
         public void ResetSourceBookDocs(string userID)
         {
             if (userID == null || userID != "dhammayaungchi2011@gmail.com") { return; }

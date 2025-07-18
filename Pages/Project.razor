@@ -18,7 +18,7 @@
 @using Tipitaka_DB
 
 @* https://stackoverflow.com/questions/70509410/how-to-specify-where-html-goes-in-a-blazor-component *@
-<Administration componentName="Project" email=@email userName=@userName userClass=@userClass flex_width="900px">
+<Administration componentName="Project" email=@email userName=@userName userClass=@userClass flex_width="1000px">
     <adminMenuItem>Project</adminMenuItem>
 </Administration>
 
@@ -38,13 +38,13 @@
         @* <GridEvents OnActionBegin="ActionBeginUser" OnActionComplete="ActionCompleteUser" OnToolbarClick="ToolbarClick" TValue="DisplaySourceBookInfo"></GridEvents> *@
         <GridColumns>
             <GridColumn Field=@nameof(BookDocStatus.BookID) HeaderText="Book ID" IsPrimaryKey="true" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" AllowEditing="false" Width="8%" Type="ColumnType.Integer" ValidationRules="@(new ValidationRules{ Required=true })" TextAlign="TextAlign.Center"></GridColumn>
-            <GridColumn Field=@nameof(BookDocStatus.BookFilename) HeaderText="Book PDF File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="40%" Type="ColumnType.String"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.BookFilename) HeaderText="Book PDF File" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Left" Width="55%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(BookDocStatus.DocCount) HeaderText="No Docs" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.String"></GridColumn>
             <GridColumn Field=@nameof(BookDocStatus.Pages) HeaderText="Pages" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="8%" Type="ColumnType.Integer"></GridColumn>
-            <GridColumn Field=@nameof(BookDocStatus.Completed) HeaderText="Completed" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.Completed) HeaderText="Submitted" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.Integer"></GridColumn>
             <GridColumn Field=@nameof(BookDocStatus.Status) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.String"></GridColumn>
-            <GridColumn Field=@nameof(BookDocStatus.HTML) HeaderText="HTML" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="6%" Type="ColumnType.Integer"></GridColumn>
-            <GridColumn Field=@nameof(BookDocStatus.HTMLStatus) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.String"></GridColumn>
+            @* <GridColumn Field=@nameof(BookDocStatus.HTML) HeaderText="HTML" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="6%" Type="ColumnType.Integer"></GridColumn>
+            <GridColumn Field=@nameof(BookDocStatus.HTMLStatus) HeaderText="Status" CustomAttributes="@(new Dictionary<string, object>(){ { "class", "e-attr1" }})" TextAlign="TextAlign.Center" Width="9%" Type="ColumnType.String"></GridColumn> *@
         </GridColumns>
     </SfGrid>
 </div>

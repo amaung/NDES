@@ -1,4 +1,5 @@
-﻿using Tipitaka_DBTables;
+﻿using Syncfusion.Blazor.SfPdfViewer;
+using Tipitaka_DBTables;
 
 namespace Tipitaka_DB
 {
@@ -68,6 +69,23 @@ namespace Tipitaka_DB
         {
             UpdateTableRec(suttaPageData).Wait();
             return StatusCode;
+        }
+        public async Task UpdateSuttaPageDataAsync(SuttaPageData suttaPageData)
+        {
+            SuttaPageData? suttaPageData1 = await GetSuttaPageDataAsync(suttaPageData.PartitionKey, suttaPageData.RowKey);
+            if (suttaPageData1 != null)
+            {
+                suttaPageData1.PageData = suttaPageData.PageData;
+                suttaPageData1.PageNo = suttaPageData.PageNo;
+                suttaPageData1.UserID = suttaPageData.UserID;
+                suttaPageData1.NISRecCount = suttaPageData.NISRecCount;
+                suttaPageData1.NISRecLen = suttaPageData.NISRecLen;
+                await UpdateTableRec(suttaPageData1);
+            }
+            else
+            {
+                await InsertTableRec(suttaPageData);
+            }
         }
         public void UploadSutta(string userID, string dataType, int suttaNo, Dictionary<string, string> dataPages,
                 Dictionary<int, int> NISRecCount)
@@ -188,6 +206,25 @@ namespace Tipitaka_DB
             SuttaPageData suttaPageData = (SuttaPageData)objResult;
             return suttaPageData;
         }
+        public async Task<SuttaPageData?> GetPageDataAsync(string docID, string recNo)
+        {
+            SetSubPartitionKey(docID);
+            string s = "000" + recNo;
+            string rowKey = docID + "-" + s.Substring(s.Length - 3);
+            await RetrieveTableRec(rowKey);
+            if (StatusCode == 404) return null;
+            SuttaPageData suttaPageData = (SuttaPageData)objResult;
+            return suttaPageData;
+        }
+        public async Task<int> GetDocPageDataCount(string docID)
+        {
+            SetSubPartitionKey(docID);
+            await QueryTableRec("");
+            if (StatusCode == 404) return 0;
+            List<SuttaPageData> suttaPageData = (List<SuttaPageData>)objResult;
+            if (suttaPageData == null) return 0;
+            return suttaPageData.Count;
+        }
         public async Task<SortedDictionary<int, string>> GetSutta(string docID)
         {
             SortedDictionary<int, string> dictSuttaPages = new SortedDictionary<int, string>();
@@ -211,6 +248,17 @@ namespace Tipitaka_DB
             }
             return dictSuttaPages;
         }
+        public async Task<SuttaPageData?> GetSuttaPageDataAsync(string docNo, string rowKey)
+        {
+            SetSubPartitionKey(docNo);
+            var result = await RetrieveTableRec(rowKey);
+            SuttaPageData? suttaPageData = null;
+            if (result != null)
+            {
+                suttaPageData = (SuttaPageData?)result;
+            }
+            return suttaPageData;
+        }
         public String[] GetAllPartitionKeys()
         {
             //    ConcurrentDictionary<string, byte> partitionKeys = new ConcurrentDictionary<string, byte>();
@@ -227,6 +275,18 @@ namespace Tipitaka_DB
                     result.Add(suttaPageData.PartitionKey);
             }
             return result.ToArray();
+        }
+        public async Task<int> DeleteDocDataAsync(string docNo)
+        {
+            if (docNo == null || docNo.Length == 0) return 0;
+            SetSubPartitionKey(docNo);
+            var objResult = await QueryTableRec();
+            List<SuttaPageData> list = (List<SuttaPageData>)objResult;
+            if (list.Count > 0)
+            {
+                await DeleteTableRecBatch(list);
+            }
+            return list.Count;
         }
         public void DeleteAll(string userID)
         {
