@@ -173,12 +173,14 @@
         int pgCount = 0;
         int count = 0;
         bool newLine = false;
+        bool lineDrawn = false;
         string pattern = String.Format("{0}$", DataFile.endOfParagraphMarker);
         try
         {
             count = 0; string pgno; string[] ss; int lcount = 0;
             for(int i = start; i <= end; i++)
             {
+                lineDrawn = false;
                 ++pgCount; pgno = pageNos[i];
                 nisRecords = State.dataFile!.GetPageData(pgno);
                 if (pgCount == 1)
@@ -250,7 +252,10 @@
                         {
                             builder.AddAttribute(1, "class", "footnote");
                             builder.OpenElement(1, "br"); builder.CloseElement();
-                            builder.OpenElement(1, "hr"); builder.CloseElement();
+                            if (!lineDrawn) builder.OpenElement(1, "hr"); 
+                            else builder.OpenElement(1, "br");
+                            builder.CloseElement();
+                            lineDrawn = true;
                         }
 
                         if (nisRecord.Footnote != null)
@@ -261,7 +266,10 @@
                     }
                 }
                 builder.OpenElement(1, "br"); builder.CloseElement(); 
-                builder.OpenElement(1, "hr"); builder.CloseElement();
+                if (!lineDrawn) builder.OpenElement(1, "hr"); 
+                else builder.OpenElement(1, "br");
+                builder.CloseElement();
+                lineDrawn = true;
             }
         }
         catch (Exception ex)
